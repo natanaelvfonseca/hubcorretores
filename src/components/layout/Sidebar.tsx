@@ -25,7 +25,7 @@ const menuItems = [
     { icon: MessageSquare, label: 'Conexão WhatsApp', path: '/whatsapp' },
     { icon: BrainCircuit, label: 'Minhas IAs', path: '/brain' },
     { icon: MessagesSquare, label: 'Live Chat', path: '/live-chat' },
-    { icon: Users, label: 'Leads / CRM', path: '/crm' },
+    { icon: Users, label: 'Funil de Vendas', path: '/crm' },
     { icon: UserCheck, label: 'Clientes', path: '/clients' },
     { icon: RotateCcw, label: 'Recuperação', path: '/recovery' },
     { icon: CalendarDays, label: 'Agenda', path: '/agenda' },

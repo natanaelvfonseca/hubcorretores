@@ -90,4 +90,21 @@
     scrollbar-width: none;
     /* Firefox */
   }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar-horizontal::-webkit-scrollbar-thumb {
+    @apply bg-border/40 rounded-full hover:bg-border/60 transition-colors;
+  }
+
+  .custom-scrollbar-horizontal {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(var(--color-border), 0.4) transparent;
+  }
 }

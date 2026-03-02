@@ -98,22 +98,33 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnTitle: string) => {
         e.preventDefault();
         const leadId = e.dataTransfer.getData('leadId');
-        if (leadId) {
-            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: columnTitle as LeadStatus } : l));
-            setSyncing(true);
-            try {
-                await fetch(`${API_URL}/leads/${leadId}/status`, {
-                    method: 'PATCH',
-                    headers: authHeaders(),
-                    body: JSON.stringify({ status: columnTitle }),
-                });
-                // Refresh to get updated temperature
-                fetchData();
-            } catch (error) {
-                console.error('Failed to update lead status:', error);
-            } finally {
-                setTimeout(() => setSyncing(false), 500);
-            }
+        if (!leadId) return;
+
+        // Derive temperature locally — same logic as backend, no re-fetch needed
+        const colIdx = columns.findIndex(c => c.title === columnTitle);
+        let temperature = 'Frio';
+        if (columns.length > 1 && colIdx >= 0) {
+            const ratio = colIdx / (columns.length - 1);
+            if (ratio >= 0.7) temperature = 'Quente';
+            else if (ratio >= 0.35) temperature = 'Morno';
+        }
+
+        // Optimistic update: status + temperature in one pass — no flash/re-render
+        setLeads(prev => prev.map(l =>
+            l.id === leadId ? { ...l, status: columnTitle as LeadStatus, temperature } : l
+        ));
+
+        setSyncing(true);
+        try {
+            await fetch(`${API_URL}/leads/${leadId}/status`, {
+                method: 'PATCH',
+                headers: authHeaders(),
+                body: JSON.stringify({ status: columnTitle }),
+            });
+        } catch (error) {
+            console.error('Failed to update lead status:', error);
+        } finally {
+            setTimeout(() => setSyncing(false), 500);
         }
     };
 
@@ -197,7 +208,7 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
                 <PipelineFlow stages={pipelineStages} />
             </div>
             {/* Kanban Board */}
-            <div className="flex gap-4 flex-1 overflow-x-auto pb-4 items-start select-none scrollbar-hide relative min-h-0">
+            <div className="flex gap-4 flex-1 overflow-x-auto pb-6 items-start select-none custom-scrollbar-horizontal relative min-h-0">
                 {syncing && (
                     <div className="absolute top-2 right-4 z-50">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>

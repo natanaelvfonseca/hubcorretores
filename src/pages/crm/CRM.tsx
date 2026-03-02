@@ -23,7 +23,7 @@ export function CRM() {
         <div className="h-full flex flex-col p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-text-primary">CRM de Vendas</h1>
+                    <h1 className="text-2xl font-bold text-text-primary">Funil de Vendas</h1>
                     <p className="text-text-secondary text-sm">Gerencie seus leads e oportunidades</p>
                 </div>
                 <div className="flex gap-3">
