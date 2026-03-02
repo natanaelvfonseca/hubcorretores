@@ -4301,7 +4301,17 @@ app.post("/api/webhooks/whatsapp", async (req, res) => {
         return res.json({ success: true });
       }
 
-      // --- MULTIMODAL HANDLING (AUDIO & VISION) ---
+      // --- AUTO LEAD CREATION (CRM) ---
+      // Ensure a lead exists in the CRM for this WhatsApp contact.
+      // This runs fire-and-forget (no await) to not slow the message path.
+      const orgId = instance.organization_id;
+      const pushName = event.data?.pushName || event.data?.notify || data?.pushName || data?.notify || null;
+      if (orgId) {
+        ensureLeadFromWhatsApp(remoteJid, pushName, orgId)
+          .catch(e => log(`[AUTO-LEAD] Error: ${e.message}`));
+      }
+      // --- END AUTO LEAD CREATION ---
+
       let finalUserText = "";
       let imageUrl = null;
       let reductionAmount = 0; // Default 0 (text messages cost nothing to process input, only output)
@@ -8453,11 +8463,145 @@ async function ensureRevenueOSColumns() {
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS intent_label VARCHAR(20) DEFAULT 'COLD'`);
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_ia_briefing TEXT`);
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS assigned_to UUID`);
-    log('[REVENUE-OS] DB columns ensured: intent_label, last_ia_briefing, assigned_to');
+    await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS last_interaction_at TIMESTAMPTZ`);
+    log('[REVENUE-OS] DB columns ensured: intent_label, last_ia_briefing, assigned_to, last_interaction_at');
   } catch (err) {
     log(`[REVENUE-OS] Column ensure error (non-critical): ${err.message}`);
   }
 }
+
+// --- AUTO LEAD CREATION FROM WHATSAPP ---
+async function ensureLeadFromWhatsApp(remoteJid, pushName, organizationId) {
+  try {
+    // Extract clean phone number (strip @s.whatsapp.net, keep digits only)
+    const rawPhone = remoteJid.split('@')[0];
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+
+    // Skip group messages (JIDs with @g.us or @broadcast)
+    if (remoteJid.includes('@g.us') || remoteJid.includes('@broadcast')) {
+      return;
+    }
+
+    // Check if lead already exists (dedup by phone)
+    const existing = await pool.query(
+      `SELECT id FROM leads 
+       WHERE organization_id = $1 
+         AND (phone = $2 OR phone = $3 OR mobile_phone = $2 OR mobile_phone = $3)
+       LIMIT 1`,
+      [organizationId, cleanPhone, rawPhone]
+    );
+
+    if (existing.rows.length > 0) {
+      log(`[AUTO-LEAD] Lead already exists for ${cleanPhone} in org ${organizationId}. Skipping.`);
+      return; // No duplicate
+    }
+
+    // Get the first pipeline column title for the org (or fallback to 'Novos Leads')
+    let firstColumnTitle = 'Novos Leads';
+    try {
+      const colRes = await pool.query(
+        `SELECT title FROM kanban_columns 
+         WHERE organization_id = $1 
+         ORDER BY order_index ASC LIMIT 1`,
+        [organizationId]
+      );
+      if (colRes.rows.length > 0) {
+        firstColumnTitle = colRes.rows[0].title;
+      }
+    } catch (colErr) {
+      log(`[AUTO-LEAD] Could not fetch columns, using default: ${colErr.message}`);
+    }
+
+    // Create the lead
+    const contactName = (pushName && pushName.trim()) ? pushName.trim() : `WhatsApp ${cleanPhone.slice(-4)}`;
+    await pool.query(
+      `INSERT INTO leads 
+         (name, phone, source, status, organization_id, last_contact)
+       VALUES ($1, $2, $3, $4, $5, NOW())`,
+      [contactName, cleanPhone, 'whatsapp', firstColumnTitle, organizationId]
+    );
+
+    log(`[AUTO-LEAD] Created lead "${contactName}" (${cleanPhone}) in column "${firstColumnTitle}" for org ${organizationId}`);
+  } catch (err) {
+    log(`[AUTO-LEAD] Error creating lead: ${err.message}`);
+  }
+}
+
+// --- AI PIPELINE STAGE ADVANCEMENT ---
+async function advancePipelineStage(leadId, organizationId, score) {
+  try {
+    // Fetch all pipeline columns ordered by position
+    const colRes = await pool.query(
+      `SELECT title, order_index FROM kanban_columns 
+       WHERE organization_id = $1 
+       ORDER BY order_index ASC`,
+      [organizationId]
+    );
+
+    const columns = colRes.rows;
+
+    if (columns.length < 2) {
+      // Need at least 2 columns to advance
+      return;
+    }
+
+    // Determine target column index based on score tier
+    // We map score tiers to positions in the pipeline:
+    // COLD < 35 → no movement
+    // WARM 35-64 → 40% through pipeline
+    // HOT  65-84 → 65% through pipeline
+    // CRITICAL 85+ → 85% through pipeline (penultimate column at most)
+    let targetIndex = -1; // -1 means no movement
+    const lastIdx = columns.length - 1;
+
+    if (score >= 85) {
+      // CRITICAL: move to ~85% through pipeline (penultimate or close)
+      targetIndex = Math.max(1, Math.floor(lastIdx * 0.85));
+    } else if (score >= 65) {
+      // HOT: move to ~65% through pipeline
+      targetIndex = Math.max(1, Math.floor(lastIdx * 0.65));
+    } else if (score >= 35) {
+      // WARM: move to ~40% through pipeline  
+      targetIndex = Math.max(1, Math.floor(lastIdx * 0.40));
+    } else {
+      // COLD: no movement
+      return;
+    }
+
+    const targetColumn = columns[targetIndex];
+    if (!targetColumn) return;
+
+    // Get current lead status
+    const leadRes = await pool.query(
+      `SELECT name, status FROM leads WHERE id = $1`,
+      [leadId]
+    );
+    if (leadRes.rows.length === 0) return;
+
+    const lead = leadRes.rows[0];
+    const currentStatus = lead.status;
+
+    // Find current position in pipeline
+    const currentIdx = columns.findIndex(c => c.title === currentStatus);
+
+    // Only advance — NEVER move backwards
+    if (currentIdx >= targetIndex) {
+      log(`[PIPELINE-AI] Lead ${leadId} already at or ahead of target stage. No movement needed.`);
+      return;
+    }
+
+    // Advance the lead to the target column
+    await pool.query(
+      `UPDATE leads SET status = $1, last_contact = NOW() WHERE id = $2`,
+      [targetColumn.title, leadId]
+    );
+
+    log(`[PIPELINE-AI] Lead "${lead.name}" moved: "${currentStatus}" → "${targetColumn.title}" (score: ${score})`);
+  } catch (err) {
+    log(`[PIPELINE-AI] Error advancing stage: ${err.message}`);
+  }
+}
+
 
 // Intent label mapping from score
 function scoreToIntentLabel(score) {
@@ -8531,6 +8675,11 @@ JSON:`;
     );
 
     log(`[INTENT-SCORE] Lead ${leadId}: ${intentLabel} (${result.score}pts) | ${result.briefing || result.reason}`);
+
+    // 5. AI Pipeline Movement — advance stage if score warrants it (non-blocking)
+    advancePipelineStage(leadId, organizationId, result.score || 0)
+      .catch(e => log(`[PIPELINE-AI] Movement error: ${e.message}`));
+
   } catch (err) {
     log(`[INTENT-SCORE] Error: ${err.message}`);
   }
