@@ -44,13 +44,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
     const total = useMemo(() => stages.reduce((s, c) => s + c.count, 0), [stages]);
     const maxCount = useMemo(() => Math.max(...stages.map(s => s.count), 1), [stages]);
 
-    // Find bottleneck (stage with most leads that is not the first)
-    const bottleneckIdx = useMemo(() => {
-        if (stages.length < 2) return -1;
-        let max = 0; let idx = -1;
-        stages.forEach((s, i) => { if (i > 0 && s.count > max) { max = s.count; idx = i; } });
-        return idx;
-    }, [stages]);
+    // Removed bottleneck logic - now handled in dashboard recommendations
 
     // Normalize heights for each stage band
     const normalize = (count: number) => {
@@ -75,11 +69,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
         return { top: mid - h / 2, bot: mid + h / 2 };
     });
 
-    // Conversion rates between stages
-    const conversionRates = stages.map((s, i) => {
-        if (i === 0 || stages[i - 1].count === 0) return null;
-        return Math.round((s.count / stages[i - 1].count) * 100);
-    });
+    // Removed conversion rates as per user request
 
     return (
         <div className="w-full relative select-none" style={{ height: HEIGHT + 40 }}>
@@ -109,10 +99,6 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                             <stop offset="100%" stopColor={STAGE_COLORS[(i + 1) % STAGE_COLORS.length]} stopOpacity="0.75" />
                         </linearGradient>
                     ))}
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                        <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                    </filter>
                 </defs>
 
                 {/* Connection paths between stages */}
@@ -141,7 +127,6 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                     const b = bands[i];
                     const h = b.bot - b.top;
                     const color = STAGE_COLORS[i % STAGE_COLORS.length];
-                    const isBottleneck = i === bottleneckIdx;
                     return (
                         <g key={i}>
                             <rect
@@ -151,8 +136,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                                 height={h}
                                 rx={8}
                                 fill={color}
-                                opacity={isBottleneck ? 1 : 0.82}
-                                filter={isBottleneck ? 'url(#glow)' : undefined}
+                                opacity={0.82}
                                 className="cursor-pointer transition-all duration-500"
                                 onMouseEnter={() => {
                                     const svgEl = svgRef.current;
@@ -180,43 +164,11 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                                     {s.count}
                                 </text>
                             )}
-                            {/* Bottleneck indicator */}
-                            {isBottleneck && (
-                                <text
-                                    x={x + w / 2}
-                                    y={b.top - 6}
-                                    textAnchor="middle"
-                                    fontSize={9}
-                                    fill="#f97316"
-                                    fontWeight="bold"
-                                    className="pointer-events-none"
-                                >
-                                    ⚠ GARGALO
-                                </text>
-                            )}
                         </g>
                     );
                 })}
 
-                {/* Conversion rate labels between stages */}
-                {conversionRates.map((rate, i) => {
-                    if (rate === null || i === 0) return null;
-                    const xPos = i * segW;
-                    return (
-                        <text
-                            key={`cr-${i}`}
-                            x={xPos}
-                            y={HEIGHT - 6}
-                            textAnchor="middle"
-                            fontSize={9}
-                            fill={rate >= 50 ? '#4ade80' : rate >= 25 ? '#facc15' : '#f87171'}
-                            fontWeight="600"
-                            className="pointer-events-none"
-                        >
-                            {rate}%
-                        </text>
-                    );
-                })}
+                {/* Removed conversion rate labels */}
             </svg>
 
             {/* Tooltip */}
@@ -248,9 +200,6 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                                     {total > 0 ? Math.round((tooltip.stage.count / total) * 100) : 0}%
                                 </span>
                             </div>
-                            {tooltip.idx === bottleneckIdx && (
-                                <div className="mt-1 text-orange-400 font-semibold text-[10px]">⚠ Gargalo identificado</div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -261,11 +210,6 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                 <span className="text-[10px] text-text-muted">
                     {total} leads no pipeline
                 </span>
-                {bottleneckIdx >= 0 && (
-                    <span className="text-[10px] text-orange-400 font-semibold">
-                        · Gargalo: {stages[bottleneckIdx]?.title}
-                    </span>
-                )}
             </div>
         </div>
     );

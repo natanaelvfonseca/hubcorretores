@@ -1,6 +1,6 @@
 import {
     Clock, MessageSquare, Calendar, DollarSign, CheckCircle, Users,
-    Flame, ArrowRight, AlertTriangle, Target, Zap, Timer
+    Flame, ArrowRight, AlertTriangle, Target, Zap, Timer, BrainCircuit
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -61,6 +61,7 @@ export function Dashboard() {
     const { user, token } = useAuth();
     const [selectedDays, setSelectedDays] = useState(7);
     const [urgencyTab, setUrgencyTab] = useState<'now' | 'today' | 'at_risk'>('now');
+    const [dismissedRecs, setDismissedRecs] = useState<string[]>([]);
 
     const { data: metrics, loading: metricsLoading } = useAPI<DashboardMetrics>(
         `/api/dashboard/metrics?days=${selectedDays}`, token, [selectedDays]
@@ -84,6 +85,47 @@ export function Dashboard() {
     } : { now: 0, today: 0, at_risk: 0 };
 
     const maxVelocityHours = velocity ? Math.max(...velocity.map(s => s.avg_hours_idle), 1) : 1;
+
+    // Generate recommendations based on velocity and forecast data
+    const recommendations = (() => {
+        const items: Array<{ id: string; title: string; desc: string; type: 'warning' | 'info' | 'success' }> = [];
+
+        if (velocity) {
+            // Find bottleneck (stage with most leads or longest idle time)
+            const bottleneck = velocity.reduce((prev, curr) =>
+                (curr.count > prev.count && curr.avg_hours_idle > 24) ? curr : prev
+                , velocity[0]);
+
+            if (bottleneck && bottleneck.count > 0 && bottleneck.avg_hours_idle > 24) {
+                items.push({
+                    id: `bot-${bottleneck.stage}`,
+                    type: 'warning',
+                    title: `Gargalo em "${bottleneck.stage}"`,
+                    desc: `Há ${bottleneck.count} leads parados nesta etapa em média por ${fmtHours(bottleneck.avg_hours_idle)}. Recomendamos priorizar o contato com eles hoje para destravar o funil.`,
+                });
+            }
+        }
+
+        if (forecast && forecast.hot_value > 0) {
+            items.push({
+                id: 'hot-leads',
+                type: 'info',
+                title: 'Oportunidades Quentes',
+                desc: `Você tem ${fmt(forecast.hot_value)} em negócios muito propensos a fechar. Foque em enviar a proposta final para esses clientes.`,
+            });
+        }
+
+        if (items.length === 0) {
+            items.push({
+                id: 'all-good',
+                type: 'success',
+                title: 'Funil Saudável',
+                desc: 'O fluxo de leads está fluindo bem. Não há gargalos críticos no momento.',
+            });
+        }
+
+        return items.filter(r => !dismissedRecs.includes(r.id));
+    })();
 
     return (
         <div className="space-y-6">
@@ -223,6 +265,54 @@ export function Dashboard() {
                         </div>
                     ) : (
                         <EmptyState icon={Zap} text="Dados de velocity disponíveis após a IA conversar com leads no pipeline" />
+                    )}
+                </div>
+            </div>
+
+            {/* ── Recomendações da IA ── */}
+            <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="flex items-center gap-3 mb-5">
+                    <div className="p-2 bg-purple-500/10 rounded-lg"><BrainCircuit size={20} className="text-purple-400" /></div>
+                    <div>
+                        <h2 className="text-base font-bold text-text-primary">Recomendações da IA & Gargalos</h2>
+                        <p className="text-xs text-text-secondary">Insights automáticos com base no comportamento do funil</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {recommendations.length > 0 ? recommendations.map(rec => (
+                        <div key={rec.id} className="bg-surface-secondary/30 border border-border/40 rounded-xl p-4 flex flex-col justify-between group hover:border-border transition-colors">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    {rec.type === 'warning' && <AlertTriangle size={16} className="text-orange-400" />}
+                                    {rec.type === 'info' && <Zap size={16} className="text-blue-400" />}
+                                    {rec.type === 'success' && <CheckCircle size={16} className="text-green-400" />}
+                                    <h3 className="font-semibold text-sm text-text-primary">{rec.title}</h3>
+                                </div>
+                                <p className="text-xs text-text-secondary leading-relaxed mb-4">{rec.desc}</p>
+                            </div>
+                            {rec.type !== 'success' && (
+                                <div className="flex gap-2 mt-auto">
+                                    <button
+                                        onClick={() => setDismissedRecs(prev => [...prev, rec.id])}
+                                        className="flex-1 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                                    >
+                                        Resolvido
+                                    </button>
+                                    <button
+                                        onClick={() => setDismissedRecs(prev => [...prev, rec.id])}
+                                        className="flex-1 bg-surfaceHover hover:bg-white/5 text-text-muted hover:text-text-primary text-xs font-semibold py-1.5 rounded-lg transition-colors border border-border/30"
+                                    >
+                                        Ignorar
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )) : (
+                        <div className="col-span-full">
+                            <EmptyState icon={CheckCircle} text="Nenhuma recomendação pendente no momento. Você está em dia!" />
+                        </div>
                     )}
                 </div>
             </div>

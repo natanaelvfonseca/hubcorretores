@@ -23,13 +23,13 @@ interface KanbanCardProps {
 export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient, onAssignVendedor, vendedores = [] }: KanbanCardProps) {
     if (!lead) return null;
 
-    const [showVendedorMenu, setShowVendedorMenu] = useState(false);
-    const vendedorMenuRef = useRef<HTMLDivElement>(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (vendedorMenuRef.current && !vendedorMenuRef.current.contains(e.target as Node)) {
-                setShowVendedorMenu(false);
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowMenu(false);
             }
         };
         document.addEventListener('mousedown', handler);
@@ -107,65 +107,78 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                     </div>
                 </div>
 
-                {/* Actions — contained inside the card via overflow-hidden on parent */}
-                <div className="flex gap-1 flex-shrink-0 ml-1">
-                    {/* Assign vendor icon */}
-                    {onAssignVendedor && (
-                        <div className="relative" ref={vendedorMenuRef}>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setShowVendedorMenu(v => !v); }}
-                                className={`transition-colors p-1 rounded ${assignedVendedor ? 'text-primary' : 'text-text-muted hover:text-text-primary opacity-0 group-hover:opacity-100'} hover:bg-white/5`}
-                                title={assignedVendedor ? `Vendedor: ${assignedVendedor.nome}` : 'Atribuir Vendedor'}
-                            >
-                                <User size={15} />
-                            </button>
-                            {showVendedorMenu && (
-                                <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-xl z-50 py-1">
-                                    <div className="px-3 py-1.5 text-[10px] font-semibold text-text-muted uppercase tracking-wider border-b border-border/50">Atribuir Vendedor</div>
+                {/* Actions — consolidated into a single dropdown */}
+                <div className="relative flex-shrink-0 ml-1" ref={menuRef}>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
+                        className="text-text-muted hover:text-text-primary transition-colors p-1 hover:bg-white/5 rounded"
+                        title="Ações"
+                    >
+                        <MoreHorizontal size={16} />
+                    </button>
+
+                    {showMenu && (
+                        <div className="absolute right-0 top-10 mt-1 w-56 bg-surface border border-border rounded-lg shadow-xl z-50 py-1 overflow-hidden">
+                            {/* Option: Edit */}
+                            {onEdit && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onEdit(lead); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-text-primary transition-colors"
+                                >
+                                    <MoreHorizontal size={14} className="text-text-muted" />
+                                    Editar Lead
+                                </button>
+                            )}
+
+                            {/* Option: Mark as Client */}
+                            {onMarkAsClient && lead.status !== 'Cliente' && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); if (confirm(`Marcar ${lead.name} como Cliente?`)) onMarkAsClient(lead.id); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-green-500/10 text-green-500 transition-colors"
+                                >
+                                    <UserCheck size={14} />
+                                    Fechar Negócio (Cliente)
+                                </button>
+                            )}
+
+                            {/* Option: Assign Vendor */}
+                            {onAssignVendedor && (
+                                <div className="border-t border-border/30 mt-1 pt-1">
+                                    <div className="px-3 py-1.5 text-[10px] font-semibold text-text-muted uppercase tracking-wider">Atribuir Vendedor</div>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, null); setShowVendedorMenu(false); }}
-                                        className="w-full text-left px-3 py-2 text-xs hover:bg-white/5 text-text-secondary"
+                                        onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, null); setShowMenu(false); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-text-secondary transition-colors"
                                     >
-                                        — Sem atribuição
+                                        <User size={14} className="opacity-0" />
+                                        — Remover atribuição
                                     </button>
                                     {vendedores.map(v => (
                                         <button
                                             key={v.id}
-                                            onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, v.id); setShowVendedorMenu(false); }}
-                                            className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 ${v.id === (lead as any).assignedTo ? 'text-primary font-semibold' : 'text-text-primary'}`}
+                                            onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, v.id); setShowMenu(false); }}
+                                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 transition-colors ${v.id === (lead as any).assignedTo ? 'text-primary font-semibold' : 'text-text-primary'}`}
                                         >
+                                            <User size={14} className={v.id === (lead as any).assignedTo ? 'text-primary' : 'text-text-muted'} />
                                             {v.nome}
                                         </button>
                                     ))}
                                 </div>
                             )}
+
+                            {/* Option: Delete */}
+                            {onDelete && (
+                                <div className="border-t border-border/30 mt-1 pt-1">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); if (confirm('Tem certeza que deseja excluir este lead?')) onDelete(lead.id); setShowMenu(false); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-red-500/10 text-red-500 transition-colors"
+                                    >
+                                        <Trash2 size={14} />
+                                        Excluir Lead
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
-                    {onDelete && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); if (confirm('Tem certeza que deseja excluir este lead?')) onDelete(lead.id); }}
-                            className="text-text-muted hover:text-red-500 transition-colors p-1 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100"
-                            title="Excluir Lead"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    )}
-                    {onMarkAsClient && lead.status !== 'Cliente' && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); if (confirm(`Marcar ${lead.name} como Cliente?`)) onMarkAsClient(lead.id); }}
-                            className="text-text-muted hover:text-green-500 transition-colors p-1 hover:bg-green-500/10 rounded"
-                            title="Fechar Negócio"
-                        >
-                            <UserCheck size={16} />
-                        </button>
-                    )}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onEdit?.(lead); }}
-                        className="text-text-muted hover:text-text-primary transition-colors p-1 hover:bg-white/5 rounded"
-                        title="Editar Lead"
-                    >
-                        <MoreHorizontal size={16} />
-                    </button>
                 </div>
             </div>
 
