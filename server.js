@@ -14,7 +14,9 @@ import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import helmet from "helmet";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import cron from "node-cron";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -147,11 +149,34 @@ const initPool = async () => {
   }
 };
 
+// Revenue OS Coaching: ensure vendedor_insights table exists
+const ensureCoachingTables = async () => {
+  try {
+    log("[SYSTEM] Ensuring vendor coaching tables exist...");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS vendedor_insights (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          vendedor_id UUID REFERENCES vendedores(id) ON DELETE CASCADE,
+          organization_id UUID NOT NULL,
+          lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+          insight_type VARCHAR(50) NOT NULL,
+          message TEXT NOT NULL,
+          is_sent BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    log("[SYSTEM] Vendor coaching tables verified.");
+  } catch (err) {
+    log("[ERROR] ensureCoachingTables failed: " + err.message);
+  }
+};
+
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
   setTimeout(ensureMessageBuffer, 3000);
   setTimeout(ensureRevenueOSColumns, 5000); // Revenue OS: ensure intent_label, last_ia_briefing, assigned_to
+  setTimeout(ensureCoachingTables, 7000); // Revenue OS Coaching: insights table
 }).catch(e => log("Startup error: " + e.message));
 
 app.use(cors({ origin: true, credentials: true }));
@@ -5168,6 +5193,151 @@ app.get("/api/leads/heatmap", verifyJWT, async (req, res) => {
   }
 });
 
+// --- COACHING AI LOGIC ---
+const generateCoachingInsight = async (leadId, orgId, newStatus) => {
+  try {
+    // Apenas gerar insight se foi ganho ou perdido para simplificar, ou "quente"
+    if (!["ganho", "perdido"].includes(newStatus.toLowerCase())) return;
+
+    // Buscar o lead e vendedor associado
+    const leadRes = await pool.query(
+      "SELECT * FROM leads WHERE id = $1 AND organization_id = $2",
+      [leadId, orgId]
+    );
+    const lead = leadRes.rows[0];
+    // Se leads não tem assigned_to na mesma tabela, podemos pular ou tentar achar na tabela associativa.
+    // Vamos assumir que a tabela leads tem 'assigned_to' conforme Revenue OS
+    if (!lead || !lead.assigned_to) return;
+
+    const vendedorId = lead.assigned_to;
+
+    // Obter dados do vendedor
+    const vendRes = await pool.query("SELECT nome FROM vendedores WHERE id = $1", [vendedorId]);
+    const vendedorNome = vendRes.rows[0]?.nome || "Vendedor";
+
+    // Simular chamada ao GPT para gerar insight baseado no status
+    // Idealmente buscaríamos histórico de interações, horas desde a criação etc.
+    const leadCreated = new Date(lead.created_at || Date.now());
+    const leadUpdated = new Date();
+    const difHours = Math.round((leadUpdated - leadCreated) / (1000 * 60 * 60));
+
+    const prompt = `Atue como um treinador de vendas (Revenue OS). 
+O vendedor ${vendedorNome} acabou de marcar o lead "${lead.name}" (Valor: R$ ${lead.value}) como ${newStatus.toUpperCase()}.
+Tempo desde a criação do lead até agora: ${difHours} horas.
+Gere UM insight curto (máx 2 frases) avaliando o desempenho e dando uma dica construtiva de coaching. 
+Se for "ganho", parabenize e destaque o que foi bem. Se for "perdido", identifique um possível ponto de melhoria ou padrão.`;
+
+    const chatCompletion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "system", content: prompt }],
+    });
+
+    const insightMsg = chatCompletion.choices[0].message.content;
+
+    await pool.query(
+      "INSERT INTO vendedor_insights (vendedor_id, organization_id, lead_id, insight_type, message) VALUES ($1, $2, $3, $4, $5)",
+      [vendedorId, orgId, leadId, newStatus.toLowerCase(), insightMsg]
+    );
+
+    log(`[COACHING] Insight gerado para lead ${leadId} (Vendedor: ${vendedorId})`);
+  } catch (err) {
+    log(`[COACHING ERROR] Failed to generate insight: ${err.message}`);
+  }
+};
+
+// --- CRON JOBS ---
+// Envio semanal de relatórios para os vendedores (Sexta-feira às 18:00)
+cron.schedule("0 18 * * 5", async () => {
+  log("[CRON] Iniciando rotina de envio de insights semanais de Coaching para Vendedores");
+  try {
+    // Pegar insights não enviados
+    const insightsRes = await pool.query(
+      "SELECT * FROM vendedor_insights WHERE is_sent = FALSE ORDER BY vendedor_id, created_at"
+    );
+
+    if (insightsRes.rows.length === 0) return;
+
+    // Agrupar por vendedor
+    const porVendedor = {};
+    for (const row of insightsRes.rows) {
+      if (!porVendedor[row.vendedor_id]) porVendedor[row.vendedor_id] = { orgId: row.organization_id, insights: [] };
+      porVendedor[row.vendedor_id].insights.push(row);
+    }
+
+    for (const [vendId, data] of Object.entries(porVendedor)) {
+      const vendRes = await pool.query("SELECT nome, whatsapp FROM vendedores WHERE id = $1", [vendId]);
+      const vendedor = vendRes.rows[0];
+      if (!vendedor || !vendedor.whatsapp) continue;
+
+      let msg = `*Kogna Revenue OS - Coaching Semanal*\nOlá ${vendedor.nome}! Aqui estão seus insights de desempenho desta semana:\n\n`;
+      data.insights.forEach(i => {
+        msg += `💡 ${i.message}\n\n`;
+      });
+      msg += `Continue acelerando as vendas e conte com a Kogna para otimizar seus contatos! 🚀`;
+
+      // Encontrar uma instância da organização para enviar
+      const instRes = await pool.query("SELECT instance_name FROM whatsapp_instances WHERE organization_id = $1 AND status = 'CONNECTED' LIMIT 1", [data.orgId]);
+      if (instRes.rows.length > 0) {
+        const instanceName = instRes.rows[0].instance_name;
+        // Enviar via Evolution API
+        const url = `${EVOLUTION_API_URL}/message/sendText/${instanceName}`;
+        await fetch(url, {
+          method: "POST",
+          headers: { apikey: EVOLUTION_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            number: vendedor.whatsapp,
+            text: msg
+          })
+        });
+
+        // Marcar como lido/enviado
+        const ids = data.insights.map(i => i.id);
+        await pool.query("UPDATE vendedor_insights SET is_sent = TRUE WHERE id = ANY($1)", [ids]);
+        log(`[CRON] Relatório semanal enviado com sucesso ao vendedor ${vendedor.nome}`);
+      }
+    }
+  } catch (e) {
+    log(`[CRON ERROR] Relatório semanal: ${e.message}`);
+  }
+});
+
+// // DEBUG ENDPOINT: Dispara relatório semanal (Apenas para dev/test)
+app.get("/api/vendedores/debug-report", verifyAdmin, async (req, res) => {
+  try {
+    const orgId = req.query.orgId || "09a74aa9-9d7a-428a-ba01-71b3e9a59cf6"; // Padrão ou query
+
+    // Obter todos os vendedores da org
+    const vendRes = await pool.query("SELECT id, nome, whatsapp FROM vendedores WHERE organization_id = $1", [orgId]);
+    if (vendRes.rows.length === 0) return res.json({ msg: "Sem vendedores" });
+
+    // Achar uma instância da org para enviar
+    const instRes = await pool.query("SELECT instance_name FROM whatsapp_instances WHERE organization_id = $1 AND status = 'CONNECTED' LIMIT 1", [orgId]);
+    const instanceName = instRes.rows[0]?.instance_name;
+
+    for (const vendedor of vendRes.rows) {
+      if (!vendedor.whatsapp) continue;
+
+      let msg = `*Kogna Revenue OS - Coaching Semanal*\nOlá ${vendedor.nome}! Aqui estão seus insights de desempenho (TESTE DEBUG):\n\n`;
+      msg += `💡 Seu tempo de resposta está excelente.\n\n`;
+      msg += `Continue acelerando as vendas e conte com a Kogna para otimizar seus contatos! 🚀`;
+
+      if (instanceName) {
+        // Enviar teste via Evolution API
+        const url = `${EVOLUTION_API_URL}/message/sendText/${instanceName}`;
+        await fetch(url, {
+          method: "POST",
+          headers: { apikey: EVOLUTION_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ number: vendedor.whatsapp, text: msg })
+        });
+        log(`[DEBUG] Relatório de teste enviado ao vendedor ${vendedor.nome}`);
+      }
+    }
+    res.json({ success: true, instanceName, vendedores: vendRes.rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PATCH /api/leads/:id/status - Update lead status
 app.patch("/api/leads/:id/status", verifyJWT, async (req, res) => {
   const { id } = req.params;
@@ -5195,6 +5365,9 @@ app.patch("/api/leads/:id/status", verifyJWT, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Lead not found" });
     }
+
+    // AI Coaching Hook (não bloqueia a response)
+    generateCoachingInsight(id, orgId, status).catch(e => log("Insight hook error: " + e.message));
 
     const row = result.rows[0];
     const updatedLead = {
@@ -6394,6 +6567,157 @@ async function getFreeSlots(vendedorId, dateStr) {
   }
   return slots;
 }
+
+// ─── REVENUE OS: COACHING DE VENDEDORES ───────────────────
+
+/**
+ * Analisa a performance do vendedor quando um lead muda de status
+ * Foco principal: Tempo de resposta para leads quentes que foram perdidos
+ */
+const analyzeVendedorPerformance = async (leadId, newStatus, orgId) => {
+  try {
+    // Só analisa se o novo status for de perda/descarte
+    const lostStatuses = ['perdido', 'lost', 'descartado', 'unqualified'];
+    if (!lostStatuses.includes(newStatus.toLowerCase())) return;
+
+    // Busca dados do lead
+    const leadRes = await pool.query(
+      `SELECT assigned_to, intent_label, last_ia_briefing_at 
+       FROM leads WHERE id = $1 AND organization_id = $2`,
+      [leadId, orgId]
+    );
+
+    if (leadRes.rows.length === 0) return;
+    const lead = leadRes.rows[0];
+
+    // Só avalia leads que tinham intenção alta e estavam com um vendedor
+    if (!lead.assigned_to) return;
+    if (lead.intent_label !== 'HOT' && lead.intent_label !== 'CRITICAL') return;
+    if (!lead.last_ia_briefing_at) return;
+
+    // Busca a primeira mensagem do vendedor (owner) APÓS o Handoff
+    const msgRes = await pool.query(
+      `SELECT created_at FROM chat_messages 
+       WHERE lead_id = $1 AND role = 'owner' AND created_at > $2
+       ORDER BY created_at ASC LIMIT 1`,
+      [leadId, lead.last_ia_briefing_at]
+    );
+
+    let tempoRespostaHoras = 0;
+
+    if (msgRes.rows.length === 0) {
+      // Vendedor nunca respondeu
+      const horasDesdeHandoff = (new Date() - new Date(lead.last_ia_briefing_at)) / (1000 * 60 * 60);
+      tempoRespostaHoras = Math.round(horasDesdeHandoff);
+    } else {
+      // Calculo do tempo de resposta real
+      const firstReply = msgRes.rows[0].created_at;
+      tempoRespostaHoras = Math.round((new Date(firstReply) - new Date(lead.last_ia_briefing_at)) / (1000 * 60 * 60));
+    }
+
+    // Se demorou mais de 2 horas para um lead quente que foi perdido, gera o insight
+    if (tempoRespostaHoras >= 2) {
+      const msg = tempoRespostaHoras > 24
+        ? `Você demorou mais de 1 dia para responder este lead quente — padrão de perda identificado.`
+        : `Você demorou ${tempoRespostaHoras}h para responder este lead quente — padrão de perda identificado.`;
+
+      await pool.query(
+        `INSERT INTO vendedor_insights (vendedor_id, organization_id, lead_id, insight_type, message)
+         VALUES ($1, $2, $3, 'delay', $4)`,
+        [lead.assigned_to, orgId, leadId, msg]
+      );
+      log(`[COACHING] Insight gerado para vendedor ${lead.assigned_to}: ${msg}`);
+    }
+
+  } catch (err) {
+    log(`[COACHING] Erro na análise de performance: ${err.message}`);
+  }
+};
+
+const generateWeeklyCoachingReports = async (orgId) => {
+  try {
+    // 1. Busca todos os insights não enviados da organização
+    const insightsRes = await pool.query(
+      `SELECT i.*, v.nome, v.whatsapp, l.name as lead_name
+       FROM vendedor_insights i
+       JOIN vendedores v ON i.vendedor_id = v.id
+       LEFT JOIN leads l ON i.lead_id = l.id
+       WHERE i.is_sent = FALSE AND i.organization_id = $1 AND v.ativo = TRUE 
+       AND v.whatsapp IS NOT NULL AND v.whatsapp != ''
+       ORDER BY i.vendedor_id, i.created_at DESC`,
+      [orgId]
+    );
+
+    if (insightsRes.rows.length === 0) return 0;
+
+    // 2. Agrupa por vendedor
+    const porVendedor = {};
+    for (const row of insightsRes.rows) {
+      if (!porVendedor[row.vendedor_id]) {
+        porVendedor[row.vendedor_id] = { info: row, insights: [] };
+      }
+      porVendedor[row.vendedor_id].insights.push(row);
+    }
+
+    // 3. Busca instância Evolution API da org
+    const instRes = await pool.query(
+      `SELECT instance_name FROM whatsapp_instances WHERE organization_id = $1 AND status = 'open' LIMIT 1`,
+      [orgId]
+    );
+    if (instRes.rows.length === 0) return 0;
+    const instanceName = instRes.rows[0].instance_name;
+
+    let enviados = 0;
+    const evolutionApiUrl = process.env.EVOLUTION_API_URL || "https://evo.kogna.co";
+    const evolutionApiKey = process.env.EVOLUTION_API_KEY || "";
+
+    // 4. Monta e envia as mensagens
+    for (const vid in porVendedor) {
+      const data = porVendedor[vid];
+      const items = data.insights.map(i => `- Lead ${i.lead_name || 'Desconhecido'}: ${i.message}`).join('\\n');
+
+      const text = `🤖 *Kogna Revenue OS: Relatório de Coaching*\\nOlá ${data.info.nome.split(' ')[0]}! Aqui estão seus insights da semana:\\n\\n📉 *Pontos de Atenção:*\\n${items}\\n\\nVamos acelerar essa conversão na próxima semana! 🚀`;
+
+      let wpp = data.info.whatsapp.replace(/\\D/g, '');
+      if (!wpp.startsWith('55')) wpp = '55' + wpp;
+
+      try {
+        const resp = await fetch(`${evolutionApiUrl}/message/sendText/${instanceName}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "apikey": evolutionApiKey },
+          body: JSON.stringify({ number: wpp, text: text })
+        });
+
+        if (resp.ok) {
+          // Marca como enviados
+          const ids = data.insights.map(i => i.id);
+          await pool.query(`UPDATE vendedor_insights SET is_sent = TRUE WHERE id = ANY($1)`, [ids]);
+          enviados++;
+        }
+      } catch (e) {
+        log(`[COACHING] Falha envio p/ ${wpp}: ${e.message}`);
+      }
+    }
+
+    return enviados;
+  } catch (err) {
+    log(`[COACHING] Erro no envio semanal: ${err.message}`);
+    return 0;
+  }
+};
+
+// Endpoint p/ disparar o envio (pode ser chamado por um cron)
+app.post("/api/coaching/trigger-weekly-report", verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getOrgId(req);
+    if (!orgId) return res.status(401).json({ error: "Unauthorized" });
+
+    const enviados = await generateWeeklyCoachingReports(orgId);
+    res.json({ success: true, enviados });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ─── VENDEDORES CRUD ──────────────────────────────────────
 

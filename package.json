@@ -32,6 +32,7 @@
         "lucide-react": "^0.292.0",
         "mercadopago": "^2.12.0",
         "multer": "^2.0.2",
+        "node-cron": "^4.2.1",
         "node-fetch": "^2.7.0",
         "openai": "^6.22.0",
         "pdf-parse": "^2.4.5",
