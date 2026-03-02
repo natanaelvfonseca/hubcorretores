@@ -84,35 +84,71 @@ export function Vendedores() {
     const addVendedor = async () => {
         if (!newV.nome || !newV.email) return;
         setLoading(true);
-        const res = await fetch(`${API_URL}/vendedores`, { method: 'POST', headers: h(), body: JSON.stringify(newV) });
-        if (res.ok) {
-            await fetchVendedores();
-            setNewV({ nome: '', email: '', whatsapp: '', porcentagem: 50 });
-            setShowAddForm(false);
-            showToast('Vendedor adicionado', '', 'success');
+        try {
+            const res = await fetch(`${API_URL}/vendedores`, {
+                method: 'POST', headers: h(), body: JSON.stringify(newV)
+            });
+            if (res.ok) {
+                await fetchVendedores();
+                setNewV({ nome: '', email: '', whatsapp: '', porcentagem: 50 });
+                setShowAddForm(false);
+                showToast('Sucesso', 'Vendedor adicionado com sucesso', 'success');
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showToast('Erro', err.error || `Erro ao salvar (${res.status})`, 'error');
+            }
+        } catch (e) {
+            console.error('[addVendedor]', e);
+            showToast('Erro', 'Falha na conexão com o servidor', 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     // Toggle ativo
     const toggleAtivo = async (id: string) => {
-        const res = await fetch(`${API_URL}/vendedores/${id}/toggle-ativo`, { method: 'PATCH', headers: h() });
-        if (res.ok) await fetchVendedores();
+        try {
+            const res = await fetch(`${API_URL}/vendedores/${id}/toggle-ativo`, { method: 'PATCH', headers: h() });
+            if (res.ok) {
+                await fetchVendedores();
+            } else {
+                const err = await res.json().catch(() => ({}));
+                showToast('Erro', err.error || 'Não foi possível alterar o status', 'error');
+            }
+        } catch (e) {
+            console.error('[toggleAtivo]', e);
+            showToast('Erro', 'Falha na conexão', 'error');
+        }
     };
 
     // Delete vendedor
     const deleteVendedor = async (id: string) => {
         if (!confirm('Remover este vendedor?')) return;
-        const res = await fetch(`${API_URL}/vendedores/${id}`, { method: 'DELETE', headers: h() });
-        if (res.ok) { await fetchVendedores(); if (selectedId === id) setSelectedId(null); }
+        try {
+            const res = await fetch(`${API_URL}/vendedores/${id}`, { method: 'DELETE', headers: h() });
+            if (res.ok) {
+                await fetchVendedores();
+                if (selectedId === id) setSelectedId(null);
+                showToast('Removido', 'Vendedor removido', 'success');
+            } else {
+                showToast('Erro', 'Não foi possível remover', 'error');
+            }
+        } catch (e) {
+            console.error('[deleteVendedor]', e);
+            showToast('Erro', 'Falha na conexão', 'error');
+        }
     };
 
     // Update porcentagem inline
     const updatePorcentagem = async (id: string, val: number) => {
-        await fetch(`${API_URL}/vendedores/${id}`, {
-            method: 'PATCH', headers: h(), body: JSON.stringify({ porcentagem: val })
-        });
-        await fetchVendedores();
+        try {
+            await fetch(`${API_URL}/vendedores/${id}`, {
+                method: 'PATCH', headers: h(), body: JSON.stringify({ porcentagem: val })
+            });
+            await fetchVendedores();
+        } catch (e) {
+            console.error('[updatePorcentagem]', e);
+        }
     };
 
     // Apply preset
@@ -128,41 +164,60 @@ export function Vendedores() {
     const addHours = async () => {
         if (!selectedId || selectedDias.length === 0) return;
         setLoading(true);
-        await Promise.all(selectedDias.map(dia =>
-            fetch(`${API_URL}/vendedores/${selectedId}/disponibilidade`, {
-                method: 'POST', headers: h(),
-                body: JSON.stringify({ diaSemana: dia, horaInicio: qHoraInicio, horaFim: qHoraFim, intervalo: qIntervalo })
-            })
-        ));
-        await fetchDetail(selectedId);
-        setSelectedDias([]);
-        setShowHoursForm(false);
-        showToast('Horários salvos', `${selectedDias.length} dia(s) adicionados`, 'success');
-        setLoading(false);
+        try {
+            await Promise.all(selectedDias.map(dia =>
+                fetch(`${API_URL}/vendedores/${selectedId}/disponibilidade`, {
+                    method: 'POST', headers: h(),
+                    body: JSON.stringify({ diaSemana: dia, horaInicio: qHoraInicio, horaFim: qHoraFim, intervalo: qIntervalo })
+                })
+            ));
+            await fetchDetail(selectedId);
+            setSelectedDias([]);
+            setShowHoursForm(false);
+            showToast('Horários salvos', `${selectedDias.length} dia(s) adicionados`, 'success');
+        } catch (e) {
+            console.error('[addHours]', e);
+            showToast('Erro', 'Falha ao salvar horários', 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const deleteDisp = async (dispId: string) => {
-        await fetch(`${API_URL}/disponibilidade/${dispId}`, { method: 'DELETE', headers: h() });
-        if (selectedId) fetchDetail(selectedId);
+        try {
+            await fetch(`${API_URL}/disponibilidade/${dispId}`, { method: 'DELETE', headers: h() });
+            if (selectedId) fetchDetail(selectedId);
+        } catch (e) { console.error('[deleteDisp]', e); }
     };
 
     const addBloqueio = async () => {
         if (!selectedId || !newBloqueio.dataInicio || !newBloqueio.dataFim) return;
         setLoading(true);
-        const res = await fetch(`${API_URL}/vendedores/${selectedId}/bloqueios`, {
-            method: 'POST', headers: h(), body: JSON.stringify(newBloqueio)
-        });
-        if (res.ok) {
-            await fetchDetail(selectedId);
-            setShowAddBloqueio(false);
-            setNewBloqueio({ dataInicio: '', dataFim: '', motivo: '' });
+        try {
+            const res = await fetch(`${API_URL}/vendedores/${selectedId}/bloqueios`, {
+                method: 'POST', headers: h(), body: JSON.stringify(newBloqueio)
+            });
+            if (res.ok) {
+                await fetchDetail(selectedId);
+                setShowAddBloqueio(false);
+                setNewBloqueio({ dataInicio: '', dataFim: '', motivo: '' });
+                showToast('Bloqueio criado', '', 'success');
+            } else {
+                showToast('Erro', 'Não foi possível criar o bloqueio', 'error');
+            }
+        } catch (e) {
+            console.error('[addBloqueio]', e);
+            showToast('Erro', 'Falha na conexão', 'error');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const deleteBloqueio = async (bloqId: string) => {
-        await fetch(`${API_URL}/bloqueios/${bloqId}`, { method: 'DELETE', headers: h() });
-        if (selectedId) fetchDetail(selectedId);
+        try {
+            await fetch(`${API_URL}/bloqueios/${bloqId}`, { method: 'DELETE', headers: h() });
+            if (selectedId) fetchDetail(selectedId);
+        } catch (e) { console.error('[deleteBloqueio]', e); }
     };
 
     const totalPct = vendedores.filter(v => v.ativo).reduce((s, v) => s + v.porcentagem, 0);
