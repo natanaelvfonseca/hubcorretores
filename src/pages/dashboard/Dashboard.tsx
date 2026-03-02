@@ -76,11 +76,10 @@ export function Dashboard() {
     const { data: urgency, loading: urgencyLoading } = useAPI<UrgencyData>('/api/dashboard/urgency', token);
     const { data: winloss, loading: winlossLoading } = useAPI<WinLossData>('/api/dashboard/winloss', token);
 
-    const chartData = metrics?.ai.chart?.some(d => d.volume > 0) ? metrics.ai.chart : [
-        { name: 'Seg', volume: 3 }, { name: 'Ter', volume: 7 }, { name: 'Qua', volume: 5 },
-        { name: 'Qui', volume: 10 }, { name: 'Sex', volume: 6 }, { name: 'Sab', volume: 4 }, { name: 'Dom', volume: 2 },
+    const chartData = metrics?.ai.chart ?? [
+        { name: 'Seg', volume: 0 }, { name: 'Ter', volume: 0 }, { name: 'Qua', volume: 0 },
+        { name: 'Qui', volume: 0 }, { name: 'Sex', volume: 0 }, { name: 'Sab', volume: 0 }, { name: 'Dom', volume: 0 },
     ];
-    const isPlaceholder = !metrics?.ai.chart?.some(d => d.volume > 0);
 
     const urgencyLeads = urgency ? urgency[urgencyTab] : [];
     const urgencyCounts = urgency ? {
@@ -321,21 +320,20 @@ export function Dashboard() {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                     <h2 className="text-base font-display font-bold text-text-primary mb-1">Volume de Atendimentos IA</h2>
                     <p className="text-xs text-text-secondary mb-4">Interações nos últimos {selectedDays} dias</p>
-                    {isPlaceholder && <p className="text-[10px] text-text-muted text-center italic opacity-60 mb-1">Sem dados reais — gráfico ilustrativo</p>}
                     <div className="h-[220px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#F5793B" stopOpacity={isPlaceholder ? 0.1 : 0.4} />
+                                        <stop offset="5%" stopColor="#F5793B" stopOpacity={0.4} />
                                         <stop offset="95%" stopColor="#F5793B" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
                                 <XAxis dataKey="name" stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} dy={8} />
                                 <YAxis stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} />
-                                <Tooltip contentStyle={{ backgroundColor: '#18181B', borderColor: '#27272A', borderRadius: '12px' }} itemStyle={{ color: '#fff', fontSize: '13px' }} formatter={(v: any) => isPlaceholder ? ['—', 'Volume'] : [v, 'Volume']} cursor={{ stroke: '#F5793B', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                                <Area type="monotone" dataKey="volume" stroke="#F5793B" strokeWidth={isPlaceholder ? 1.5 : 2.5} strokeOpacity={isPlaceholder ? 0.4 : 1} fillOpacity={1} fill="url(#colorVol)" activeDot={isPlaceholder ? false : { r: 5, strokeWidth: 0, fill: '#fff' }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#18181B', borderColor: '#27272A', borderRadius: '12px' }} itemStyle={{ color: '#fff', fontSize: '13px' }} formatter={(v: number) => [v, 'Volume']} cursor={{ stroke: '#F5793B', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                                <Area type="monotone" dataKey="volume" stroke="#F5793B" strokeWidth={2.5} fillOpacity={1} fill="url(#colorVol)" activeDot={{ r: 5, strokeWidth: 0, fill: '#fff' }} />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
