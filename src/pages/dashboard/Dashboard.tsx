@@ -1,7 +1,6 @@
 import {
     Clock, MessageSquare, Calendar, DollarSign, CheckCircle, Users,
-    Flame, ArrowRight, AlertTriangle, Target, Zap,
-    BarChart3, ThumbsUp, ThumbsDown, Timer
+    Flame, ArrowRight, AlertTriangle, Target, Zap, Timer
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -29,11 +28,6 @@ interface UrgencyLead {
     score: number; intentLabel: 'HOT' | 'WARM' | 'COLD'; briefing?: string; hours_idle: number;
 }
 interface UrgencyData { now: UrgencyLead[]; today: UrgencyLead[]; at_risk: UrgencyLead[]; }
-
-interface WinLossData {
-    win_patterns: string[]; loss_patterns: string[];
-    sample_count: number; insufficient_data?: boolean; last_updated?: string;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,12 +68,15 @@ export function Dashboard() {
     const { data: forecast, loading: forecastLoading } = useAPI<ForecastData>('/api/dashboard/forecast', token);
     const { data: velocity, loading: velocityLoading } = useAPI<VelocityStage[]>('/api/dashboard/velocity', token);
     const { data: urgency, loading: urgencyLoading } = useAPI<UrgencyData>('/api/dashboard/urgency', token);
-    const { data: winloss, loading: winlossLoading } = useAPI<WinLossData>('/api/dashboard/winloss', token);
 
-    const chartData = metrics?.ai.chart ?? [
-        { name: 'Seg', volume: 0 }, { name: 'Ter', volume: 0 }, { name: 'Qua', volume: 0 },
-        { name: 'Qui', volume: 0 }, { name: 'Sex', volume: 0 }, { name: 'Sab', volume: 0 }, { name: 'Dom', volume: 0 },
-    ];
+    // Chart data — use API data; zero-values get a tiny baseline so the wave renders visibly
+    const rawChart = metrics?.ai.chart ?? [];
+    const MIN_BASELINE = 0.3; // invisible at scale, but lets recharts draw the curve
+    const paddedChartData = rawChart.map(d => ({
+        name: d.name,
+        real: d.volume,                                             // used in tooltip
+        volume: d.volume > 0 ? d.volume : MIN_BASELINE,            // used by Area (never truly 0)
+    }));
 
     const urgencyLeads = urgency ? urgency[urgencyTab] : [];
     const urgencyCounts = urgency ? {
@@ -96,7 +93,7 @@ export function Dashboard() {
                 <div>
                     <h1 className="text-2xl font-bold text-text-primary">Olá {user?.name?.split(' ')[0] || 'Gestor'}!</h1>
                     <p className="text-text-secondary mt-1 text-sm">
-                        Centro de Comando Revenue —{' '}
+                        Centro de Comando de Receita —{' '}
                         <span className="relative inline-block">
                             <span className="absolute inset-0 bg-primary/20 blur-md rounded-full animate-pulse" />
                             <span className="relative font-semibold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
@@ -117,7 +114,7 @@ export function Dashboard() {
                 </select>
             </div>
 
-            {/* ── KPI Cards (3) ── */}
+            {/* ── KPI Cards ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
                     { icon: DollarSign, color: 'primary', label: 'Potenciais Negócios', value: fmt(metrics?.pipeline.total_value || 0), sub: `${metrics?.pipeline.total_leads || 0} leads` },
@@ -134,16 +131,16 @@ export function Dashboard() {
                 ))}
             </div>
 
-            {/* ── Forecast + Velocity (2 columns) ── */}
+            {/* ── Previsão de Receita + Velocity ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                {/* 💰 Forecast de Receita */}
+                {/* 💰 Previsão de Receita */}
                 <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/5 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none" />
                     <div className="flex items-center gap-3 mb-5">
                         <div className="p-2 bg-green-500/10 rounded-lg"><Target size={20} className="text-green-400" /></div>
                         <div>
-                            <h2 className="text-base font-bold text-text-primary">Forecast de Receita</h2>
+                            <h2 className="text-base font-bold text-text-primary">Previsão de Receita</h2>
                             <p className="text-xs text-text-secondary">Projeção ponderada por intenção de compra</p>
                         </div>
                     </div>
@@ -187,7 +184,7 @@ export function Dashboard() {
                             )}
                         </div>
                     ) : (
-                        <EmptyState icon={Target} text="Adicione valor aos leads para ver o forecast de receita" />
+                        <EmptyState icon={Target} text="Adicione valor aos leads para ver a previsão de receita" />
                     )}
                 </div>
 
@@ -230,7 +227,7 @@ export function Dashboard() {
                 </div>
             </div>
 
-            {/* ── Lead Heat Map (Urgência) ── */}
+            {/* ── Lead Heat Map ── */}
             <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-orange-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 <div className="flex items-center justify-between mb-5">
@@ -312,102 +309,54 @@ export function Dashboard() {
                 )}
             </div>
 
-            {/* ── AI Volume Chart + Win/Loss (2 columns) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                {/* Volume Chart */}
-                <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                    <h2 className="text-base font-display font-bold text-text-primary mb-1">Volume de Atendimentos IA</h2>
-                    <p className="text-xs text-text-secondary mb-4">Interações nos últimos {selectedDays} dias</p>
-                    <div className="h-[220px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#F5793B" stopOpacity={0.4} />
-                                        <stop offset="95%" stopColor="#F5793B" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
-                                <XAxis dataKey="name" stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} dy={8} />
-                                <YAxis stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} />
-                                <Tooltip contentStyle={{ backgroundColor: '#18181B', borderColor: '#27272A', borderRadius: '12px' }} itemStyle={{ color: '#fff', fontSize: '13px' }} formatter={(v: number) => [v, 'Volume']} cursor={{ stroke: '#F5793B', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                                <Area type="monotone" dataKey="volume" stroke="#F5793B" strokeWidth={2.5} fillOpacity={1} fill="url(#colorVol)" activeDot={{ r: 5, strokeWidth: 0, fill: '#fff' }} />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/40">
-                        {[
-                            { icon: MessageSquare, label: 'Mensagens', value: (metricsLoading ? '...' : (metrics?.ai.total_messages || 0).toLocaleString()), color: 'text-primary' },
-                            { icon: Users, label: 'Chats Ativos', value: metricsLoading ? '...' : (metrics?.ai.active_chats || 0), color: 'text-blue-400' },
-                            { icon: Clock, label: 'Horas Salvas', value: metricsLoading ? '...' : (metrics?.ai.saved_hours || 0), color: 'text-purple-400' },
-                        ].map(({ icon: Icon, label, value, color }) => (
-                            <div key={label} className="text-center">
-                                <Icon size={14} className={`${color} mx-auto mb-1`} />
-                                <p className="text-sm font-bold text-text-primary">{value}</p>
-                                <p className="text-[10px] text-text-muted">{label}</p>
-                            </div>
-                        ))}
-                    </div>
+            {/* ── Volume de Atendimentos IA (full width) ── */}
+            <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <h2 className="text-base font-display font-bold text-text-primary mb-1">Volume de Atendimentos IA</h2>
+                <p className="text-xs text-text-secondary mb-4">Interações nos últimos {selectedDays} dias</p>
+                <div className="h-[240px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={paddedChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#F5793B" stopOpacity={0.45} />
+                                    <stop offset="95%" stopColor="#F5793B" stopOpacity={0.02} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#27272A" vertical={false} />
+                            <XAxis dataKey="name" stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} dy={8} interval={0} />
+                            <YAxis stroke="#52525B" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v: number) => String(Math.round(v))} />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#18181B', borderColor: '#27272A', borderRadius: '12px' }}
+                                itemStyle={{ color: '#fff', fontSize: '13px' }}
+                                formatter={(_v: number, _n: string, props: { payload?: { real: number } }) => [props.payload?.real ?? 0, 'Volume']}
+                                cursor={{ stroke: '#F5793B', strokeWidth: 1, strokeDasharray: '5 5' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="volume"
+                                stroke="#F5793B"
+                                strokeWidth={2.5}
+                                fillOpacity={1}
+                                fill="url(#colorVol)"
+                                dot={false}
+                                activeDot={{ r: 5, strokeWidth: 0, fill: '#fff' }}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
                 </div>
-
-                {/* 🧠 Win/Loss Intelligence */}
-                <div className="bg-surface border border-border/50 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none" />
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className="p-2 bg-purple-500/10 rounded-lg"><BarChart3 size={20} className="text-purple-400" /></div>
-                        <div>
-                            <h2 className="text-base font-bold text-text-primary">Win/Loss Intelligence</h2>
-                            <p className="text-xs text-text-secondary">Padrões de vitória e derrota (IA)</p>
+                <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-border/40">
+                    {[
+                        { icon: MessageSquare, label: 'Mensagens', value: (metricsLoading ? '...' : (metrics?.ai.total_messages || 0).toLocaleString()), color: 'text-primary' },
+                        { icon: Users, label: 'Chats Ativos', value: metricsLoading ? '...' : (metrics?.ai.active_chats || 0), color: 'text-blue-400' },
+                        { icon: Clock, label: 'Horas Salvas', value: metricsLoading ? '...' : (metrics?.ai.saved_hours || 0), color: 'text-purple-400' },
+                    ].map(({ icon: Icon, label, value, color }) => (
+                        <div key={label} className="text-center">
+                            <Icon size={14} className={`${color} mx-auto mb-1`} />
+                            <p className="text-sm font-bold text-text-primary">{value}</p>
+                            <p className="text-[10px] text-text-muted">{label}</p>
                         </div>
-                    </div>
-
-                    {winlossLoading ? (
-                        <div className="space-y-3">{[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-8 bg-white/5 rounded animate-pulse" />)}</div>
-                    ) : winloss?.insufficient_data || (winloss?.win_patterns?.length === 0 && winloss?.loss_patterns?.length === 0) ? (
-                        <EmptyState icon={BarChart3} text={`Ainda sem dados suficientes. Necessário pelo menos 3 leads ganhos ou perdidos com briefing da IA. (${winloss?.sample_count || 0} encontrado${winloss?.sample_count === 1 ? '' : 's'})`} />
-                    ) : winloss ? (
-                        <div className="space-y-4">
-                            {winloss.win_patterns.length > 0 && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <ThumbsUp size={13} className="text-green-400" />
-                                        <p className="text-xs font-bold text-green-400 uppercase tracking-wide">Padrões de Vitória</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {winloss.win_patterns.map((p, i) => (
-                                            <div key={i} className="flex items-start gap-2 p-2.5 bg-green-500/5 border border-green-500/15 rounded-xl">
-                                                <span className="text-green-500 text-xs font-bold mt-0.5 flex-shrink-0">{i + 1}.</span>
-                                                <p className="text-xs text-text-secondary leading-relaxed">{p}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            {winloss.loss_patterns.length > 0 && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <ThumbsDown size={13} className="text-red-400" />
-                                        <p className="text-xs font-bold text-red-400 uppercase tracking-wide">Padrões de Derrota</p>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {winloss.loss_patterns.map((p, i) => (
-                                            <div key={i} className="flex items-start gap-2 p-2.5 bg-red-500/5 border border-red-500/15 rounded-xl">
-                                                <span className="text-red-500 text-xs font-bold mt-0.5 flex-shrink-0">{i + 1}.</span>
-                                                <p className="text-xs text-text-secondary leading-relaxed">{p}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            {winloss.last_updated && (
-                                <p className="text-[10px] text-text-muted text-right">
-                                    Análise de {winloss.sample_count} negócios · Atualizado a cada 24h
-                                </p>
-                            )}
-                        </div>
-                    ) : null}
+                    ))}
                 </div>
             </div>
 
