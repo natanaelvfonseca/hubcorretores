@@ -22,10 +22,10 @@ import { useAuth } from '../../context/AuthContext';
 
 const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: MessageSquare, label: 'Conexão WhatsApp', path: '/whatsapp' },
-    { icon: BrainCircuit, label: 'Minhas IAs', path: '/brain' },
-    { icon: MessagesSquare, label: 'Live Chat', path: '/live-chat' },
     { icon: Users, label: 'Funil de Vendas', path: '/crm' },
+    { icon: BrainCircuit, label: 'Agentes de IA', path: '/brain' },
+    { icon: MessageSquare, label: 'Canais de Comunicação', path: '/whatsapp' },
+    { icon: MessagesSquare, label: 'Live Chat', path: '/live-chat' },
     { icon: UserCheck, label: 'Clientes', path: '/clients' },
     { icon: RotateCcw, label: 'Recuperação', path: '/recovery' },
     { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
