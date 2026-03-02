@@ -13,6 +13,8 @@ interface DbColumn {
     is_system?: boolean;
 }
 
+interface Vendedor { id: string; nome: string; }
+
 // Legacy status-to-title mapping for leads created before column integration
 const LEGACY_STATUS_MAP: Record<string, string> = {
     'new': 'Novos Leads',
@@ -31,6 +33,7 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [columns, setColumns] = useState<DbColumn[]>([]);
+    const [vendedores, setVendedores] = useState<Vendedor[]>([]);
     const navigate = useNavigate();
 
     const API_URL = '/api';
@@ -40,48 +43,38 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     });
 
-    // Get the column title that a lead belongs to
     const getLeadColumnTitle = (lead: Lead): string => {
-        // First check if the status exactly matches a column title
         const directMatch = columns.find(c => c.title === lead.status);
         if (directMatch) return directMatch.title;
-
-        // Check legacy status mapping
         const legacyTitle = LEGACY_STATUS_MAP[lead.status];
         if (legacyTitle) {
             const legacyMatch = columns.find(c => c.title === legacyTitle);
             if (legacyMatch) return legacyMatch.title;
         }
-
-        // Default to first column
         return columns.length > 0 ? columns[0].title : '';
     };
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [leadsRes, colsRes] = await Promise.all([
+            const [leadsRes, colsRes, vendRes] = await Promise.all([
                 fetch(`${API_URL}/leads`, { headers: authHeaders() }),
-                fetch(`${API_URL}/settings/columns`, { headers: authHeaders() })
+                fetch(`${API_URL}/settings/columns`, { headers: authHeaders() }),
+                fetch(`${API_URL}/vendedores`, { headers: authHeaders() }),
             ]);
 
             if (colsRes.ok) {
                 const dbColumns = await colsRes.json();
-                if (dbColumns && dbColumns.length > 0) {
-                    setColumns(dbColumns);
-                }
+                if (dbColumns && dbColumns.length > 0) setColumns(dbColumns);
             }
-
             if (leadsRes.ok) {
                 const data = await leadsRes.json();
-                if (Array.isArray(data)) {
-                    setLeads(data);
-                } else {
-                    console.error("Leads data is not an array:", data);
-                    setLeads([]);
-                }
+                setLeads(Array.isArray(data) ? data : []);
             }
-
+            if (vendRes.ok) {
+                const vdata = await vendRes.json();
+                setVendedores(Array.isArray(vdata) ? vdata : []);
+            }
         } catch (e) {
             console.error("Error fetching data:", e);
         } finally {
@@ -89,9 +82,7 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, [refreshTrigger]);
+    useEffect(() => { fetchData(); }, [refreshTrigger]);
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, leadId: string) => {
         e.dataTransfer.setData('leadId', leadId);
@@ -106,16 +97,8 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     const handleDrop = async (e: React.DragEvent<HTMLDivElement>, columnTitle: string) => {
         e.preventDefault();
         const leadId = e.dataTransfer.getData('leadId');
-
         if (leadId) {
-            // Optimistically update the lead status to the column title
-            const updatedLeads = leads.map((lead) =>
-                lead.id === leadId
-                    ? { ...lead, status: columnTitle as LeadStatus }
-                    : lead
-            );
-            setLeads(updatedLeads);
-
+            setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: columnTitle as LeadStatus } : l));
             setSyncing(true);
             try {
                 await fetch(`${API_URL}/leads/${leadId}/status`, {
@@ -123,11 +106,30 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
                     headers: authHeaders(),
                     body: JSON.stringify({ status: columnTitle }),
                 });
+                // Refresh to get updated temperature
+                fetchData();
             } catch (error) {
                 console.error('Failed to update lead status:', error);
             } finally {
                 setTimeout(() => setSyncing(false), 500);
             }
+        }
+    };
+
+    const handleAssignVendedor = async (leadId: string, vendedorId: string | null) => {
+        try {
+            const res = await fetch(`${API_URL}/leads/${leadId}/assign`, {
+                method: 'PATCH',
+                headers: authHeaders(),
+                body: JSON.stringify({ vendedorId }),
+            });
+            if (res.ok) {
+                setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assignedTo: vendedorId } as any : l));
+                const vend = vendedores.find(v => v.id === vendedorId);
+                showToast(vend ? `Atribuído a ${vend.nome}` : 'Atribuição removida', '', 'success');
+            }
+        } catch (err) {
+            console.error('Failed to assign vendor:', err);
         }
     };
 
@@ -138,15 +140,12 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
                 method: 'DELETE',
                 headers: authHeaders(),
             });
-
             if (res.ok) {
                 setLeads(prev => prev.filter(lead => lead.id !== leadId));
             } else {
-                console.error("Failed to delete lead");
                 alert("Erro ao excluir lead. Tente novamente.");
             }
         } catch (error) {
-            console.error("Delete error:", error);
             alert("Erro de conexão ao excluir lead.");
         } finally {
             setSyncing(false);
@@ -155,33 +154,20 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
 
     const handleMarkAsClient = async (leadId: string) => {
         setSyncing(true);
-
         try {
-            const leadToUpdate = leads.find(l => l.id === leadId);
-            if (!leadToUpdate) return;
-
-            // Remove from Kanban optimistically
-            const url = `${API_URL}/leads/${leadId}/status`;
-            const body = { status: 'Cliente' };
-
-            const res = await fetch(url, {
+            const res = await fetch(`${API_URL}/leads/${leadId}/status`, {
                 method: 'PATCH',
                 headers: authHeaders(),
-                body: JSON.stringify(body),
+                body: JSON.stringify({ status: 'Cliente' }),
             });
-
             if (res.ok) {
                 setLeads(prev => prev.filter(l => l.id !== leadId));
                 showToast('Cliente fechado com sucesso', 'O negócio foi fechado e o lead movido para clientes.', 'success');
-
-                // Navigate after a short delay
-                setTimeout(() => {
-                    navigate('/clients');
-                }, 1500);
+                setTimeout(() => navigate('/clients'), 1500);
             } else {
                 fetchData();
             }
-        } catch (error: any) {
+        } catch {
             fetchData();
         } finally {
             setSyncing(false);
@@ -226,6 +212,8 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
                         onDeleteLead={handleDeleteLead}
                         onEditLead={onEditLead}
                         onMarkAsClient={handleMarkAsClient}
+                        onAssignVendedor={handleAssignVendedor}
+                        vendedores={vendedores}
                     />
                 </div>
             ))}

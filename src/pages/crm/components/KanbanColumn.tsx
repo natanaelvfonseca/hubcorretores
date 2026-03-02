@@ -3,6 +3,8 @@ import { KanbanCard } from './KanbanCard';
 import { KanbanColumn as KanbanColumnType } from '../types';
 import { Plus } from 'lucide-react';
 
+interface Vendedor { id: string; nome: string; }
+
 interface KanbanColumnProps {
     column: KanbanColumnType;
     onDrop: (e: React.DragEvent<HTMLDivElement>, status: string) => void;
@@ -11,17 +13,18 @@ interface KanbanColumnProps {
     onDeleteLead?: (leadId: string) => void;
     onEditLead?: (lead: any) => void;
     onMarkAsClient?: (leadId: string) => void;
+    onAssignVendedor?: (leadId: string, vendedorId: string | null) => void;
+    vendedores?: Vendedor[];
 }
 
-export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDeleteLead, onEditLead, onMarkAsClient }: KanbanColumnProps) {
+export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDeleteLead, onEditLead, onMarkAsClient, onAssignVendedor, vendedores }: KanbanColumnProps) {
     const columnRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(20);
 
     const totalValue = column.leads.reduce((sum, lead) => sum + lead.value, 0);
 
-    const formatValue = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
-    };
+    const formatValue = (value: number) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 
     const visibleLeads = column.leads.slice(0, visibleCount);
 
@@ -45,6 +48,8 @@ export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDelete
                         onDelete={onDeleteLead}
                         onEdit={onEditLead}
                         onMarkAsClient={onMarkAsClient}
+                        onAssignVendedor={onAssignVendedor}
+                        vendedores={vendedores}
                     />
                 ))}
                 {column.leads.length === 0 && (

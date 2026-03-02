@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Search, Paperclip, CheckCheck, X, Play, Pause } from 'lucide-react';
+import { Send, Search, Paperclip, CheckCheck, X, Play, Pause, UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 
@@ -64,6 +64,10 @@ export function LiveChat() {
     const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
     const [activeLeadScore, setActiveLeadScore] = useState<number>(0);
     const [activeLeadTemp, setActiveLeadTemp] = useState<string>("Frio");
+    const [activeLeadId, setActiveLeadId] = useState<string | null>(null);
+    const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
+    const [showTakeoverModal, setShowTakeoverModal] = useState(false);
+    const [selectedVendedorId, setSelectedVendedorId] = useState<string>('');
 
 
 
@@ -85,6 +89,7 @@ export function LiveChat() {
                         setIsChatPaused(data.isPaused);
                         setActiveLeadScore(data.leadScore || 0);
                         setActiveLeadTemp(data.leadTemperature || "Frio");
+                        setActiveLeadId(data.leadId || null);
                     }
                 }
             } catch (err) {
@@ -152,6 +157,43 @@ export function LiveChat() {
                 setNoInstance(true);
             });
     }, [user, token]);
+
+    // Fetch vendors for org
+    useEffect(() => {
+        if (!token) return;
+        fetch('/api/vendedores', { headers: { 'Authorization': `Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : [])
+            .then(data => setVendedores(Array.isArray(data) ? data : []))
+            .catch(() => { });
+    }, [token]);
+
+    // Handle takeover: pause AI + assign vendedor + update CRM lead
+    const handleTakeover = async () => {
+        if (!activeChat || !instanceName) return;
+        const jid = activeChat.remoteJid || activeChat.id;
+
+        // 1. Pause AI
+        if (currentAgentId && !isChatPaused) {
+            await fetch('/api/chats/toggle-pause', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ agentId: currentAgentId, remoteJid: jid })
+            }).catch(() => { });
+            setIsChatPaused(true);
+        }
+
+        // 2. Assign lead if vendedor selected and lead found
+        if (selectedVendedorId && activeLeadId) {
+            await fetch(`/api/leads/${activeLeadId}/assign`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ vendedorId: selectedVendedorId })
+            }).catch(() => { });
+        }
+
+        setShowTakeoverModal(false);
+        setSelectedVendedorId('');
+    };
 
     // --- 2. Fetch Chats (Polling) ---
     const fetchChats = useCallback(async () => {
@@ -854,304 +896,317 @@ export function LiveChat() {
     }
 
     return (
-        <div className="relative w-full h-full flex overflow-hidden bg-gray-50 dark:bg-[#0C0C0C] rounded-xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
+        <>
+            <div className="relative w-full h-full flex overflow-hidden bg-gray-50 dark:bg-[#0C0C0C] rounded-xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
 
 
-            <div className="flex-none w-[350px] min-w-[350px] bg-white dark:bg-[#121212] border-r border-gray-200 dark:border-[#2A2A2A] flex flex-col h-full z-10">
+                <div className="flex-none w-[350px] min-w-[350px] bg-white dark:bg-[#121212] border-r border-gray-200 dark:border-[#2A2A2A] flex flex-col h-full z-10">
 
-                <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-[#2A2A2A]">
-                    <h2 className="text-gray-900 dark:text-white font-medium pl-1">Conversas</h2>
-                </div>
+                    <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-[#2A2A2A]">
+                        <h2 className="text-gray-900 dark:text-white font-medium pl-1">Conversas</h2>
+                    </div>
 
-                {/* Search Bar */}
-                <div className="flex-none p-3 bg-white dark:bg-[#121212]">
-                    <div className="bg-gray-100 dark:bg-[#1F1F1F] rounded-lg flex items-center px-3 py-1.5 h-9">
-                        <Search size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
-                        <input
-                            type="text"
-                            placeholder="Pesquisar..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-transparent border-none outline-none text-gray-900 dark:text-white text-sm w-full placeholder-gray-500"
-                        />
-                        {searchQuery && (
-                            <X
-                                size={16}
-                                className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 ml-2"
-                                onClick={() => setSearchQuery('')}
+                    {/* Search Bar */}
+                    <div className="flex-none p-3 bg-white dark:bg-[#121212]">
+                        <div className="bg-gray-100 dark:bg-[#1F1F1F] rounded-lg flex items-center px-3 py-1.5 h-9">
+                            <Search size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
+                            <input
+                                type="text"
+                                placeholder="Pesquisar..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="bg-transparent border-none outline-none text-gray-900 dark:text-white text-sm w-full placeholder-gray-500"
                             />
+                            {searchQuery && (
+                                <X
+                                    size={16}
+                                    className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 ml-2"
+                                    onClick={() => setSearchQuery('')}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Chat List */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        {isLoadingChats && chats.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">Carregando conversas...</div>
+                        ) : (
+                            chats.filter(chat =>
+                                getDisplayName(chat).toLowerCase().includes(searchQuery.toLowerCase())
+                            ).map((chat) => (
+                                <div
+                                    key={chat.id || chat.remoteJid}
+                                    onClick={() => setActiveChat(chat)}
+                                    className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1F1F1F] transition-colors border-b border-gray-100 dark:border-[#1F1F1F] ${activeChat?.id === chat.id ? 'bg-gray-200 dark:bg-[#2A2A2A]' : ''}`}
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-gray-700 mr-3 flex-shrink-0 overflow-hidden">
+                                        {(chat.picture) ? (
+                                            <img src={chat.picture} alt={chat.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl font-bold bg-[#333]">
+                                                {getDisplayName(chat)[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-baseline mb-1">
+                                            <h3 className="text-gray-900 dark:text-white text-[16px] font-medium truncate font-display">{getDisplayName(chat)}</h3>
+                                            <span className="text-xs text-gray-500">{chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}</span>
+                                        </div>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-body">
+                                            {chat.lastMessage?.content || '...'}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>
 
-                {/* Chat List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {isLoadingChats && chats.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">Carregando conversas...</div>
-                    ) : (
-                        chats.filter(chat =>
-                            getDisplayName(chat).toLowerCase().includes(searchQuery.toLowerCase())
-                        ).map((chat) => (
-                            <div
-                                key={chat.id || chat.remoteJid}
-                                onClick={() => setActiveChat(chat)}
-                                className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1F1F1F] transition-colors border-b border-gray-100 dark:border-[#1F1F1F] ${activeChat?.id === chat.id ? 'bg-gray-200 dark:bg-[#2A2A2A]' : ''}`}
-                            >
-                                <div className="w-12 h-12 rounded-full bg-gray-700 mr-3 flex-shrink-0 overflow-hidden">
-                                    {(chat.picture) ? (
-                                        <img src={chat.picture} alt={chat.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl font-bold bg-[#333]">
-                                            {getDisplayName(chat)[0].toUpperCase()}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-baseline mb-1">
-                                        <h3 className="text-gray-900 dark:text-white text-[16px] font-medium truncate font-display">{getDisplayName(chat)}</h3>
-                                        <span className="text-xs text-gray-500">{chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}</span>
+                {/* Main Chat Area */}
+                <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-[#0C0C0C] relative h-full">
+                    {activeChat ? (
+                        <>
+                            {/* Chat Header */}
+                            <div className="flex-none h-[70px] px-4 flex items-center justify-between border-b border-gray-200 dark:border-[#2A2A2A] bg-gray-100 dark:bg-[#1F1F1F] z-10 shadow-sm">
+                                <div className="flex items-center gap-4">
+
+                                    <div>
+                                        <h2 className="text-gray-900 dark:text-white font-medium font-display">{getDisplayName(activeChat)}</h2>
+                                        {activeLeadTemp && (
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${activeLeadTemp.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                    activeLeadTemp.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
+                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                    }`}>
+                                                    {activeLeadTemp} {activeLeadScore > 0 ? `(${activeLeadScore}%)` : ''}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">online</span>
                                     </div>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-body">
-                                        {chat.lastMessage?.content || '...'}
-                                    </p>
                                 </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-
-            {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-[#0C0C0C] relative h-full">
-                {activeChat ? (
-                    <>
-                        {/* Chat Header */}
-                        <div className="flex-none h-[70px] px-4 flex items-center justify-between border-b border-gray-200 dark:border-[#2A2A2A] bg-gray-100 dark:bg-[#1F1F1F] z-10 shadow-sm">
-                            <div className="flex items-center gap-4">
-
-                                <div>
-                                    <h2 className="text-gray-900 dark:text-white font-medium font-display">{getDisplayName(activeChat)}</h2>
-                                    {activeLeadTemp && (
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${activeLeadTemp.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                activeLeadTemp.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
-                                                    'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                }`}>
-                                                {activeLeadTemp} {activeLeadScore > 0 ? `(${activeLeadScore}%)` : ''}
-                                            </span>
-                                        </div>
+                                <div className="flex gap-4 text-gray-500 dark:text-gray-400 items-center">
+                                    {/* Pause Button */}
+                                    {currentAgentId && (
+                                        <button
+                                            onClick={handleToggleChatPause}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isChatPaused
+                                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-[#2A2A2A] dark:border-[#333] dark:text-gray-300 dark:hover:bg-[#333]'
+                                                }`}
+                                            title={isChatPaused ? "IA Pausada nesta conversa" : "Pausar IA nesta conversa"}
+                                        >
+                                            {isChatPaused ? <Play size={16} /> : <Pause size={16} />}
+                                            {isChatPaused ? 'Retomar IA' : 'Pausar IA'}
+                                        </button>
                                     )}
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">online</span>
+
+                                    {/* Takeover Button */}
+                                    <button
+                                        onClick={() => setShowTakeoverModal(true)}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                                        title="Assumir conversa e atribuir vendedor"
+                                    >
+                                        <UserCheck size={16} />
+                                        Assumir
+                                    </button>
+
+                                    <Search size={20} className="cursor-pointer hover:text-gray-900 dark:hover:text-white" />
+
                                 </div>
                             </div>
-                            <div className="flex gap-4 text-gray-500 dark:text-gray-400 items-center">
-                                {/* Pause Button */}
-                                {currentAgentId && (
-                                    <button
-                                        onClick={handleToggleChatPause}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isChatPaused
-                                            ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-[#2A2A2A] dark:border-[#333] dark:text-gray-300 dark:hover:bg-[#333]'
-                                            }`}
-                                        title={isChatPaused ? "IA Pausada nesta conversa" : "Pausar IA nesta conversa"}
-                                    >
-                                        {isChatPaused ? <Play size={16} /> : <Pause size={16} />}
-                                        {isChatPaused ? 'Retomar IA' : 'Pausar IA'}
-                                    </button>
+
+                            {/* Messages Area */}
+                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#0C0C0C] relative scroll-smooth">
+
+                                {/* Handoff Banner — shown when AI is paused (may be auto-handoff or manual) */}
+                                {isChatPaused && (
+                                    <div className="flex items-start gap-3 p-4 mb-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                                        <span className="text-2xl flex-shrink-0">🤝</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-amber-500">Handoff Humano Ativo</p>
+                                            <p className="text-xs text-amber-400/80 mt-0.5 leading-relaxed">
+                                                A IA foi pausada automaticamente pelo Revenue OS — este lead atingiu alta intenção de compra.
+                                                Uma notificação foi enviada com o brief completo. Assuma a conversa agora.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={handleToggleChatPause}
+                                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold transition-colors"
+                                        >
+                                            <Play size={12} /> Retomar IA
+                                        </button>
+                                    </div>
                                 )}
 
-                                <Search size={20} className="cursor-pointer hover:text-gray-900 dark:hover:text-white" />
-
-                            </div>
-                        </div>
-
-                        {/* Messages Area */}
-                        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#0C0C0C] relative scroll-smooth">
-
-                            {/* Handoff Banner — shown when AI is paused (may be auto-handoff or manual) */}
-                            {isChatPaused && (
-                                <div className="flex items-start gap-3 p-4 mb-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                                    <span className="text-2xl flex-shrink-0">🤝</span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-amber-500">Handoff Humano Ativo</p>
-                                        <p className="text-xs text-amber-400/80 mt-0.5 leading-relaxed">
-                                            A IA foi pausada automaticamente pelo Revenue OS — este lead atingiu alta intenção de compra.
-                                            Uma notificação foi enviada com o brief completo. Assuma a conversa agora.
-                                        </p>
+                                {fetchError && (
+                                    <div className="p-2 bg-red-100 text-red-700 text-xs text-center border-b border-red-200">
+                                        Falha ao carregar: {fetchError}
                                     </div>
-                                    <button
-                                        onClick={handleToggleChatPause}
-                                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold transition-colors"
-                                    >
-                                        <Play size={12} /> Retomar IA
-                                    </button>
-                                </div>
-                            )}
+                                )}
 
-                            {fetchError && (
-                                <div className="p-2 bg-red-100 text-red-700 text-xs text-center border-b border-red-200">
-                                    Falha ao carregar: {fetchError}
-                                </div>
-                            )}
+                                {messages.length === 0 && !fetchError && (
+                                    <div className="p-4 text-center text-gray-400 text-sm mt-10">
+                                        Nenhuma mensagem encontrada.
+                                        <br /><span className="text-xs text-gray-300">Envie uma mensagem para iniciar.</span>
+                                    </div>
+                                )}
 
-                            {messages.length === 0 && !fetchError && (
-                                <div className="p-4 text-center text-gray-400 text-sm mt-10">
-                                    Nenhuma mensagem encontrada.
-                                    <br /><span className="text-xs text-gray-300">Envie uma mensagem para iniciar.</span>
-                                </div>
-                            )}
+                                <div className="relative z-10 flex flex-col space-y-2 w-full pb-2">
+                                    {messages.map((msg, index) => {
+                                        // 1. Logic Defense from Senior Engineer: Guard against malformed objects
+                                        if (!msg || !msg.key) {
+                                            console.warn('DEBUG: Invalid message object skipped:', msg);
+                                            return null;
+                                        }
 
-                            <div className="relative z-10 flex flex-col space-y-2 w-full pb-2">
-                                {messages.map((msg, index) => {
-                                    // 1. Logic Defense from Senior Engineer: Guard against malformed objects
-                                    if (!msg || !msg.key) {
-                                        console.warn('DEBUG: Invalid message object skipped:', msg);
-                                        return null;
-                                    }
-
-                                    // 2. Filter out reaction messages (they appear as empty bubbles)
-                                    if (msg.message?.reactionMessage) {
-                                        return null;
-                                    }
+                                        // 2. Filter out reaction messages (they appear as empty bubbles)
+                                        if (msg.message?.reactionMessage) {
+                                            return null;
+                                        }
 
 
-                                    // Note: We no longer filter out messages with empty text
-                                    // because getMessageText() now returns placeholders for media messages
+                                        // Note: We no longer filter out messages with empty text
+                                        // because getMessageText() now returns placeholders for media messages
 
-                                    const isMe = msg.key.fromMe || false;
-                                    // ALWAYS include index to guarantee uniqueness
-                                    const messageKey = `${msg.key.id || 'msg'}-${msg.messageTimestamp || Date.now()}-${index}`;
+                                        const isMe = msg.key.fromMe || false;
+                                        // ALWAYS include index to guarantee uniqueness
+                                        const messageKey = `${msg.key.id || 'msg'}-${msg.messageTimestamp || Date.now()}-${index}`;
 
-                                    return (
-                                        <div key={messageKey} className={`flex ${isMe ? 'justify-end' : 'justify-start'} gap-2`}>
-                                            {/* Avatar for incoming messages */}
-                                            {!isMe && (
-                                                <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden self-end mb-1">
-                                                    {msg.profilePicUrl ? (
-                                                        <img src={msg.profilePicUrl} alt={msg.pushName || 'User'} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-[#555]">
-                                                            {(msg.pushName || 'U')[0].toUpperCase()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            <div className="flex flex-col">
-                                                {/* Sender name for incoming messages */}
-                                                {!isMe && msg.pushName && (
-                                                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 ml-2 font-medium">
-                                                        {msg.pushName}
+                                        return (
+                                            <div key={messageKey} className={`flex ${isMe ? 'justify-end' : 'justify-start'} gap-2`}>
+                                                {/* Avatar for incoming messages */}
+                                                {!isMe && (
+                                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden self-end mb-1">
+                                                        {msg.profilePicUrl ? (
+                                                            <img src={msg.profilePicUrl} alt={msg.pushName || 'User'} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-[#555]">
+                                                                {(msg.pushName || 'U')[0].toUpperCase()}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
 
-                                                <div className={`
+                                                <div className="flex flex-col">
+                                                    {/* Sender name for incoming messages */}
+                                                    {!isMe && msg.pushName && (
+                                                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 ml-2 font-medium">
+                                                            {msg.pushName}
+                                                        </div>
+                                                    )}
+
+                                                    <div className={`
                                                     max-w-[85%] sm:max-w-[70%] rounded-lg px-3 py-1.5 shadow-md relative text-sm
                                                     ${isMe
-                                                        ? 'bg-[#F5793B] text-white rounded-tr-none'
-                                                        : 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white rounded-tl-none'}
+                                                            ? 'bg-[#F5793B] text-white rounded-tr-none'
+                                                            : 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white rounded-tl-none'}
                                                 `}>
-                                                    <div className="font-body text-[15px] leading-relaxed break-words pb-4 min-w-[80px]">
-                                                        {renderMessageContent(msg)}
-                                                    </div>
-                                                    <div className={`
+                                                        <div className="font-body text-[15px] leading-relaxed break-words pb-4 min-w-[80px]">
+                                                            {renderMessageContent(msg)}
+                                                        </div>
+                                                        <div className={`
                                                         absolute bottom-1 right-2 text-[10px] flex items-center gap-1
                                                         ${isMe ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}
                                                     `}>
-                                                        {formatTime(msg.messageTimestamp)}
-                                                        {isMe && (
-                                                            <span className={msg.status === 'READ' ? 'text-blue-200' : ''}>
-                                                                <CheckCheck size={14} />
-                                                            </span>
-                                                        )}
-                                                    </div>
+                                                            {formatTime(msg.messageTimestamp)}
+                                                            {isMe && (
+                                                                <span className={msg.status === 'READ' ? 'text-blue-200' : ''}>
+                                                                    <CheckCheck size={14} />
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                    {/* Triangle for bubble tail */}
-                                                    <div className={`absolute top-0 w-0 h-0 border-[6px] border-transparent 
+                                                        {/* Triangle for bubble tail */}
+                                                        <div className={`absolute top-0 w-0 h-0 border-[6px] border-transparent 
                                                         ${isMe
-                                                            ? 'right-[-6px] border-t-[#F5793B] border-l-[#F5793B]'
-                                                            : 'left-[-6px] border-t-white dark:border-t-[#252525] border-r-white dark:border-r-[#252525]'}
+                                                                ? 'right-[-6px] border-t-[#F5793B] border-l-[#F5793B]'
+                                                                : 'left-[-6px] border-t-white dark:border-t-[#252525] border-r-white dark:border-r-[#252525]'}
                                                     `}></div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Input Area */}
-                        <div className="flex-none min-h-[80px] bg-gray-100 dark:bg-[#1F1F1F] px-4 py-3 flex items-center gap-4 z-20 border-t border-gray-200 dark:border-[#2A2A2A] w-full">
-                            {/* Hidden file inputs */}
-                            <input
-                                ref={imageInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleSendImage}
-                                className="hidden"
-                            />
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                onChange={handleSendFile}
-                                className="hidden"
-                            />
-
-                            <div className="flex gap-4 text-gray-500 dark:text-gray-400">
-
-                                <Paperclip
-                                    size={24}
-                                    className={`cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    onClick={() => !isUploadingFile && fileInputRef.current?.click()}
+                            {/* Input Area */}
+                            <div className="flex-none min-h-[80px] bg-gray-100 dark:bg-[#1F1F1F] px-4 py-3 flex items-center gap-4 z-20 border-t border-gray-200 dark:border-[#2A2A2A] w-full">
+                                {/* Hidden file inputs */}
+                                <input
+                                    ref={imageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleSendImage}
+                                    className="hidden"
                                 />
-                            </div>
-                            <div className="flex-1 bg-white dark:bg-[#2A2A2A] rounded-lg flex items-center px-4 py-2 border border-gray-200 dark:border-none shadow-sm dark:shadow-none">
-                                {isUploadingFile ? (
-                                    <div className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-2">
-                                        <div className="animate-spin h-4 w-4 border-2 border-[#F5793B] border-t-transparent rounded-full"></div>
-                                        Enviando arquivo...
-                                    </div>
-                                ) : (
-                                    <input
-                                        type="text"
-                                        placeholder="Digite uma mensagem"
-                                        className="bg-transparent border-none outline-none text-gray-900 dark:text-white w-full placeholder-gray-500 font-body text-sm"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    onChange={handleSendFile}
+                                    className="hidden"
+                                />
+
+                                <div className="flex gap-4 text-gray-500 dark:text-gray-400">
+
+                                    <Paperclip
+                                        size={24}
+                                        className={`cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        onClick={() => !isUploadingFile && fileInputRef.current?.click()}
                                     />
-                                )}
+                                </div>
+                                <div className="flex-1 bg-white dark:bg-[#2A2A2A] rounded-lg flex items-center px-4 py-2 border border-gray-200 dark:border-none shadow-sm dark:shadow-none">
+                                    {isUploadingFile ? (
+                                        <div className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-2">
+                                            <div className="animate-spin h-4 w-4 border-2 border-[#F5793B] border-t-transparent rounded-full"></div>
+                                            Enviando arquivo...
+                                        </div>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            placeholder="Digite uma mensagem"
+                                            className="bg-transparent border-none outline-none text-gray-900 dark:text-white w-full placeholder-gray-500 font-body text-sm"
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                        />
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleSendMessage}
+                                    disabled={isUploadingFile}
+                                    className={`p-2 rounded-full bg-[#F5793B] text-white hover:bg-[#e06225] transition-colors shadow-lg active:scale-95 ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <Send size={20} />
+                                </button>
                             </div>
-                            <button
-                                onClick={handleSendMessage}
-                                disabled={isUploadingFile}
-                                className={`p-2 rounded-full bg-[#F5793B] text-white hover:bg-[#e06225] transition-colors shadow-lg active:scale-95 ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <Send size={20} />
-                            </button>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50 dark:bg-[#0C0C0C] border-b-[6px] border-[#F5793B]">
+                            <div className="w-64 h-64 mb-8 opacity-20">
+                                {/* Placeholder Illustration */}
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full text-gray-400 dark:text-gray-500">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                                </svg>
+                            </div>
+                            <h1 className="text-3xl font-display font-light text-gray-900 dark:text-white mb-4">Kogna Live Chat</h1>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md leading-relaxed">
+                                Envie e receba mensagens sem precisar manter seu celular conectado à internet.<br />
+                                Use o Kogna em até 4 aparelhos e 1 celular ao mesmo tempo.
+                            </p>
+                            <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
+                                <LockIcon size={12} />
+                                Protegido com criptografia de ponta a ponta
+                            </div>
                         </div>
-                    </>
-                ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50 dark:bg-[#0C0C0C] border-b-[6px] border-[#F5793B]">
-                        <div className="w-64 h-64 mb-8 opacity-20">
-                            {/* Placeholder Illustration */}
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full text-gray-400 dark:text-gray-500">
-                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-                            </svg>
-                        </div>
-                        <h1 className="text-3xl font-display font-light text-gray-900 dark:text-white mb-4">Kogna Live Chat</h1>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md leading-relaxed">
-                            Envie e receba mensagens sem precisar manter seu celular conectado à internet.<br />
-                            Use o Kogna em até 4 aparelhos e 1 celular ao mesmo tempo.
-                        </p>
-                        <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
-                            <LockIcon size={12} />
-                            Protegido com criptografia de ponta a ponta
-                        </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-        </div>
+            {showTakeoverModal && <TakeoverModal vendedores={vendedores} selectedId={selectedVendedorId} onSelect={setSelectedVendedorId} onConfirm={handleTakeover} onClose={() => setShowTakeoverModal(false)} />}
+        </>
     );
 }
 
@@ -1171,3 +1226,42 @@ const LockIcon = ({ size }: { size: number }) => (
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
     </svg>
 );
+
+function TakeoverModal({ vendedores, selectedId, onSelect, onConfirm, onClose }: {
+    vendedores: { id: string; nome: string }[];
+    selectedId: string;
+    onSelect: (id: string) => void;
+    onConfirm: () => void;
+    onClose: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl shadow-2xl p-6 w-[360px]">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-white font-semibold text-base">Assumir Conversa</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={18} /></button>
+                </div>
+                <p className="text-gray-400 text-sm mb-4">A IA será pausada e o lead atribuído ao vendedor selecionado no CRM.</p>
+                <div className="space-y-2 mb-6">
+                    {vendedores.length === 0 && <p className="text-gray-500 text-sm">Nenhum vendedor cadastrado.</p>}
+                    {vendedores.map(v => (
+                        <button
+                            key={v.id}
+                            onClick={() => onSelect(v.id)}
+                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${selectedId === v.id
+                                    ? 'bg-primary/20 border-primary/40 text-primary'
+                                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                }`}
+                        >
+                            {v.nome}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 text-sm">Cancelar</button>
+                    <button onClick={onConfirm} className="flex-1 py-2 rounded-xl bg-primary hover:bg-primary/80 text-white text-sm font-semibold transition-colors">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    );
+}

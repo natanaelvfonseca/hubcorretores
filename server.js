@@ -5356,11 +5356,33 @@ app.patch("/api/leads/:id/status", verifyJWT, async (req, res) => {
 
     if (!orgId) return res.status(403).json({ error: "No organization" });
 
+    // Derive temperature from column order
+    let temperature = "Frio";
+    try {
+      const colsRes = await pool.query(
+        "SELECT title, order_index FROM lead_columns WHERE organization_id = $1 OR user_id IN (SELECT id FROM users WHERE organization_id = $1) ORDER BY order_index ASC",
+        [orgId]
+      );
+      const cols = colsRes.rows;
+      if (cols.length > 0) {
+        const colIdx = cols.findIndex(c => c.title === status);
+        if (colIdx >= 0) {
+          const ratio = colIdx / (cols.length - 1);
+          if (ratio >= 0.7) temperature = "Quente";
+          else if (ratio >= 0.35) temperature = "Morno";
+          else temperature = "Frio";
+        }
+      }
+    } catch (e) {
+      log("Could not derive temperature from columns: " + e.message);
+    }
+
     const result = await pool.query(
-      "UPDATE leads SET status = $1, last_contact = NOW() WHERE id = $2 AND organization_id = $3 RETURNING *",
-      [status, id, orgId],
+      "UPDATE leads SET status = $1, last_contact = NOW(), temperature = $2 WHERE id = $3 AND organization_id = $4 RETURNING *",
+      [status, temperature, id, orgId],
     );
 
+    // Fallback if temperature column doesn't exist
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Lead not found" });
     }
@@ -5383,6 +5405,52 @@ app.patch("/api/leads/:id/status", verifyJWT, async (req, res) => {
   } catch (err) {
     log("PATCH /api/leads/:id/status error: " + err.toString());
     res.status(500).json({ error: "Failed to update lead status" });
+  }
+});
+
+// PATCH /api/leads/:id/assign - Assign a vendedor to a lead
+app.patch("/api/leads/:id/assign", verifyJWT, async (req, res) => {
+  const { id } = req.params;
+  const { vendedorId } = req.body;
+  try {
+    const userId = req.userId;
+    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(403).json({ error: "No organization" });
+
+    // Check if assigned_to column exists, if not add it
+    await pool.query(`
+      ALTER TABLE leads ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES vendedores(id) ON DELETE SET NULL
+    `).catch(() => { });
+
+    const result = await pool.query(
+      "UPDATE leads SET assigned_to = $1 WHERE id = $2 AND organization_id = $3 RETURNING id, name, assigned_to",
+      [vendedorId || null, id, orgId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: "Lead not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    log("PATCH /api/leads/:id/assign error: " + err.toString());
+    res.status(500).json({ error: "Failed to assign vendor" });
+  }
+});
+
+// GET /api/vendedores - List vendors for the org
+app.get("/api/vendedores", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(403).json({ error: "No organization" });
+
+    const result = await pool.query(
+      "SELECT id, nome, email, whatsapp, ativo FROM vendedores WHERE organization_id = $1 AND ativo = true ORDER BY nome",
+      [orgId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    log("GET /api/vendedores error: " + err.toString());
+    res.status(500).json({ error: "Failed to list vendors" });
   }
 });
 
