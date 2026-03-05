@@ -30,14 +30,14 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
     const menuRef = useRef<HTMLDivElement>(null);
     const [intelligence, setIntelligence] = useState<any>(null);
 
-    // Fetch AI intelligence for this lead (non-blocking)
+    // Fetch AI Opportunity Score for this lead (non-blocking)
     useEffect(() => {
         if (!token || !lead.id) return;
-        fetch(`${apiBase}/api/leads/${lead.id}/intelligence`, {
+        fetch(`${apiBase}/api/leads/${lead.id}/opportunity-score`, {
             headers: { Authorization: `Bearer ${token}` }
         })
             .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data?.hasIntelligence) setIntelligence(data); })
+            .then(data => { if (data?.hasScore) setIntelligence(data); })
             .catch(() => { });
     }, [lead.id, token]);
 
@@ -101,16 +101,16 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                                     {intentCfg.label} {score}
                                 </span>
                             )}
-                            {/* AI Lead Score badge from Conversation Intelligence */}
+                            {/* AI Lead Score badge from Opportunity Scoring Engine */}
                             {intelligence && !intentCfg && (
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 tracking-wide flex items-center gap-0.5
-                                    ${intelligence.temperature === 'quente' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/25' :
+                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded flex-shrink-0 tracking-wide flex items-center gap-1
+                                ${intelligence.temperature === 'quente' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/25' :
                                         intelligence.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/25' :
                                             'bg-blue-500/10 text-blue-400 border border-blue-500/25'}`}
                                 >
-                                    <Brain size={8} />
-                                    {intelligence.temperature === 'quente' ? '🔥' : intelligence.temperature === 'morno' ? '🌡️' : '❄️'} {intelligence.leadScore}
-                                </span>
+                                    <Brain size={10} />
+                                    {intelligence.temperature === 'quente' ? '🔥' : intelligence.temperature === 'morno' ? '🌡️' : '❄️'} {intelligence.score}
+                                </div>
                             )}
                         </div>
                         {lead.phone && (
@@ -125,19 +125,24 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                         {lead.briefing && (
                             <p className="text-[10px] text-text-muted italic mt-1 leading-snug line-clamp-2" title={lead.briefing}>{lead.briefing}</p>
                         )}
-                        {/* AI Intelligence: detected intent + top objection */}
+                        {/* AI Intelligence: detected intent + product + top objection */}
                         {intelligence && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="flex flex-wrap gap-1 mt-2">
                                 {intelligence.intent && (
                                     <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
                                         {intelligence.intent}
                                     </span>
                                 )}
-                                {intelligence.objections?.slice(0, 1).map((obj: string) => (
-                                    <span key={obj} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                        ⚠️ {obj}
+                                {intelligence.product_interest && intelligence.product_interest !== 'N/A' && (
+                                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                        🛒 {intelligence.product_interest}
                                     </span>
-                                ))}
+                                )}
+                                {intelligence.top_objection && (
+                                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 truncate max-w-[100px]" title={intelligence.top_objection}>
+                                        ⚠️ {intelligence.top_objection}
+                                    </span>
+                                )}
                             </div>
                         )}
                         {!intentCfg && lead.temperature && !intelligence && (

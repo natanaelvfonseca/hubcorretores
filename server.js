@@ -250,6 +250,35 @@ const ensureConversationIntelligenceTables = async () => {
   }
 };
 
+const ensureOpportunityScoresTable = async () => {
+  try {
+    log("[OSE] Ensuring Opportunity Scores table exists...");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS opportunity_scores (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        lead_id TEXT NOT NULL,
+        score INTEGER DEFAULT 0,
+        temperature TEXT DEFAULT 'frio',
+        intent TEXT,
+        product_interest TEXT,
+        top_objection TEXT,
+        pipeline_stage TEXT,
+        auto_pipeline_enabled BOOLEAN DEFAULT true,
+        signals JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(lead_id)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ose_org_id ON opportunity_scores(organization_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ose_score ON opportunity_scores(score)`);
+    log("[OSE] Opportunity Scores table verified.");
+  } catch (err) {
+    log("[ERROR] ensureOpportunityScoresTable failed: " + err.message);
+  }
+};
+
 // ── CIL: AI Analysis Engine ───────────────────────────────────────────────────
 
 /**
@@ -416,11 +445,131 @@ async function processConversationIntelligence(messageContent, context) {
     ]);
 
     log(`[CIL] Intelligence recorded for lead ${context.leadId || 'unknown'}: stage=${analysis.stage}, prob=${analysis.purchase_probability}`);
+
+    // [OSE] Hook: After CIL records data, recalculate the deterministc opportunity score
+    if (context.orgId && context.leadId) {
+      calculateOpportunityScore(context.orgId, context.leadId).catch(err => {
+        log(`[OSE] calculateOpportunityScore error: ${err.message}`);
+      });
+    }
+
   } catch (err) {
     log(`[CIL] processConversationIntelligence error: ${err.message}`);
   }
 }
 // ── END CIL Engine ────────────────────────────────────────────────────────────
+
+// ── OPPORTUNITY SCORING ENGINE (OSE) ──────────────────────────────────────────
+
+/**
+ * Calculates the deterministic Opportunity Score for a lead based on CIL data.
+ * Updates the \`opportunity_scores\` table and optionally moves the lead in the pipeline.
+ */
+async function calculateOpportunityScore(orgId, leadId) {
+  try {
+    // 1. Fetch latest CIL messages for the lead
+    const messagesRes = await pool.query(`
+      SELECT intent, product_interest, stage, urgency, sentiment, objections, created_at
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND lead_id = $2
+      ORDER BY created_at DESC LIMIT 50
+    `, [orgId, leadId]);
+
+    if (messagesRes.rows.length === 0) return;
+    const messages = messagesRes.rows;
+    const latestMsg = messages[0];
+
+    // 2. Compute Signals & Weights
+    let score = 0;
+    const signals = {};
+
+    function addSignal(name, weight) {
+      score += weight;
+      signals[name] = weight;
+    }
+
+    // --- POSITIVE SIGNALS ---
+    if (latestMsg.intent === 'compra') addSignal('intent_compra', 25);
+
+    const hasPriceRequest = messages.some(m => m.stage === 'proposta' || m.intent === 'comparação');
+    if (hasPriceRequest) addSignal('perguntou_preco_ou_forma_pagamento', 20);
+
+    if (latestMsg.product_interest && latestMsg.product_interest !== 'N/A') addSignal('interesse_produto_claro', 15);
+
+    if (latestMsg.urgency === 'alta') addSignal('urgencia_alta', 15);
+    else if (latestMsg.urgency === 'média') addSignal('urgencia_media', 5);
+
+    if (latestMsg.stage === 'proposta' && latestMsg.intent === 'compra') addSignal('pediu_proposta', 25);
+
+    // --- NEGATIVE SIGNALS ---
+    if (latestMsg.intent === 'informação') addSignal('apenas_pesquisando', -5);
+
+    const hasPriceObjection = latestMsg.objections && latestMsg.objections.some(o => o.toLowerCase().includes('preço') || o.toLowerCase().includes('caro') || o.toLowerCase().includes('valor'));
+    if (hasPriceObjection) addSignal('objecao_preco', -10);
+
+    const hasTrustObjection = latestMsg.objections && latestMsg.objections.some(o => o.toLowerCase().includes('confian') || o.toLowerCase().includes('garantia') || o.toLowerCase().includes('seguro'));
+    if (hasTrustObjection) addSignal('objecao_confianca', -10);
+
+    // Time penalty (idle > 24h)
+    const hoursSinceLastMsg = (Date.now() - new Date(latestMsg.created_at).getTime()) / (1000 * 60 * 60);
+    if (hoursSinceLastMsg > 24) addSignal('parado_mais_24h', -10);
+
+    // Clamp score [0, 100]
+    score = Math.max(0, Math.min(100, score));
+
+    // Temperature
+    const temperature = score >= 70 ? 'quente' : score >= 40 ? 'morno' : 'frio';
+
+    // Target Pipeline Stage mapping
+    let targetStage = 'Novo Lead';
+    if (score >= 81) targetStage = 'Negociação';
+    else if (score >= 61) targetStage = 'Proposta';
+    else if (score >= 41) targetStage = 'Interesse';
+    else if (score >= 21) targetStage = 'Qualificação';
+
+    const cleanObjection = (latestMsg.objections && latestMsg.objections.length > 0) ? latestMsg.objections[0].replace(/['"\\[\\]]/g, '') : null;
+
+    // 3. Upsert to opportunity_scores
+    const upsertRes = await pool.query(`
+      INSERT INTO opportunity_scores (
+        organization_id, lead_id, score, temperature, intent, 
+        product_interest, top_objection, pipeline_stage, signals, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      ON CONFLICT (lead_id) 
+      DO UPDATE SET
+        score = EXCLUDED.score,
+        temperature = EXCLUDED.temperature,
+        intent = EXCLUDED.intent,
+        product_interest = EXCLUDED.product_interest,
+        top_objection = EXCLUDED.top_objection,
+        pipeline_stage = EXCLUDED.pipeline_stage,
+        signals = EXCLUDED.signals,
+        updated_at = NOW()
+      RETURNING auto_pipeline_enabled, pipeline_stage
+    `, [
+      orgId, leadId, score, temperature, latestMsg.intent,
+      latestMsg.product_interest, cleanObjection, targetStage, JSON.stringify(signals)
+    ]);
+
+    const row = upsertRes.rows[0];
+
+    // 4. Automatic Pipeline Movement
+    if (row && row.auto_pipeline_enabled) {
+      await pool.query(`
+        UPDATE leads 
+        SET status = $1, updated_at = NOW()
+        WHERE id = $2 AND organization_id = $3 AND status != 'Cliente' AND status != $1
+      `, [row.pipeline_stage, leadId, orgId]);
+    }
+
+    log(`[OSE] Score calculated for lead ${leadId}: ${score} (${temperature}) | Stage: ${targetStage}`);
+  } catch (err) {
+    log(`[OSE] Engine Error: ${err.message}`);
+  }
+}
+
+// ── END OSE Engine ────────────────────────────────────────────────────────────
 
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
@@ -429,6 +578,7 @@ initPool().then(() => {
   setTimeout(ensureRevenueOSColumns, 5000); // Revenue OS: ensure intent_label, last_ia_briefing, assigned_to
   setTimeout(ensureCoachingTables, 7000); // Revenue OS Coaching: insights table
   setTimeout(ensureConversationIntelligenceTables, 9000); // CIL: Conversation Intelligence tables
+  setTimeout(ensureOpportunityScoresTable, 10000); // OSE: Opportunity Scores table
 }).catch(e => log("Startup error: " + e.message));
 
 app.use(cors({ origin: true, credentials: true }));
@@ -653,6 +803,55 @@ app.get("/api/chat-context/:instanceName/:jid", verifyJWT, async (req, res) => {
     res.json({ agentId, isPaused, leadScore, leadTemperature });
   } catch (err) {
     log(`GET /api/chat-context error: ${err.message}`);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /api/chat-context/bulk/:instanceName - Get lead temperatures for multiple JIDs
+app.post("/api/chat-context/bulk/:instanceName", verifyJWT, async (req, res) => {
+  try {
+    const { instanceName } = req.params;
+    const { jids } = req.body;
+
+    if (!jids || !Array.isArray(jids) || jids.length === 0) {
+      return res.json({});
+    }
+
+    const agentRes = await pool.query(
+      `SELECT a.organization_id FROM agents a
+             JOIN whatsapp_instances wi ON a.whatsapp_instance_id = wi.id
+             WHERE wi.instance_name = $1`,
+      [instanceName]
+    );
+
+    const orgId = agentRes.rows[0]?.organization_id;
+    if (!orgId) return res.json({});
+
+    // We fetch leads that match any of the phone numbers
+    // Note: since jids can be 551199999999@s.whatsapp.net, we strip the suffix
+    const phonesToMatch = jids.map(jid => jid.split('@')[0]);
+
+    const results = {};
+    for (const phone of phonesToMatch) {
+      const leadRes = await pool.query(
+        "SELECT phone, mobile_phone, score, temperature FROM leads WHERE organization_id = $1 AND (phone LIKE $2 OR mobile_phone LIKE $2) LIMIT 1",
+        [orgId, `%${phone}%`]
+      );
+      if (leadRes.rows.length > 0) {
+        // Map the original jid directly (assumes single match per phone base)
+        const matchedJid = jids.find(j => j.includes(phone));
+        if (matchedJid) {
+          results[matchedJid] = {
+            temperature: leadRes.rows[0].temperature || 'Frio',
+            score: leadRes.rows[0].score || 0
+          };
+        }
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    log(`POST /api/chat-context/bulk error: ${err.message}`);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -11263,6 +11462,148 @@ app.get("/api/leads/intelligence/alerts", verifyJWT, async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // END CONVERSATION INTELLIGENCE LAYER
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OPPORTUNITY SCORING ENGINE (OSE) — API ROUTES
+// ─────────────────────────────────────────────────────────────────────────────
+
+// TENANT: Get Opportunity Score for a specific lead
+app.get("/api/leads/:leadId/opportunity-score", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { leadId } = req.params;
+
+    const userRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = userRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: "No organization" });
+
+    const result = await pool.query(`
+      SELECT score, temperature, intent, product_interest, top_objection, 
+             pipeline_stage, auto_pipeline_enabled, signals, updated_at
+      FROM opportunity_scores
+      WHERE lead_id = $1 AND organization_id = $2
+    `, [leadId, orgId]);
+
+    if (result.rows.length === 0) {
+      return res.json({ hasScore: false });
+    }
+
+    res.json({
+      hasScore: true,
+      ...result.rows[0]
+    });
+  } catch (err) {
+    log(`[OSE] GET /api/leads/:leadId/opportunity-score error: ${err.message}`);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// TENANT: Toggle Auto-Pipeline for a lead
+app.post("/api/leads/:leadId/opportunity-score/auto-pipeline", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { leadId } = req.params;
+    const { enabled } = req.body;
+
+    const userRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = userRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: "No organization" });
+
+    await pool.query(`
+      UPDATE opportunity_scores 
+      SET auto_pipeline_enabled = $1
+      WHERE lead_id = $2 AND organization_id = $3
+    `, [enabled === true, leadId, orgId]);
+
+    res.json({ success: true, auto_pipeline_enabled: enabled === true });
+  } catch (err) {
+    log(`[OSE] POST auto-pipeline error: ${err.message}`);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// TENANT (DASHBOARD): Revenue Intelligence - Opportunity Metrics & Funnel
+app.get("/api/dashboard/revenue-intelligence", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const userRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = userRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: "No organization" });
+
+    // 1. North Star: Oportunidades criadas (score > 60)
+    const nsRes = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '24 hours') AS created_today,
+        COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '7 days') AS created_week,
+        COUNT(*) FILTER (WHERE updated_at >= NOW() - INTERVAL '30 days') AS created_month
+      FROM opportunity_scores
+      WHERE organization_id = $1 AND score > 60
+    `, [orgId]);
+
+    // 2. Leads por temperatura
+    const tempRes = await pool.query(`
+      SELECT temperature, COUNT(*) as count 
+      FROM opportunity_scores 
+      WHERE organization_id = $1 
+      GROUP BY temperature
+    `, [orgId]);
+
+    // 3. Distribuição de Score (Histograma)
+    const distRes = await pool.query(`
+      SELECT 
+        CASE 
+          WHEN score BETWEEN 0 AND 20 THEN '0-20'
+          WHEN score BETWEEN 21 AND 40 THEN '21-40'
+          WHEN score BETWEEN 41 AND 60 THEN '41-60'
+          WHEN score BETWEEN 61 AND 80 THEN '61-80'
+          WHEN score BETWEEN 81 AND 100 THEN '81-100'
+        END as range,
+        COUNT(*) as count
+      FROM opportunity_scores
+      WHERE organization_id = $1
+      GROUP BY range
+      ORDER BY range
+    `, [orgId]);
+
+    // 4. Taxa de conversão por faixa (Aproximada cruzando leads.status = Cliente)
+    const conversionRes = await pool.query(`
+      SELECT 
+        CASE 
+          WHEN os.score BETWEEN 0 AND 20 THEN '0-20'
+          WHEN os.score BETWEEN 21 AND 40 THEN '21-40'
+          WHEN os.score BETWEEN 41 AND 60 THEN '41-60'
+          WHEN os.score BETWEEN 61 AND 80 THEN '61-80'
+          WHEN os.score BETWEEN 81 AND 100 THEN '81-100'
+        END as range,
+        COUNT(*) as total_leads,
+        COUNT(*) FILTER (WHERE l.status = 'Cliente') as won_leads
+      FROM opportunity_scores os
+      LEFT JOIN leads l ON l.id = os.lead_id::uuid
+      WHERE os.organization_id = $1
+      GROUP BY range
+    `, [orgId]);
+
+    const conversionRates = conversionRes.rows.map(r => ({
+      range: r.range,
+      rate: r.total_leads > 0 ? Math.round((parseInt(r.won_leads) / parseInt(r.total_leads)) * 100) : 0
+    })).filter(r => r.range);
+
+    res.json({
+      opportunities: {
+        today: parseInt(nsRes.rows[0]?.created_today || 0),
+        week: parseInt(nsRes.rows[0]?.created_week || 0),
+        month: parseInt(nsRes.rows[0]?.created_month || 0)
+      },
+      temperatures: tempRes.rows.map(r => ({ name: r.temperature, value: parseInt(r.count) })),
+      distribution: distRes.rows.map(r => ({ range: r.range, count: parseInt(r.count) })).filter(r => r.range),
+      conversion_rates: conversionRates
+    });
+  } catch (err) {
+    log(`[OSE] GET /api/dashboard/revenue-intelligence error: ${err.message}`);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+// ── END OSE ────────────────────────────────────────────────────────────
 
 // Temporary Migration Route to execute schema changes against the live database pool
 app.get("/api/run-migration-temp", async (req, res) => {

@@ -1,9 +1,11 @@
 import {
     Clock, MessageSquare, Calendar, DollarSign, CheckCircle, Users,
-    Flame, ArrowRight, AlertTriangle, Target, Zap, Timer, BrainCircuit
+    Flame, ArrowRight, AlertTriangle, Target, Zap, Timer, BrainCircuit,
+    TrendingUp, Activity, BarChart3
 } from 'lucide-react';
 import {
-    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    BarChart, Bar, Cell
 } from 'recharts';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -28,6 +30,13 @@ interface UrgencyLead {
     score: number; intentLabel: 'HOT' | 'WARM' | 'COLD'; briefing?: string; hours_idle: number;
 }
 interface UrgencyData { now: UrgencyLead[]; today: UrgencyLead[]; at_risk: UrgencyLead[]; }
+
+interface RevenueIntelligenceData {
+    opportunities: { today: number; week: number; month: number };
+    temperatures: { name: string; value: number }[];
+    distribution: { range: string; count: number }[];
+    conversion_rates: { range: string; rate: number }[];
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,6 +78,7 @@ export function Dashboard() {
     const { data: forecast, loading: forecastLoading } = useAPI<ForecastData>('/api/dashboard/forecast', token);
     const { data: velocity, loading: velocityLoading } = useAPI<VelocityStage[]>('/api/dashboard/velocity', token);
     const { data: urgency, loading: urgencyLoading } = useAPI<UrgencyData>('/api/dashboard/urgency', token);
+    const { data: revIntel, loading: revIntelLoading } = useAPI<RevenueIntelligenceData>(`/api/dashboard/revenue-intelligence?days=${selectedDays}`, token, [selectedDays]);
 
     // Chart data — use API data; zero-values get a tiny baseline so the wave renders visibly
     const rawChart = metrics?.ai.chart ?? [];
@@ -171,6 +181,117 @@ export function Dashboard() {
                         <div className={`absolute -bottom-4 -right-4 w-24 h-24 bg-${color}/5 rounded-full blur-2xl group-hover:bg-${color}/10 transition-colors`} />
                     </div>
                 ))}
+            </div>
+
+            {/* ── REVENUE INTELLIGENCE (OPPORTUNITY SCORING ENGINE) ── */}
+            <div>
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg"><TrendingUp size={24} className="text-indigo-400" /></div>
+                    <div>
+                        <h2 className="text-lg font-bold text-text-primary">Revenue Intelligence</h2>
+                        <p className="text-sm text-text-secondary">Métricas geradas em tempo real pela <i>Opportunity Scoring Engine</i></p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    {/* North Star KPI */}
+                    <div className="col-span-1 bg-surface border border-indigo-500/30 rounded-2xl p-6 shadow-[0_0_30px_-5px_var(--tw-shadow-color)] shadow-indigo-500/10 flex flex-col justify-between relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+
+                        <div>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-text-secondary font-medium">Oportunidades Criadas</h3>
+                                <span className="bg-indigo-500/20 text-indigo-400 text-xs py-1 px-3 rounded-full font-bold border border-indigo-500/30">
+                                    Score &gt; 60
+                                </span>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-4xl font-display font-bold text-text-primary">
+                                        {revIntelLoading ? '...' : (revIntel?.opportunities.month || 0)}
+                                    </p>
+                                    <p className="text-xs text-text-secondary mt-1">Este mês</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
+                                    <div>
+                                        <p className="text-lg font-bold text-text-primary">{revIntelLoading ? '-' : (revIntel?.opportunities.week || 0)}</p>
+                                        <p className="text-[10px] text-text-secondary uppercase">Esta Semana</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-lg font-bold text-text-primary">{revIntelLoading ? '-' : (revIntel?.opportunities.today || 0)}</p>
+                                        <p className="text-[10px] text-text-secondary uppercase">Hoje</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Temperaturas & Conversão */}
+                    <div className="col-span-1 lg:col-span-1 flex flex-col gap-6">
+                        <div className="bg-surface border border-border/50 rounded-2xl p-5 shadow-sm flex-1">
+                            <h3 className="text-sm text-text-secondary font-medium mb-4 flex items-center gap-2">
+                                <Flame size={16} className="text-orange-400" /> Distribuição de Temperatura
+                            </h3>
+                            {revIntelLoading ? (
+                                <div className="h-32 flex items-center justify-center text-text-secondary text-sm">Carregando...</div>
+                            ) : revIntel?.temperatures.length === 0 ? (
+                                <EmptyState icon={Target} text="Sem leads classificados ainda" />
+                            ) : (
+                                <div className="space-y-3 mt-4">
+                                    {['quente', 'morno', 'frio'].map(t => {
+                                        const count = revIntel?.temperatures.find(x => x.name === t)?.value || 0;
+                                        const total = revIntel?.temperatures.reduce((acc, curr) => acc + curr.value, 0) || 1;
+                                        const pct = Math.round((count / total) * 100);
+                                        const color = t === 'quente' ? 'bg-orange-500' : t === 'morno' ? 'bg-yellow-500' : 'bg-blue-500';
+                                        return (
+                                            <div key={t} className="flex items-center gap-3">
+                                                <div className="w-16 text-xs text-text-secondary capitalize">{t}</div>
+                                                <div className="flex-1 h-2 bg-surface-secondary/50 rounded-full overflow-hidden">
+                                                    <div className={`h-full ${color} rounded-full`} style={{ width: `${pct}%` }} />
+                                                </div>
+                                                <div className="w-8 text-right text-xs font-bold text-text-primary">{count}</div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Distribuição de Score */}
+                    <div className="col-span-1 lg:col-span-2 bg-surface border border-border/50 rounded-2xl p-6 shadow-sm">
+                        <h3 className="text-sm text-text-secondary font-medium mb-6 flex items-center gap-2">
+                            <BarChart3 size={16} className="text-primary" /> Distribuição de Opportunity Score
+                        </h3>
+                        {revIntelLoading ? (
+                            <div className="h-[200px] flex items-center justify-center text-text-secondary text-sm">Carregando gráfico...</div>
+                        ) : revIntel?.distribution.length === 0 ? (
+                            <div className="h-[200px] flex items-center justify-center text-text-secondary text-sm">Nenhum score calculado na base.</div>
+                        ) : (
+                            <div className="h-[200px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={revIntel?.distribution || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                        <XAxis dataKey="range" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                                        <Tooltip
+                                            cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                                            contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px' }}
+                                        />
+                                        <Bar dataKey="count" name="Leads" radius={[4, 4, 0, 0]}>
+                                            {(revIntel?.distribution || []).map((entry, index) => {
+                                                const max = entry.range ? parseInt(entry.range.split('-')[1]) : 0;
+                                                const color = max >= 80 ? '#f97316' : max >= 60 ? '#f59e0b' : max >= 40 ? '#eab308' : '#3b82f6';
+                                                return <Cell key={`cell-${index}`} fill={color} />;
+                                            })}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* ── Previsão de Receita + Velocity ── */}

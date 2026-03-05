@@ -14,8 +14,7 @@ import {
     LogOut,
     Shield,
     Package,
-    RotateCcw,
-    Sparkles
+    RotateCcw
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
@@ -198,30 +197,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                             {collapsed && (
                                 <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
                                     Gestão Produtos
-                                </div>
-                            )}
-                        </Link>
-                        <Link
-                            to="/admin/conversation-intelligence"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative mt-1
-                                ${location.pathname === '/admin/conversation-intelligence'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
-                        >
-                            {location.pathname === '/admin/conversation-intelligence' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
-                            )}
-                            <Sparkles
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/conversation-intelligence' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/conversation-intelligence' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Conversation Intel</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Conversation Intel
                                 </div>
                             )}
                         </Link>

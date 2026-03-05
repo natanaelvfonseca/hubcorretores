@@ -65,6 +65,7 @@ export function LiveChat() {
     const [activeLeadScore, setActiveLeadScore] = useState<number>(0);
     const [activeLeadTemp, setActiveLeadTemp] = useState<string>("Frio");
     const [activeLeadId, setActiveLeadId] = useState<string | null>(null);
+    const [chatTemperatures, setChatTemperatures] = useState<Record<string, { temperature: string, score: number }>>({});
     const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
     const [showTakeoverModal, setShowTakeoverModal] = useState(false);
     const [selectedVendedorId, setSelectedVendedorId] = useState<string>('');
@@ -322,6 +323,19 @@ export function LiveChat() {
                 const deduplicatedChats = Array.from(chatMap.values());
 
                 setChats(deduplicatedChats);
+
+                // Fetch temperatures in bulk for active chats
+                if (deduplicatedChats.length > 0) {
+                    const jids = deduplicatedChats.map(c => c.remoteJid || c.id).filter(Boolean);
+                    fetch(`/api/chat-context/bulk/${instanceName}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ jids })
+                    })
+                        .then(r => r.ok ? r.json() : {})
+                        .then(data => setChatTemperatures(data))
+                        .catch(() => { });
+                }
             }
         } catch (error) {
             console.error('Failed to fetch chats:', error);
@@ -951,8 +965,18 @@ export function LiveChat() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-baseline mb-1">
-                                            <h3 className="text-gray-900 dark:text-white text-[16px] font-medium truncate font-display">{getDisplayName(chat)}</h3>
-                                            <span className="text-xs text-gray-500">{chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}</span>
+                                            <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                                                <h3 className="text-gray-900 dark:text-white text-[16px] font-medium truncate font-display">{getDisplayName(chat)}</h3>
+                                                {chatTemperatures[chat.remoteJid || chat.id]?.temperature && (
+                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${chatTemperatures[chat.remoteJid || chat.id].temperature.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                            chatTemperatures[chat.remoteJid || chat.id].temperature.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
+                                                                'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                                        }`}>
+                                                        {chatTemperatures[chat.remoteJid || chat.id].temperature}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-xs text-gray-500 whitespace-nowrap">{chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}</span>
                                         </div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-body">
                                             {chat.lastMessage?.content || '...'}
@@ -1249,8 +1273,8 @@ function TakeoverModal({ vendedores, selectedId, onSelect, onConfirm, onClose }:
                             key={v.id}
                             onClick={() => onSelect(v.id)}
                             className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${selectedId === v.id
-                                    ? 'bg-primary/20 border-primary/40 text-primary'
-                                    : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                ? 'bg-primary/20 border-primary/40 text-primary'
+                                : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                                 }`}
                         >
                             {v.nome}
