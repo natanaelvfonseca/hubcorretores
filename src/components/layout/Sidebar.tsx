@@ -14,7 +14,8 @@ import {
     LogOut,
     Shield,
     Package,
-    RotateCcw
+    RotateCcw,
+    TrendingUp
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
@@ -28,6 +29,7 @@ const menuItems = [
     { icon: MessagesSquare, label: 'Live Chat', path: '/live-chat' },
     { icon: UserCheck, label: 'Clientes', path: '/clients' },
     { icon: RotateCcw, label: 'Recuperação', path: '/recovery' },
+    { icon: TrendingUp, label: 'Revenue Intelligence', path: '/intelligence' },
     { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
     { icon: UserCog, label: 'Vendedores', path: '/vendedores' },
     { icon: Zap, label: 'Ativar Koins', path: '/billing' },

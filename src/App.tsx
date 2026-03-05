@@ -29,6 +29,8 @@ import { Clients } from './pages/clients/Clients';
 import { Checkout } from './pages/checkout/Checkout';
 import { CheckoutSuccess } from './pages/checkout/CheckoutSuccess';
 import { FollowupManager } from './pages/recovery/FollowupManager';
+import { RevenueIntelligence } from './pages/intelligence/RevenueIntelligence';
+import { AdminIntelligence } from './pages/admin/AdminIntelligence';
 
 import { ReferralRedirect } from './pages/partners/ReferralRedirect';
 
@@ -65,6 +67,7 @@ function App() {
                                 <Route path="agenda" element={<Agenda />} />
                                 <Route path="vendedores" element={<Vendedores />} />
                                 <Route path="recovery" element={<FollowupManager />} />
+                                <Route path="intelligence" element={<RevenueIntelligence />} />
                                 <Route path="partners" element={<PartnerDashboard />} />
 
                                 {/* Admin Routes */}
@@ -85,7 +88,7 @@ function App() {
                                 } />
                                 <Route path="admin/conversation-intelligence" element={
                                     <AdminRoute>
-                                        <AdminDashboard />
+                                        <AdminIntelligence />
                                     </AdminRoute>
                                 } />
 

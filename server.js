@@ -244,6 +244,69 @@ const ensureConversationIntelligenceTables = async () => {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_ce_org_id ON conversation_events(organization_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_sbg_org_id ON sales_behavior_graph(organization_id)`);
 
+    // Anti-reprocessing flag for the CIE batch engine
+    await pool.query(`ALTER TABLE conversation_intelligence ADD COLUMN IF NOT EXISTS processed_by_cie BOOLEAN DEFAULT FALSE`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ci_processed ON conversation_intelligence(organization_id, processed_by_cie)`);
+
+    // ── CIE: Conversation Intelligence Engine tables ──────────────────────────
+
+    // Periodic aggregated snapshots per org
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conversation_insights (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        period VARCHAR(20) DEFAULT 'daily',
+        period_start TIMESTAMPTZ,
+        period_end TIMESTAMPTZ,
+        top_objections JSONB DEFAULT '[]',
+        top_intents JSONB DEFAULT '[]',
+        top_closing_phrases JSONB DEFAULT '[]',
+        top_losing_phrases JSONB DEFAULT '[]',
+        avg_response_time_minutes FLOAT DEFAULT 0,
+        avg_close_time_days FLOAT DEFAULT 0,
+        conversion_rate FLOAT DEFAULT 0,
+        pipeline_drop_stage TEXT,
+        total_conversations INT DEFAULT 0,
+        total_won INT DEFAULT 0,
+        total_lost INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ci_insights_org ON conversation_insights(organization_id, period)`);
+
+    // Sales phrase patterns (closing phrases & killer phrases)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sales_patterns (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        pattern_type VARCHAR(30) NOT NULL CHECK (pattern_type IN ('closing_phrase','killer_phrase')),
+        phrase_detected TEXT NOT NULL,
+        context_intent TEXT,
+        conversion_impact_score FLOAT DEFAULT 0,
+        detected_count INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(organization_id, pattern_type, phrase_detected)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_sp_org_type ON sales_patterns(organization_id, pattern_type)`);
+
+    // Auto-generated behavioral insight patterns
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS behavior_patterns (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        pattern_type VARCHAR(50) NOT NULL,
+        pattern_description TEXT NOT NULL,
+        impact_score FLOAT DEFAULT 0,
+        sample_size INT DEFAULT 0,
+        metadata JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_bp_org ON behavior_patterns(organization_id)`);
+
     log("[CIL] Conversation Intelligence tables verified.");
   } catch (err) {
     log("[ERROR] ensureConversationIntelligenceTables failed: " + err.message);
@@ -1037,6 +1100,291 @@ async function cancelFollowupOnReply(orgId, remoteJid, replyTimestamp) {
 
 // ── END AI Follow-up Engine ────────────────────────────────────────────────────
 
+// ══════════════════════════════════════════════════════════════════════════════
+// CONVERSATION INTELLIGENCE ENGINE (CIE)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Compute aggregated conversation insights for a single org.
+ * Called by runConversationIntelligenceEngine per org.
+ * Returns batch of rows to upsert into conversation_insights.
+ */
+async function computeOrgInsights(orgId, periodDays = 30) {
+  const periodStart = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000);
+
+  // Aggregated intent & objection data
+  const ciRows = await pool.query(`
+    SELECT intent, objections, stage, purchase_probability, days_to_close,
+           closed_won, closed_lost, agent_id, conversation_id
+    FROM conversation_intelligence
+    WHERE organization_id = $1 AND created_at >= $2
+  `, [orgId, periodStart.toISOString()]);
+
+  if (ciRows.rows.length === 0) return null;
+
+  const rows = ciRows.rows;
+
+  // Conversion metrics
+  const total = rows.length;
+  const won = rows.filter(r => r.closed_won).length;
+  const lost = rows.filter(r => r.closed_lost).length;
+  const conversionRate = total > 0 ? won / total : 0;
+
+  // Avg close time
+  const closeTimes = rows.filter(r => r.days_to_close > 0).map(r => r.days_to_close);
+  const avgCloseTime = closeTimes.length > 0 ? closeTimes.reduce((a, b) => a + b, 0) / closeTimes.length : 0;
+
+  // Top intents
+  const intentCount = {};
+  rows.forEach(r => { if (r.intent) intentCount[r.intent] = (intentCount[r.intent] || 0) + 1; });
+  const topIntents = Object.entries(intentCount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => ({ intent: k, count: v }));
+
+  // Top objections
+  const objCount = {};
+  rows.forEach(r => { (r.objections || []).forEach(o => { objCount[o] = (objCount[o] || 0) + 1; }); });
+  const topObjections = Object.entries(objCount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => ({ objection: k, count: v }));
+
+  // Pipeline drop stage (most common stage among lost)
+  const lostRows = rows.filter(r => r.closed_lost);
+  const stageCount = {};
+  lostRows.forEach(r => { if (r.stage) stageCount[r.stage] = (stageCount[r.stage] || 0) + 1; });
+  const pipelineDropStage = Object.entries(stageCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  return {
+    topIntents,
+    topObjections,
+    conversionRate,
+    avgCloseTime,
+    pipelineDropStage,
+    total,
+    won,
+    lost
+  };
+}
+
+/**
+ * Extract sales phrases from chat_messages for won / lost conversations.
+ * Uses last N messages before close as signal.
+ */
+async function extractSalesPatterns(orgId) {
+  try {
+    // Get won conversations — find their conversation_ids
+    const wonConvs = await pool.query(`
+      SELECT DISTINCT conversation_id FROM conversation_intelligence
+      WHERE organization_id = $1 AND closed_won = TRUE AND conversation_id IS NOT NULL
+    `, [orgId]);
+
+    // Get lost conversations
+    const lostConvs = await pool.query(`
+      SELECT DISTINCT conversation_id FROM conversation_intelligence
+      WHERE organization_id = $1 AND closed_lost = TRUE AND conversation_id IS NOT NULL
+    `, [orgId]);
+
+    const processConversations = async (convIds, patternType) => {
+      for (const row of convIds) {
+        const convId = row.conversation_id;
+        // Fetch up to 5 assistant messages before close (closing/killing phrases)
+        const msgs = await pool.query(`
+          SELECT content FROM chat_messages
+          WHERE remote_jid = $1 AND role = 'assistant'
+          ORDER BY created_at DESC LIMIT 5
+        `, [convId]);
+
+        for (const msg of msgs.rows) {
+          if (!msg.content || msg.content.length > 300) continue;
+          // Extract short phrases (sentences under 100 chars)
+          const sentences = msg.content.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 10 && s.length < 100);
+          for (const phrase of sentences.slice(0, 3)) {
+            const impact = patternType === 'closing_phrase' ? 0.8 : -0.7;
+            await pool.query(`
+              INSERT INTO sales_patterns (organization_id, pattern_type, phrase_detected, conversion_impact_score, detected_count)
+              VALUES ($1, $2, $3, $4, 1)
+              ON CONFLICT (organization_id, pattern_type, phrase_detected)
+              DO UPDATE SET detected_count = sales_patterns.detected_count + 1, updated_at = NOW()
+            `, [orgId, patternType, phrase, impact]);
+          }
+        }
+      }
+    };
+
+    await processConversations(wonConvs.rows, 'closing_phrase');
+    await processConversations(lostConvs.rows, 'killer_phrase');
+
+    log(`[CIE] Sales patterns extracted for org ${orgId}`);
+  } catch (err) {
+    log(`[CIE] extractSalesPatterns error (org ${orgId}): ${err.message}`);
+  }
+}
+
+/**
+ * Generate behavioral insight rows for the org.
+ */
+async function computeBehaviorPatterns(orgId) {
+  try {
+    // Pattern 1: Fast responders vs slow — compare win rate
+    const fastReply = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE sbg.conversion_result = 'won') AS won_fast,
+        COUNT(*) AS total_fast
+      FROM sales_behavior_graph sbg
+      WHERE sbg.organization_id = $1 AND sbg.time_between_messages <= 5
+    `, [orgId]);
+    const slowReply = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE sbg.conversion_result = 'won') AS won_slow,
+        COUNT(*) AS total_slow
+      FROM sales_behavior_graph sbg
+      WHERE sbg.organization_id = $1 AND sbg.time_between_messages > 30
+    `, [orgId]);
+
+    const fastWins = parseInt(fastReply.rows[0]?.won_fast || 0);
+    const fastTotal = parseInt(fastReply.rows[0]?.total_fast || 0);
+    const slowWins = parseInt(slowReply.rows[0]?.won_slow || 0);
+    const slowTotal = parseInt(slowReply.rows[0]?.total_slow || 0);
+
+    if (fastTotal >= 5 && slowTotal >= 5) {
+      const fastRate = fastWins / fastTotal;
+      const slowRate = slowWins / slowTotal;
+      const lift = Math.round((fastRate - slowRate) * 100);
+      const desc = `Leads respondidos em até 5 minutos convertem ${Math.abs(lift)}% ${lift > 0 ? 'a mais' : 'a menos'} que respostas acima de 30 minutos.`;
+      await pool.query(`
+        INSERT INTO behavior_patterns (organization_id, pattern_type, pattern_description, impact_score, sample_size, metadata)
+        VALUES ($1, 'response_speed', $2, $3, $4, $5)
+        ON CONFLICT DO NOTHING
+      `, [orgId, desc, Math.abs(lift / 100), fastTotal + slowTotal, JSON.stringify({ fast_rate: fastRate, slow_rate: slowRate })]);
+    }
+
+    // Pattern 2: Price objection impact
+    const priceObj = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won,
+        COUNT(*) AS total
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND 'preco_alto' = ANY(objections)
+    `, [orgId]);
+
+    const noPrice = await pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won,
+        COUNT(*) AS total
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND NOT ('preco_alto' = ANY(COALESCE(objections, '{}')))
+    `, [orgId]);
+
+    const priceWon = parseInt(priceObj.rows[0]?.won || 0);
+    const priceTotal = parseInt(priceObj.rows[0]?.total || 0);
+    const noPriceWon = parseInt(noPrice.rows[0]?.won || 0);
+    const noPriceTotal = parseInt(noPrice.rows[0]?.total || 0);
+
+    if (priceTotal >= 5 && noPriceTotal >= 5) {
+      const priceRate = priceWon / priceTotal;
+      const noPriceRate = noPriceWon / noPriceTotal;
+      const diff = Math.round((priceRate - noPriceRate) * 100);
+      const desc = `Leads com objeção de preço convertem ${Math.abs(diff)}% ${diff < 0 ? 'a menos' : 'a mais'} do que sem essa objeção.`;
+      await pool.query(`
+        INSERT INTO behavior_patterns (organization_id, pattern_type, pattern_description, impact_score, sample_size, metadata)
+        VALUES ($1, 'price_objection', $2, $3, $4, $5)
+        ON CONFLICT DO NOTHING
+      `, [orgId, desc, Math.abs(diff / 100), priceTotal + noPriceTotal, JSON.stringify({ price_obj_rate: priceRate, no_price_rate: noPriceRate })]);
+    }
+
+    // Pattern 3: Hot leads close faster
+    const tempData = await pool.query(`
+      SELECT os.temperature,
+        AVG(sbg.time_to_decision) AS avg_days,
+        COUNT(*) FILTER (WHERE sbg.conversion_result = 'won') AS won,
+        COUNT(*) AS total
+      FROM sales_behavior_graph sbg
+      JOIN opportunity_scores os ON os.lead_id = sbg.lead_id
+      WHERE sbg.organization_id = $1
+      GROUP BY os.temperature
+    `, [orgId]);
+
+    for (const row of tempData.rows) {
+      if (parseInt(row.total) >= 5) {
+        const rate = Math.round((parseInt(row.won) / parseInt(row.total)) * 100);
+        const desc = `Leads "${row.temperature}" têm taxa de conversão de ${rate}% com tempo médio de fechamento de ${Math.round(row.avg_days || 0)} dias.`;
+        await pool.query(`
+          INSERT INTO behavior_patterns (organization_id, pattern_type, pattern_description, impact_score, sample_size, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT DO NOTHING
+        `, [orgId, `temp_${row.temperature}`, desc, rate / 100, parseInt(row.total), JSON.stringify({ temperature: row.temperature, conversion_rate: rate / 100 })]);
+      }
+    }
+
+    log(`[CIE] Behavior patterns computed for org ${orgId}`);
+  } catch (err) {
+    log(`[CIE] computeBehaviorPatterns error (org ${orgId}): ${err.message}`);
+  }
+}
+
+/**
+ * Main CIE batch engine. Processes unprocessed conversations per org in batches.
+ * Designed to run once daily.
+ */
+async function runConversationIntelligenceEngine() {
+  try {
+    log('[CIE] Starting Conversation Intelligence Engine run...');
+
+    // Get all distinct orgs with unprocessed data
+    const orgsRes = await pool.query(`
+      SELECT DISTINCT organization_id FROM conversation_intelligence
+      WHERE processed_by_cie = FALSE
+    `);
+
+    log(`[CIE] Processing ${orgsRes.rows.length} organizations...`);
+
+    for (const orgRow of orgsRes.rows) {
+      const orgId = orgRow.organization_id;
+      try {
+        // 1. Compute aggregated insights
+        const insights = await computeOrgInsights(orgId, 30);
+        if (insights) {
+          await pool.query(`
+            INSERT INTO conversation_insights (
+              organization_id, period, period_start, period_end,
+              top_objections, top_intents, conversion_rate, avg_close_time_days,
+              pipeline_drop_stage, total_conversations, total_won, total_lost
+            ) VALUES ($1,'daily', NOW() - INTERVAL '30 days', NOW(), $2,$3,$4,$5,$6,$7,$8,$9)
+          `, [
+            orgId,
+            JSON.stringify(insights.topObjections),
+            JSON.stringify(insights.topIntents),
+            insights.conversionRate,
+            insights.avgCloseTime,
+            insights.pipelineDropStage,
+            insights.total,
+            insights.won,
+            insights.lost
+          ]);
+        }
+
+        // 2. Extract sales phrase patterns
+        await extractSalesPatterns(orgId);
+
+        // 3. Compute behavioral patterns
+        await computeBehaviorPatterns(orgId);
+
+        // 4. Mark batch as processed
+        await pool.query(`
+          UPDATE conversation_intelligence SET processed_by_cie = TRUE
+          WHERE organization_id = $1 AND processed_by_cie = FALSE
+        `, [orgId]);
+
+        log(`[CIE] Org ${orgId} processed successfully.`);
+      } catch (orgErr) {
+        log(`[CIE] Error processing org ${orgId}: ${orgErr.message}`);
+      }
+    }
+
+    log('[CIE] Engine run complete.');
+  } catch (err) {
+    log(`[CIE] runConversationIntelligenceEngine error: ${err.message}`);
+  }
+}
+
+
+
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
@@ -1053,7 +1401,11 @@ initPool().then(() => {
     cron.schedule('* * * * *', () => {
       processFollowupQueue().catch(err => log(`[FOLLOWUP CRON] processQueue: ${err.message}`));
     });
-    log('[FOLLOWUP] Cron jobs started: queue processor (1m)');
+    // Run Conversation Intelligence Engine once daily at 2am
+    cron.schedule('0 2 * * *', () => {
+      runConversationIntelligenceEngine().catch(err => log(`[CIE CRON] error: ${err.message}`));
+    });
+    log('[FOLLOWUP] Cron jobs started: queue processor (1m), CIE engine (daily 2am)');
   }, 15000);
 
 }).catch(e => log("Startup error: " + e.message));
@@ -12445,6 +12797,395 @@ app.get('/api/followup/status/:jid', verifyJWT, async (req, res) => {
 });
 
 // ── END AI Follow-up Engine API Routes ────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONVERSATION INTELLIGENCE ENGINE — API ROUTES
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Helper to get orgId from JWT
+async function getCIEOrgId(userId) {
+  const r = await pool.query('SELECT organization_id FROM users WHERE id = $1', [userId]);
+  return r.rows[0]?.organization_id || null;
+}
+
+// Helper: require super_admin role
+async function isSuperAdmin(userId) {
+  const r = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+  return r.rows[0]?.role === 'super_admin';
+}
+
+// GET /api/intelligence/summary — KPIs: conversion, avg close, abandonment
+app.get('/api/intelligence/summary', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const stats = await pool.query(`
+      SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won,
+        COUNT(*) FILTER (WHERE closed_lost = TRUE) AS lost,
+        AVG(days_to_close) FILTER (WHERE days_to_close > 0) AS avg_close_days,
+        AVG(purchase_probability) AS avg_probability
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND created_at >= $2
+    `, [orgId, periodStart.toISOString()]);
+
+    const row = stats.rows[0];
+    const total = parseInt(row.total || 0);
+    const won = parseInt(row.won || 0);
+    const lost = parseInt(row.lost || 0);
+    const abandoned = total - won - lost;
+
+    res.json({
+      total,
+      won,
+      lost,
+      abandoned: Math.max(0, abandoned),
+      conversion_rate: total > 0 ? (won / total) : 0,
+      avg_close_days: parseFloat(row.avg_close_days || 0).toFixed(1),
+      avg_probability: parseFloat(row.avg_probability || 0).toFixed(2),
+      abandonment_rate: total > 0 ? (abandoned / total) : 0
+    });
+  } catch (err) {
+    log('GET /api/intelligence/summary error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/funnel — Conversion by pipeline stage
+app.get('/api/intelligence/funnel', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT stage,
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND created_at >= $2 AND stage IS NOT NULL
+      GROUP BY stage ORDER BY COUNT(*) DESC
+    `, [orgId, periodStart.toISOString()]);
+
+    res.json(result.rows.map(r => ({
+      stage: r.stage,
+      total: parseInt(r.total),
+      won: parseInt(r.won),
+      conversion: parseInt(r.total) > 0 ? (parseInt(r.won) / parseInt(r.total)) : 0
+    })));
+  } catch (err) {
+    log('GET /api/intelligence/funnel error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/objections — Distribution of detected objections
+app.get('/api/intelligence/objections', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT unnest(objections) AS objection, COUNT(*) AS count
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND created_at >= $2 AND objections IS NOT NULL
+      GROUP BY objection ORDER BY count DESC LIMIT 15
+    `, [orgId, periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/objections error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/intents — Distribution of detected purchase intents
+app.get('/api/intelligence/intents', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT intent, COUNT(*) AS count,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won
+      FROM conversation_intelligence
+      WHERE organization_id = $1 AND created_at >= $2 AND intent IS NOT NULL
+      GROUP BY intent ORDER BY count DESC
+    `, [orgId, periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/intents error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/patterns/closing — Top closing phrases
+app.get('/api/intelligence/patterns/closing', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const result = await pool.query(`
+      SELECT phrase_detected, conversion_impact_score, detected_count, context_intent
+      FROM sales_patterns
+      WHERE organization_id = $1 AND pattern_type = 'closing_phrase'
+      ORDER BY detected_count DESC, conversion_impact_score DESC LIMIT 20
+    `, [orgId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/patterns/closing error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/patterns/killers — Top killer phrases
+app.get('/api/intelligence/patterns/killers', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const result = await pool.query(`
+      SELECT phrase_detected, conversion_impact_score, detected_count, context_intent
+      FROM sales_patterns
+      WHERE organization_id = $1 AND pattern_type = 'killer_phrase'
+      ORDER BY detected_count DESC LIMIT 20
+    `, [orgId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/patterns/killers error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/behavior — Auto-generated behavior patterns
+app.get('/api/intelligence/behavior', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const result = await pool.query(`
+      SELECT pattern_type, pattern_description, impact_score, sample_size, metadata
+      FROM behavior_patterns
+      WHERE organization_id = $1
+      ORDER BY impact_score DESC, sample_size DESC LIMIT 20
+    `, [orgId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/behavior error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/temperature — Conversion by lead temperature
+app.get('/api/intelligence/temperature', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT os.temperature,
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE ci.closed_won = TRUE) AS won
+      FROM conversation_intelligence ci
+      JOIN opportunity_scores os ON os.lead_id = ci.lead_id
+      WHERE ci.organization_id = $1 AND ci.created_at >= $2
+      GROUP BY os.temperature
+    `, [orgId, periodStart.toISOString()]);
+
+    res.json(result.rows.map(r => ({
+      temperature: r.temperature,
+      total: parseInt(r.total),
+      won: parseInt(r.won),
+      conversion: parseInt(r.total) > 0 ? (parseInt(r.won) / parseInt(r.total)) : 0
+    })));
+  } catch (err) {
+    log('GET /api/intelligence/temperature error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/sellers — Conversion by seller (agent)
+app.get('/api/intelligence/sellers', verifyJWT, async (req, res) => {
+  try {
+    const orgId = await getCIEOrgId(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT ci.agent_id, a.name AS agent_name,
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE ci.closed_won = TRUE) AS won
+      FROM conversation_intelligence ci
+      LEFT JOIN agents a ON a.id::text = ci.agent_id
+      WHERE ci.organization_id = $1 AND ci.created_at >= $2 AND ci.agent_id IS NOT NULL
+      GROUP BY ci.agent_id, a.name ORDER BY won DESC
+    `, [orgId, periodStart.toISOString()]);
+
+    res.json(result.rows.map(r => ({
+      agent_id: r.agent_id,
+      agent_name: r.agent_name || 'Agente Desconhecido',
+      total: parseInt(r.total),
+      won: parseInt(r.won),
+      conversion: parseInt(r.total) > 0 ? (parseInt(r.won) / parseInt(r.total)) : 0
+    })));
+  } catch (err) {
+    log('GET /api/intelligence/sellers error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/run — Manual trigger for the engine (admin only)
+app.get('/api/intelligence/run', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    runConversationIntelligenceEngine().catch(e => log(`[CIE] manual run error: ${e.message}`));
+    res.json({ success: true, message: 'CIE engine triggered asynchronously' });
+  } catch (err) {
+    log('GET /api/intelligence/run error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/admin/summary — Global platform summary (super_admin)
+app.get('/api/intelligence/admin/summary', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT
+        COUNT(DISTINCT organization_id) AS total_orgs,
+        COUNT(*) AS total_conversations,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS total_won,
+        COUNT(*) FILTER (WHERE closed_lost = TRUE) AS total_lost,
+        AVG(purchase_probability) AS avg_probability
+      FROM conversation_intelligence
+      WHERE created_at >= $1
+    `, [periodStart.toISOString()]);
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    log('GET /api/intelligence/admin/summary error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/admin/objections — Top objections by sector (super_admin)
+app.get('/api/intelligence/admin/objections', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT unnest(objections) AS objection, COUNT(*) AS count
+      FROM conversation_intelligence
+      WHERE created_at >= $1 AND objections IS NOT NULL
+      GROUP BY objection ORDER BY count DESC LIMIT 20
+    `, [periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/admin/objections error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/admin/segments — Intent & ticket by segment (super_admin)
+app.get('/api/intelligence/admin/segments', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT segment, intent,
+        COUNT(*) AS total,
+        AVG(estimated_ticket) AS avg_ticket,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won
+      FROM conversation_intelligence
+      WHERE created_at >= $1 AND segment IS NOT NULL
+      GROUP BY segment, intent ORDER BY total DESC LIMIT 30
+    `, [periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/admin/segments error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/admin/regions — Demand by region (super_admin)
+app.get('/api/intelligence/admin/regions', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT state, city, COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won
+      FROM conversation_intelligence
+      WHERE created_at >= $1 AND state IS NOT NULL
+      GROUP BY state, city ORDER BY total DESC LIMIT 30
+    `, [periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/admin/regions error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/intelligence/admin/products — Most mentioned products (super_admin)
+app.get('/api/intelligence/admin/products', verifyJWT, async (req, res) => {
+  try {
+    const admin = await isSuperAdmin(req.userId);
+    if (!admin) return res.status(403).json({ error: 'Requires super_admin' });
+    const days = parseInt(req.query.days || '30');
+    const periodStart = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const result = await pool.query(`
+      SELECT product_interest, COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE closed_won = TRUE) AS won,
+        AVG(estimated_ticket) AS avg_ticket
+      FROM conversation_intelligence
+      WHERE created_at >= $1 AND product_interest IS NOT NULL
+      GROUP BY product_interest ORDER BY total DESC LIMIT 20
+    `, [periodStart.toISOString()]);
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/intelligence/admin/products error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── END Conversation Intelligence Engine API Routes ───────────────────────────
+
 
 // ── VERCEL CRONS ──────────────────────────────────────────────────────────────
 
