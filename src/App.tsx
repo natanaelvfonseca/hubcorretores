@@ -29,6 +29,7 @@ import { Clients } from './pages/clients/Clients';
 import { Checkout } from './pages/checkout/Checkout';
 import { CheckoutSuccess } from './pages/checkout/CheckoutSuccess';
 import { FollowupManager } from './pages/recovery/FollowupManager';
+import { Products } from './pages/products/Products';
 
 import { AdminIntelligence } from './pages/admin/AdminIntelligence';
 import { KognaIntelligencePanel } from './pages/admin/KognaIntelligencePanel';
@@ -69,6 +70,7 @@ function App() {
                                 <Route path="agenda" element={<Agenda />} />
                                 <Route path="vendedores" element={<Vendedores />} />
                                 <Route path="recovery" element={<FollowupManager />} />
+                                <Route path="products" element={<Products />} />
 
                                 <Route path="partners" element={<PartnerDashboard />} />
 

@@ -2081,6 +2081,24 @@ const TOOL_DEFINITIONS = {
     },
   },
 
+  present_product: {
+    type: 'function',
+    function: {
+      name: 'present_product',
+      description: 'Apresenta automaticamente o produto mais relevante ao lead no WhatsApp. Envia imagem, descrição curta, benefício principal e oferta selecionada pelo sistema. Use quando o lead pedir informações sobre produtos, preços ou soluções.',
+      parameters: {
+        type: 'object',
+        properties: {
+          product_hint: {
+            type: 'string',
+            description: 'Palavra-chave ou nome do produto mencionado pelo lead (opcional). Se omitido, o sistema seleciona automaticamente.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+
 };
 
 // ─── Stage → Tools Map ────────────────────────────────────────────────────────
@@ -2088,10 +2106,10 @@ const STAGE_TOOL_MAP = {
   novo: { tools: [], tool_choice: 'none' },
   qualificacao: { tools: ['crm_update_lead'], tool_choice: 'none' },
   diagnostico: { tools: ['crm_update_lead'], tool_choice: 'none' },
-  apresentacao: { tools: ['crm_update_lead'], tool_choice: 'none' },
-  proposta: { tools: ['crm_update_lead'], tool_choice: 'none' },
+  apresentacao: { tools: ['crm_update_lead', 'present_product'], tool_choice: 'none' },
+  proposta: { tools: ['crm_update_lead', 'present_product'], tool_choice: 'none' },
   agendamento: { tools: ['consultar_horarios_disponiveis', 'confirmar_agendamento', 'cancelar_agendamento'], tool_choice: 'auto' },
-  followup: { tools: ['send_followup_message', 'crm_update_lead'], tool_choice: 'none' },
+  followup: { tools: ['send_followup_message', 'crm_update_lead', 'present_product'], tool_choice: 'none' },
 };
 
 /**
@@ -2280,6 +2298,267 @@ function resolveAgent(stage) {
 
 // ── END Multi-Agent Architecture ──────────────────────────────────────────────
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PRODUCT & DYNAMIC OFFER ENGINE
+// Product catalog, multi-offer selection by CSE stage, WhatsApp media delivery
+// ══════════════════════════════════════════════════════════════════════════════
+
+const ensureProductEngineTables = async () => {
+  try {
+    log('[PRODUCT ENGINE] Ensuring Product & Offer tables...');
+
+    // Core product catalog
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        nome TEXT NOT NULL,
+        categoria TEXT,
+        descricao_curta TEXT,
+        descricao_detalhada TEXT,
+        beneficios TEXT[] DEFAULT '{}',
+        preco_base FLOAT,
+        faq JSONB DEFAULT '[]',
+        tags TEXT[] DEFAULT '{}',
+        status VARCHAR(20) DEFAULT 'ativo' CHECK (status IN ('ativo','inativo')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_products_org ON products(organization_id)`);
+
+    // Product media library
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS product_images (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        organization_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        tipo VARCHAR(20) DEFAULT 'image' CHECK (tipo IN ('image','video','pdf')),
+        caption TEXT,
+        ordem INT DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_product_images_pid ON product_images(product_id)`);
+
+    // Dynamic offers per product
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS offers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        organization_id TEXT NOT NULL,
+        nome TEXT NOT NULL,
+        preco FLOAT,
+        descricao TEXT,
+        mensagem_sugerida TEXT,
+        prioridade INT DEFAULT 5 CHECK (prioridade BETWEEN 1 AND 10),
+        status VARCHAR(20) DEFAULT 'ativo' CHECK (status IN ('ativo','inativo')),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_offers_product ON offers(product_id, organization_id)`);
+
+    // Conversational trigger rules per offer
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS offer_triggers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        offer_id UUID NOT NULL REFERENCES offers(id) ON DELETE CASCADE,
+        trigger_type TEXT NOT NULL CHECK (trigger_type IN (
+          'pergunta_preco', 'comparacao', 'objecao_preco',
+          'indecisao', 'pronto_para_comprar', 'followup', 'primeiro_contato'
+        )),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(offer_id, trigger_type)
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_triggers_oid ON offer_triggers(offer_id)`);
+
+    // Offer presentation events for CIL intelligence
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS offer_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id TEXT NOT NULL,
+        conversation_id TEXT,
+        lead_id TEXT,
+        product_id UUID,
+        offer_id UUID,
+        lead_stage TEXT,
+        resposta_cliente TEXT,
+        timestamp TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_offer_events_org ON offer_events(organization_id, lead_id)`);
+
+    log('[PRODUCT ENGINE] All tables verified.');
+  } catch (err) {
+    log('[PRODUCT ENGINE] ensureProductEngineTables error: ' + err.message);
+  }
+};
+
+// ─── Stage → Default Trigger Map ────────────────────────────────────────────
+const STAGE_DEFAULT_TRIGGER = {
+  novo: 'primeiro_contato',
+  qualificacao: 'primeiro_contato',
+  diagnostico: 'pergunta_preco',
+  apresentacao: 'comparacao',
+  proposta: 'pronto_para_comprar',
+  followup: 'followup',
+};
+
+/**
+ * Selects the best offer for a given org, CSE stage, and user intent keyword.
+ * Scores: +10 trigger match on intent, +5 trigger match on stage default, +prioridade.
+ * @returns {{ offer, product } | null}
+ */
+async function selectBestOffer(orgId, leadStage, userIntent = '') {
+  try {
+    const stageTrigger = STAGE_DEFAULT_TRIGGER[leadStage] || 'primeiro_contato';
+
+    // Load active offers + their triggers + their product
+    const result = await pool.query(`
+      SELECT o.*, p.nome AS product_nome, p.descricao_curta, p.beneficios,
+             p.id AS product_id_actual,
+             ARRAY_AGG(ot.trigger_type) FILTER (WHERE ot.trigger_type IS NOT NULL) AS triggers
+      FROM offers o
+      JOIN products p ON p.id = o.product_id
+      LEFT JOIN offer_triggers ot ON ot.offer_id = o.id
+      WHERE o.organization_id = $1 AND o.status = 'ativo' AND p.status = 'ativo'
+      GROUP BY o.id, p.nome, p.descricao_curta, p.beneficios, p.id
+    `, [orgId]);
+
+    if (result.rows.length === 0) return null;
+
+    // Normalize intent for matching
+    const intentLower = userIntent.toLowerCase();
+
+    let best = null;
+    let bestScore = -1;
+
+    for (const row of result.rows) {
+      const triggers = row.triggers || [];
+      let score = row.prioridade || 5;
+
+      // +10 if stage default trigger is in this offer's triggers
+      if (triggers.includes(stageTrigger)) score += 10;
+
+      // +5 if any trigger keyword appears in userIntent
+      for (const t of triggers) {
+        if (intentLower.includes(t.replace(/_/g, ' '))) { score += 5; break; }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = row;
+      }
+    }
+
+    if (!best) return null;
+
+    return {
+      offer: {
+        id: best.id,
+        nome: best.nome,
+        preco: best.preco,
+        descricao: best.descricao,
+        mensagem_sugerida: best.mensagem_sugerida,
+      },
+      product: {
+        id: best.product_id_actual,
+        nome: best.product_nome,
+        descricao_curta: best.descricao_curta,
+        beneficios: best.beneficios || [],
+      },
+    };
+  } catch (err) {
+    log(`[OFFER ENGINE] selectBestOffer error: ${err.message}`);
+    return null;
+  }
+}
+
+/**
+ * Records an offer presentation event for CIL telemetry.
+ */
+async function recordOfferEvent(orgId, leadId, productId, offerId, leadStage) {
+  try {
+    await pool.query(`
+      INSERT INTO offer_events (organization_id, lead_id, product_id, offer_id, lead_stage)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [orgId, leadId, productId, offerId, leadStage]);
+  } catch (err) {
+    log(`[OFFER ENGINE] recordOfferEvent error: ${err.message}`);
+  }
+}
+
+/**
+ * Sends product image + description text + offer message to WhatsApp lead.
+ * Uses Evolution API (EVOLUTION_API_URL + EVOLUTION_API_KEY from env).
+ */
+async function sendProductToLead(orgId, instanceName, remoteJid, leadStage, userIntent) {
+  try {
+    const selected = await selectBestOffer(orgId, leadStage, userIntent);
+    if (!selected) {
+      log(`[PRODUCT SEND] No active offer found for org=${orgId} stage=${leadStage}`);
+      return null;
+    }
+
+    const { offer, product } = selected;
+    const evoBase = process.env.EVOLUTION_API_URL || 'https://evo.kogna.co';
+    const evoKey = process.env.EVOLUTION_API_KEY || '';
+    const headers = { 'Content-Type': 'application/json', apikey: evoKey };
+
+    log(`[OFFER ENGINE] Stage=${leadStage} → offer="${offer.nome}" for lead=${remoteJid}`);
+
+    // Step 1: Send product image if available
+    const imgRes = await pool.query(
+      `SELECT url, caption FROM product_images WHERE product_id = $1 AND tipo = 'image' ORDER BY ordem LIMIT 1`,
+      [product.id]
+    );
+    if (imgRes.rows.length > 0) {
+      const img = imgRes.rows[0];
+      await fetch(`${evoBase}/message/sendMedia/${instanceName}`, {
+        method: 'POST', headers,
+        body: JSON.stringify({
+          number: remoteJid,
+          mediatype: 'image',
+          media: img.url,
+          caption: img.caption || product.nome,
+        }),
+      });
+      log(`[PRODUCT SEND] Image sent for ${product.nome}`);
+    }
+
+    // Step 2: Send description + main benefit
+    const benefit = product.beneficios?.[0] || '';
+    const descText = `*${product.nome}*\n\n${product.descricao_curta || ''}${benefit ? `\n\n✅ ${benefit}` : ''}`;
+    await fetch(`${evoBase}/message/sendText/${instanceName}`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ number: remoteJid, text: descText, delay: 800 }),
+    });
+
+    // Step 3: Send offer message
+    if (offer.mensagem_sugerida) {
+      await fetch(`${evoBase}/message/sendText/${instanceName}`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ number: remoteJid, text: offer.mensagem_sugerida, delay: 1200 }),
+      });
+    }
+
+    // Step 4: Record offer event
+    await recordOfferEvent(orgId, remoteJid, product.id, offer.id, leadStage);
+    log(`[OFFER EVENT] Recorded offer presentation for lead=${remoteJid} offer="${offer.nome}"`);
+
+    return { offer, product };
+  } catch (err) {
+    log(`[PRODUCT SEND] sendProductToLead error: ${err.message}`);
+    return null;
+  }
+}
+
+// ── END Product & Dynamic Offer Engine ───────────────────────────────────────
+
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
@@ -2291,6 +2570,7 @@ initPool().then(() => {
   setTimeout(ensureFollowupEngineTables, 12000); // AI Follow-up Engine tables
   setTimeout(ensureIndustryProfileTables, 14000); // Industry Accelerator Layer tables
   setTimeout(ensureConversationStateTables, 16000); // CSE: Conversation State Engine tables
+  setTimeout(ensureProductEngineTables, 18000);      // Product & Dynamic Offer Engine tables
 
   // Start Follow-up Engine cron jobs (fire after tables are ready)
   setTimeout(() => {
@@ -11879,9 +12159,21 @@ async function processAIResponse(
               toolResult = await executeSendFollowupMessage(
                 orgId, remoteJid, instanceName, args.message, args.delay_minutes
               );
+            } else if (functionName === 'present_product') {
+              // Calls the Dynamic Offer Engine — sends image + text + offer via WhatsApp
+              const productResult = await sendProductToLead(
+                orgId, instanceName, remoteJid, cseStage, args.product_hint || userIntent
+              );
+              toolResult = productResult
+                ? {
+                  success: true, product: productResult.product.nome, offer: productResult.offer.nome,
+                  _instruction: 'O produto e a oferta foram enviados via WhatsApp. Confirme ao lead que você enviou as informações e pergunte se ele tem dúvidas.'
+                }
+                : { success: false, message: 'Nenhum produto ativo encontrado. Informe o lead que você vai enviar as informações em breve.' };
             }
             // ── Existing calendar tools ──────────────────────────────────────
-            else if (functionName === "consultar_horarios_disponiveis") {
+            else if (functionName === 'consultar_horarios_disponiveis') {
+
               let targetVendedorId = args.vendedorId;
               if (!targetVendedorId) {
                 const v = await getNextVendedor(orgId);
@@ -14218,6 +14510,254 @@ app.get('/api/intelligence/panel/objection-detail', verifyJWT, async (req, res) 
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PRODUCT & DYNAMIC OFFER ENGINE — CRUD API
+// ══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/products — list org products
+app.get('/api/products', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const result = await pool.query(
+      `SELECT p.*, COUNT(DISTINCT pi.id) AS image_count, COUNT(DISTINCT o.id) AS offer_count
+       FROM products p
+       LEFT JOIN product_images pi ON pi.product_id = p.id
+       LEFT JOIN offers o ON o.product_id = p.id
+       WHERE p.organization_id = $1
+       GROUP BY p.id ORDER BY p.created_at DESC`,
+      [user.organization_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/products error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/products — create product
+app.post('/api/products', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { nome, categoria, descricao_curta, descricao_detalhada, beneficios, preco_base, faq, tags, status } = req.body;
+    if (!nome) return res.status(400).json({ error: 'nome is required' });
+    const result = await pool.query(
+      `INSERT INTO products (organization_id, nome, categoria, descricao_curta, descricao_detalhada, beneficios, preco_base, faq, tags, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [user.organization_id, nome, categoria || null, descricao_curta || null, descricao_detalhada || null,
+      beneficios || [], preco_base || null, faq ? JSON.stringify(faq) : '[]', tags || [], status || 'ativo']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/products error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/products/:id — get product with images + offers
+app.get('/api/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const [pRes, imgRes, offRes] = await Promise.all([
+      pool.query(`SELECT * FROM products WHERE id = $1 AND organization_id = $2`, [req.params.id, user.organization_id]),
+      pool.query(`SELECT * FROM product_images WHERE product_id = $1 ORDER BY ordem`, [req.params.id]),
+      pool.query(
+        `SELECT o.*, ARRAY_AGG(ot.trigger_type) FILTER (WHERE ot.trigger_type IS NOT NULL) AS triggers
+         FROM offers o
+         LEFT JOIN offer_triggers ot ON ot.offer_id = o.id
+         WHERE o.product_id = $1 AND o.organization_id = $2
+         GROUP BY o.id ORDER BY o.prioridade DESC`,
+        [req.params.id, user.organization_id]
+      ),
+    ]);
+
+    if (!pRes.rows[0]) return res.status(404).json({ error: 'Product not found' });
+    res.json({ ...pRes.rows[0], images: imgRes.rows, offers: offRes.rows });
+  } catch (err) {
+    log('GET /api/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/products/:id — update product
+app.put('/api/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { nome, categoria, descricao_curta, descricao_detalhada, beneficios, preco_base, faq, tags, status } = req.body;
+    const result = await pool.query(
+      `UPDATE products SET nome=$1, categoria=$2, descricao_curta=$3, descricao_detalhada=$4,
+       beneficios=$5, preco_base=$6, faq=$7, tags=$8, status=$9, updated_at=NOW()
+       WHERE id=$10 AND organization_id=$11 RETURNING *`,
+      [nome, categoria, descricao_curta, descricao_detalhada,
+        beneficios || [], preco_base, faq ? JSON.stringify(faq) : '[]', tags || [], status || 'ativo',
+        req.params.id, user.organization_id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    log('PUT /api/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/products/:id — soft-delete (set status=inativo)
+app.delete('/api/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    await pool.query(`UPDATE products SET status='inativo', updated_at=NOW() WHERE id=$1 AND organization_id=$2`,
+      [req.params.id, user.organization_id]);
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/products/:id/images — add image/video/pdf
+app.post('/api/products/:id/images', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { url, tipo, caption, ordem } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+    const result = await pool.query(
+      `INSERT INTO product_images (product_id, organization_id, url, tipo, caption, ordem)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [req.params.id, user.organization_id, url, tipo || 'image', caption || null, ordem || 0]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/products/:id/images error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/products/:productId/images/:imgId — remove media
+app.delete('/api/products/:productId/images/:imgId', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    await pool.query(`DELETE FROM product_images WHERE id=$1 AND organization_id=$2`, [req.params.imgId, user.organization_id]);
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/products/:productId/images/:imgId error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/products/:id/offers — create offer for product
+app.post('/api/products/:id/offers', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { nome, preco, descricao, mensagem_sugerida, prioridade, status } = req.body;
+    if (!nome) return res.status(400).json({ error: 'nome is required' });
+    const result = await pool.query(
+      `INSERT INTO offers (product_id, organization_id, nome, preco, descricao, mensagem_sugerida, prioridade, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [req.params.id, user.organization_id, nome, preco || null, descricao || null,
+      mensagem_sugerida || null, prioridade || 5, status || 'ativo']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/products/:id/offers error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/offers/:id — update offer
+app.put('/api/offers/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { nome, preco, descricao, mensagem_sugerida, prioridade, status } = req.body;
+    const result = await pool.query(
+      `UPDATE offers SET nome=$1, preco=$2, descricao=$3, mensagem_sugerida=$4,
+       prioridade=$5, status=$6, updated_at=NOW() WHERE id=$7 AND organization_id=$8 RETURNING *`,
+      [nome, preco, descricao, mensagem_sugerida, prioridade || 5, status || 'ativo', req.params.id, user.organization_id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Offer not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    log('PUT /api/offers/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/offers/:id — delete offer
+app.delete('/api/offers/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    await pool.query(`DELETE FROM offers WHERE id=$1 AND organization_id=$2`, [req.params.id, user.organization_id]);
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/offers/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/offers/:id/triggers — add trigger to offer
+app.post('/api/offers/:id/triggers', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const { trigger_type } = req.body;
+    if (!trigger_type) return res.status(400).json({ error: 'trigger_type is required' });
+    // Verify the offer belongs to this org
+    const offerCheck = await pool.query(`SELECT id FROM offers WHERE id=$1 AND organization_id=$2`, [req.params.id, user.organization_id]);
+    if (!offerCheck.rows[0]) return res.status(404).json({ error: 'Offer not found' });
+    const result = await pool.query(
+      `INSERT INTO offer_triggers (offer_id, trigger_type) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING *`,
+      [req.params.id, trigger_type]
+    );
+    res.status(201).json(result.rows[0] || { already_exists: true });
+  } catch (err) {
+    log('POST /api/offers/:id/triggers error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/offer-triggers/:id — remove trigger
+app.delete('/api/offer-triggers/:id', verifyJWT, async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM offer_triggers WHERE id=$1`, [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/offer-triggers/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/offer-events — fetch offer presentation analytics for org
+app.get('/api/offer-events', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    const days = parseInt(req.query.days || '30');
+    const result = await pool.query(
+      `SELECT oe.*, o.nome AS offer_nome, p.nome AS product_nome
+       FROM offer_events oe
+       LEFT JOIN offers o ON o.id = oe.offer_id
+       LEFT JOIN products p ON p.id = oe.product_id
+       WHERE oe.organization_id = $1 AND oe.timestamp >= NOW() - INTERVAL '${days} days'
+       ORDER BY oe.timestamp DESC LIMIT 200`,
+      [user.organization_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/offer-events error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── END Product & Dynamic Offer Engine CRUD API ───────────────────────────────
 
 // ── END Kogna Intelligence Panel API Routes ───────────────────────────────────
 
