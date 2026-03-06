@@ -2559,6 +2559,28 @@ async function sendProductToLead(orgId, instanceName, remoteJid, leadStage, user
 
 // ── END Product & Dynamic Offer Engine ───────────────────────────────────────
 
+// ── ONBOARDING V2 SESSION TABLE ───────────────────────────────────────────────
+const ensureOnboardingSessionsTable = async () => {
+  try {
+    log('[SYSTEM] Ensuring onboarding_test_sessions table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS onboarding_test_sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        session_id TEXT NOT NULL,
+        user_message TEXT,
+        ai_reply TEXT,
+        onboarding_context JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_sessions_sid ON onboarding_test_sessions(session_id)`);
+    log('[SYSTEM] onboarding_test_sessions table verified.');
+  } catch (err) {
+    log('[ERROR] ensureOnboardingSessionsTable: ' + err.message);
+  }
+};
+// ── END ONBOARDING V2 SESSION TABLE ──────────────────────────────────────────
+
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
@@ -2571,6 +2593,7 @@ initPool().then(() => {
   setTimeout(ensureIndustryProfileTables, 14000); // Industry Accelerator Layer tables
   setTimeout(ensureConversationStateTables, 16000); // CSE: Conversation State Engine tables
   setTimeout(ensureProductEngineTables, 18000);      // Product & Dynamic Offer Engine tables
+  setTimeout(ensureOnboardingSessionsTable, 20000);   // Onboarding V2 test sessions table
 
   // Start Follow-up Engine cron jobs (fire after tables are ready)
   setTimeout(() => {
@@ -3052,6 +3075,178 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ── ONBOARDING V2 ENDPOINTS ───────────────────────────────────────────────────
+
+// POST /api/onboarding/preview-ai — powers the Step 15 AI test chat
+// Public, rate-limited to 5 msgs per session_id
+const onboardingPreviewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 25,
+  keyGenerator: (req) => req.body?.session_id || req.ip,
+  message: { error: 'Limite de mensagens de teste atingido.' }
+});
+
+app.post('/api/onboarding/preview-ai', onboardingPreviewLimiter, async (req, res) => {
+  try {
+    const { session_id, message, onboarding_context } = req.body;
+    if (!session_id || !message) return res.status(400).json({ error: 'session_id e message são obrigatórios.' });
+
+    // Count prior messages in this session
+    const countRes = await pool.query('SELECT COUNT(*) FROM onboarding_test_sessions WHERE session_id = $1', [session_id]);
+    const count = parseInt(countRes.rows[0].count || '0');
+    if (count >= 5) return res.status(429).json({ error: 'Limite de 5 interações de teste atingido.', limitReached: true });
+
+    const ctx = onboarding_context || {};
+    const systemPrompt = `Você é ${ctx.aiName || 'uma IA de vendas'}, assistente da empresa ${ctx.companyName || 'nossa empresa'}.
+
+Seu objetivo: ${ctx.agentObjective === 'fechar_venda' ? 'fechar vendas diretamente no WhatsApp' : ctx.agentObjective === 'qualificar_agendar' ? 'qualificar leads e agendar reuniões' : 'aquecer o lead e transferir para um vendedor humano'}.
+
+Produto/Serviço: ${ctx.mainProduct || 'nossos produtos'}
+Público-alvo: ${ctx.targetAudience?.join(' e ') || 'clientes em geral'}
+Tom de voz: ${ctx.voiceTone || 'consultivo'}
+Mercado: ${ctx.industry || 'geral'}
+${ctx.restrictions ? `\nNUNCA diga: ${ctx.restrictions}` : ''}
+
+---
+IMPORTANTE: Você está sendo testado pelo dono da empresa. Responda como se fosse um lead real, demonstrando o potencial da IA.
+Seja natural, fluido, em português brasileiro. Máximo 3 parágrafos por resposta.`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 300,
+      temperature: 0.75
+    });
+
+    const reply = completion.choices[0]?.message?.content || 'Não consegui responder, tente novamente.';
+
+    // Save to dataset for CIL
+    await pool.query(
+      `INSERT INTO onboarding_test_sessions (session_id, user_message, ai_reply, onboarding_context)
+       VALUES ($1, $2, $3, $4)`,
+      [session_id, message, reply, JSON.stringify(ctx)]
+    );
+
+    res.json({ reply, messagesUsed: count + 1, messagesLeft: Math.max(0, 5 - (count + 1)) });
+  } catch (err) {
+    log('[ONBOARDING-PREVIEW] Error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao processar mensagem.' });
+  }
+});
+
+// POST /api/onboarding/register-and-save — creates account + org + agent from all onboarding data
+app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const {
+      // Account
+      name, email, phone, password,
+      // Agent & Business
+      agentObjective, industry, industryDetail,
+      companyName, aiName, mainProduct, customerPain, productPrice,
+      targetAudience, channels, salesCycle, revenueGoal,
+      unknownBehavior, voiceTone, restrictions,
+      // Referral
+      referral_code
+    } = req.body;
+
+    if (!name || !email || !password) return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
+    if (password.length < 6) return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
+
+    // Check if email already exists
+    const existCheck = await client.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (existCheck.rows.length > 0) return res.status(409).json({ error: 'Este e-mail já está cadastrado. Faça login.' });
+
+    await client.query('BEGIN');
+
+    // Create organization
+    const orgRes = await client.query(
+      `INSERT INTO organizations (name, plan_type) VALUES ($1, 'basic') RETURNING *`,
+      [companyName || name + "'s Organization"]
+    );
+    const org = orgRes.rows[0];
+
+    // Create user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userRes = await client.query(
+      `INSERT INTO users (name, email, phone, password, organization_id, role, koins_balance)
+       VALUES ($1, $2, $3, $4, $5, 'user', 100) RETURNING *`,
+      [name, email.toLowerCase(), phone || null, hashedPassword, org.id]
+    );
+    const user = userRes.rows[0];
+
+    // Update org owner
+    await client.query('UPDATE organizations SET owner_id = $1 WHERE id = $2', [user.id, org.id]);
+
+    // Save AI config
+    const agentObjectiveText =
+      agentObjective === 'fechar_venda' ? 'Fechar vendas diretamente no WhatsApp' :
+        agentObjective === 'qualificar_agendar' ? 'Qualificar leads e agendar reunião' :
+          'Aquecer o lead e transferir para vendedor humano';
+
+    await client.query(
+      `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product, desired_revenue,
+        agent_objective, unknown_behavior, voice_tone, restrictions, customer_pain, product_price)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         company_name=EXCLUDED.company_name, agent_name=EXCLUDED.agent_name,
+         main_product=EXCLUDED.main_product, desired_revenue=EXCLUDED.desired_revenue,
+         agent_objective=EXCLUDED.agent_objective, unknown_behavior=EXCLUDED.unknown_behavior,
+         voice_tone=EXCLUDED.voice_tone, restrictions=EXCLUDED.restrictions,
+         customer_pain=EXCLUDED.customer_pain, product_price=EXCLUDED.product_price`,
+      [org.id, user.id, companyName, aiName, mainProduct, revenueGoal,
+        agentObjectiveText, unknownBehavior, voiceTone, restrictions, customerPain, productPrice]
+    );
+
+    // Create the first AI agent
+    const agentDescription =
+      `Agente de vendas ${aiName || 'IA'} da ${companyName}. ` +
+      `Objetivo: ${agentObjectiveText}. ` +
+      `Mercado: ${industry || 'geral'}${industryDetail ? ' — ' + industryDetail : ''}. ` +
+      `Tom: ${voiceTone}. Ciclo de venda: ${salesCycle}.`;
+
+    await client.query(
+      `INSERT INTO agents (organization_id, name, description, role, voice_tone, unknown_behavior, restrictions, status)
+       VALUES ($1, $2, $3, 'sdr', $4, $5, $6, 'active')`,
+      [org.id, aiName || 'Agente IA', agentDescription, voiceTone, unknownBehavior, restrictions || '']
+    );
+
+    // Mark onboarding complete
+    await client.query(
+      `UPDATE users SET onboarding_completed = true WHERE id = $1`,
+      [user.id]
+    ).catch(() => { }); // non-blocking if column doesn't exist yet
+
+    await client.query('COMMIT');
+
+    // Fire-and-forget: log industry selection
+    if (industry && industry !== 'outro') {
+      fetch(`http://localhost:${process.env.PORT || 8080}/api/industry/select`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' })}` },
+        body: JSON.stringify({ industry_slug: industry })
+      }).catch(() => { });
+    }
+
+    const { password: _, ...safeUser } = user;
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+
+    log(`[ONBOARDING-V2] New account created: ${email} (org: ${org.id})`);
+    res.status(201).json({ token, user: { ...safeUser, organization: org }, role: 'user' });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => { });
+    log('[ONBOARDING-V2] register-and-save error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao criar conta. Tente novamente.' });
+  } finally {
+    client.release();
+  }
+});
+
+// ── END ONBOARDING V2 ENDPOINTS ───────────────────────────────────────────────
 
 /**
  * @swagger

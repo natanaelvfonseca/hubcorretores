@@ -1,0 +1,912 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import {
+    Check, ChevronRight, Zap,
+    Brain, Upload, Loader2, Send, Bot,
+    Rocket, Trophy, MessageSquare, GitBranch, X
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface FormData {
+    agentObjective: string;
+    industry: string;
+    industryDetail: string;
+    companyName: string;
+    aiName: string;
+    mainProduct: string;
+    customerPain: string;
+    productPrice: string;
+    targetAudience: string[];
+    channels: string[];
+    salesCycle: string;
+    revenueGoal: string;
+    unknownBehavior: string;
+    voiceTone: string;
+    restrictions: string;
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
+}
+
+const EMPTY_FORM: FormData = {
+    agentObjective: '', industry: '', industryDetail: '',
+    companyName: '', aiName: '',
+    mainProduct: '', customerPain: '', productPrice: '',
+    targetAudience: [], channels: [], salesCycle: '',
+    revenueGoal: '', unknownBehavior: '', voiceTone: '', restrictions: '',
+    name: '', email: '', phone: '', password: '', confirmPassword: '',
+};
+
+const TOTAL_STEPS = 18;
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function ChoiceCard({ label, desc, selected, onClick }: {
+    label: string; desc?: string; value?: string; selected: boolean; onClick: () => void;
+}) {
+    return (
+        <button type="button" onClick={onClick}
+            className={`w-full text-left px-4 py-4 rounded-xl border transition-all duration-200 relative group ${selected
+                ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+                : 'border-white/10 hover:border-white/25 bg-white/3 hover:bg-white/5'}`}>
+            {selected && (
+                <span className="absolute top-3 right-3 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
+                    <Check className="w-3 h-3 text-white" />
+                </span>
+            )}
+            <p className={`text-sm font-semibold ${selected ? 'text-violet-300' : 'text-white/85'}`}>{label}</p>
+            {desc && <p className="text-xs text-white/45 mt-0.5">{desc}</p>}
+        </button>
+    );
+}
+
+function MultiChip({ label, selected, onClick }: { label: string; selected: boolean; onClick: () => void }) {
+    return (
+        <button type="button" onClick={onClick}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 border ${selected
+                ? 'border-violet-500 bg-violet-500/15 text-violet-300'
+                : 'border-white/10 text-white/55 hover:border-white/25 hover:text-white/80'}`}>
+            {selected && <Check className="w-3 h-3 inline mr-1" />}{label}
+        </button>
+    );
+}
+
+function FieldLabel({ children, counter }: { children: React.ReactNode; counter?: React.ReactNode }) {
+    return (
+        <div className="flex items-end justify-between mb-2">
+            <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">{children}</label>
+            {counter && <span className="text-[10px] font-mono">{counter}</span>}
+        </div>
+    );
+}
+
+function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+    return (
+        <input {...props}
+            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all ${props.className || ''}`}
+        />
+    );
+}
+
+function Textarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+    return (
+        <textarea {...props}
+            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none ${props.className || ''}`}
+        />
+    );
+}
+
+function ErrorBanner({ msg }: { msg: string }) {
+    return (
+        <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/25 rounded-xl text-red-400 text-sm mb-4">
+            <X className="w-4 h-4 shrink-0" /> {msg}
+        </div>
+    );
+}
+
+function NextBtn({ onClick, loading, label = 'Continuar' }: { onClick: () => void; loading?: boolean; label?: string }) {
+    return (
+        <button onClick={onClick} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/25 disabled:opacity-50 mt-6">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{label} <ChevronRight className="w-4 h-4" /></>}
+        </button>
+    );
+}
+
+// ── Progress Sidebar ──────────────────────────────────────────────────────────
+const STEP_LABELS = [
+    'Bem-vindo', 'Agente', 'Mercado', 'Identidade', 'Produto',
+    'Público', 'Canais', 'Ciclo', 'Meta', 'Protocolo',
+    'Personalidade', 'Conhecimento', 'Pipeline', 'Conta', 'Teste',
+    'Melhorar', 'WhatsApp', 'Concluído'
+];
+
+function ProgressSidebar({ step }: { step: number }) {
+    return (
+        <div className="hidden lg:flex flex-col w-52 shrink-0 pt-2">
+            <div className="flex items-center gap-2 mb-8 px-1">
+                <div className="w-7 h-7 bg-gradient-to-br from-violet-600 to-violet-400 rounded-lg flex items-center justify-center shadow-glow">
+                    <Zap className="w-4 h-4 text-white fill-white" />
+                </div>
+                <span className="font-bold text-white text-lg">Kogna</span>
+            </div>
+            <div className="space-y-0.5">
+                {STEP_LABELS.map((label, i) => {
+                    const s = i + 1;
+                    const done = s < step;
+                    const active = s === step;
+                    return (
+                        <div key={s} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-violet-500' : active ? 'bg-violet-600 ring-2 ring-violet-400/40 ring-offset-1 ring-offset-[#09090F]' : 'bg-white/8 border border-white/12'}`}>
+                                {done ? <Check className="w-3 h-3 text-white" /> : <span className="text-[9px] font-bold text-white/50">{s}</span>}
+                            </div>
+                            <span className={`text-xs font-medium transition-colors ${active ? 'text-white' : done ? 'text-white/40' : 'text-white/28'}`}>{label}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function MobileProgress({ step }: { step: number }) {
+    return (
+        <div className="lg:hidden mb-6">
+            <div className="flex items-center justify-between text-xs text-white/40 mb-2">
+                <span className="font-mono">Passo {step} de {TOTAL_STEPS}</span>
+                <span className="text-violet-400 font-semibold">{STEP_LABELS[step - 1]}</span>
+            </div>
+            <div className="h-1 bg-white/8 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-violet-600 to-violet-400 rounded-full transition-all duration-500"
+                    style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+            </div>
+        </div>
+    );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+export function OnboardingV2() {
+    const navigate = useNavigate();
+    const { login } = useAuth();
+    const [step, setStep] = useState(1);
+    const [form, setForm] = useState<FormData>(EMPTY_FORM);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [chatLoading, setChatLoading] = useState(false);
+    const [msgsUsed, setMsgsUsed] = useState(0);
+    const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+    const [pipelineVisible, setPipelineVisible] = useState(false);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [wsStatus, setWsStatus] = useState<'idle' | 'connecting' | 'qrcode' | 'connected'>('idle');
+    const [wsTtl, setWsTtl] = useState(60);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+    const token = useRef<string | null>(null);
+
+    const set = (k: keyof FormData, v: any) => setForm(f => ({ ...f, [k]: v }));
+    const toggleArr = (k: keyof FormData, v: string) => {
+        const arr = (form[k] as string[]);
+        set(k, arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
+    };
+
+    const go = (n: number) => { setError(''); setStep(n); window.scrollTo(0, 0); };
+
+    // ── Step validators ──────────────────────────────────────────────────────
+    const validate: Record<number, () => boolean> = {
+        2: () => { if (!form.agentObjective) { setError('Selecione o objetivo do agente.'); return false; } return true; },
+        3: () => { if (!form.industry) { setError('Selecione o mercado de atuação.'); return false; } return true; },
+        4: () => {
+            if (!form.companyName.trim()) { setError('Informe o nome da empresa.'); return false; }
+            if (!form.aiName.trim()) { setError('Dê um nome para sua IA.'); return false; }
+            return true;
+        },
+        5: () => {
+            if (form.mainProduct.length < 100) { setError(`Descreva o produto com pelo menos 100 caracteres (${form.mainProduct.length}/100).`); return false; }
+            if (form.customerPain.length < 50) { setError(`Descreva a dor do cliente com pelo menos 50 caracteres (${form.customerPain.length}/50).`); return false; }
+            return true;
+        },
+        6: () => { if (form.targetAudience.length === 0) { setError('Selecione pelo menos um público.'); return false; } return true; },
+        7: () => { if (form.channels.length === 0) { setError('Selecione pelo menos um canal.'); return false; } return true; },
+        8: () => { if (!form.salesCycle) { setError('Selecione o ciclo de venda.'); return false; } return true; },
+        9: () => { if (!form.revenueGoal) { setError('Informe sua meta mensal.'); return false; } return true; },
+        10: () => { if (!form.unknownBehavior) { setError('Selecione o protocolo.'); return false; } return true; },
+        11: () => { if (!form.voiceTone) { setError('Selecione o estilo da IA.'); return false; } return true; },
+        14: () => {
+            if (!form.name.trim()) { setError('Informe seu nome.'); return false; }
+            if (!form.email.trim() || !form.email.includes('@')) { setError('Informe um e-mail válido.'); return false; }
+            if (form.password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
+            if (form.password !== form.confirmPassword) { setError('As senhas não coincidem.'); return false; }
+            return true;
+        },
+    };
+
+    const next = () => {
+        const v = validate[step];
+        if (v && !v()) return;
+        if (step === 13) { setPipelineVisible(true); setTimeout(() => go(14), 4500); return; }
+        if (step === 14) { handleRegister(); return; }
+        go(step + 1);
+    };
+
+    // ── Registration (Step 14) ───────────────────────────────────────────────
+    const handleRegister = async () => {
+        if (!validate[14]()) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/onboarding/register-and-save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, targetAudience: form.targetAudience, channels: form.channels }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao criar conta.');
+            token.current = data.token;
+            await login(data.token, data.user);
+            go(15);
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── AI Chat (Step 15) ────────────────────────────────────────────────────
+    const sendChat = useCallback(async () => {
+        const msg = chatInput.trim();
+        if (!msg || chatLoading || msgsUsed >= 5) return;
+        setChatInput('');
+        setChatMessages(m => [...m, { role: 'user', text: msg }]);
+        setChatLoading(true);
+        try {
+            const res = await fetch('/api/onboarding/preview-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    message: msg,
+                    onboarding_context: {
+                        aiName: form.aiName, companyName: form.companyName,
+                        agentObjective: form.agentObjective, mainProduct: form.mainProduct,
+                        targetAudience: form.targetAudience, voiceTone: form.voiceTone,
+                        industry: form.industry, restrictions: form.restrictions,
+                    }
+                }),
+            });
+            const data = await res.json();
+            setChatMessages(m => [...m, { role: 'ai', text: data.reply }]);
+            setMsgsUsed(data.messagesUsed || msgsUsed + 1);
+        } catch { setChatMessages(m => [...m, { role: 'ai', text: 'Erro ao processar. Tente novamente.' }]); }
+        finally { setChatLoading(false); }
+    }, [chatInput, chatLoading, msgsUsed, sessionId, form]);
+
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+
+    // Initialize chat in step 15
+    useEffect(() => {
+        if (step === 15 && chatMessages.length === 0) {
+            setChatMessages([{ role: 'ai', text: `Olá! Sou ${form.aiName || 'sua IA'}, assistente da ${form.companyName || 'sua empresa'}. Como posso te ajudar hoje? 😊` }]);
+        }
+    }, [step]);
+
+    // ── WhatsApp QR (Step 17) ───────────────────────────────────────────────
+    const connectWhatsApp = async () => {
+        if (!token.current) return;
+        setWsStatus('connecting');
+        setError('');
+        try {
+            const res = await fetch('/api/whatsapp/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.current}` },
+                body: JSON.stringify({ email: form.email }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao conectar.');
+            if (data.instance?.status === 'CONNECTED' || data.instance?.status === 'open') {
+                setWsStatus('connected'); go(18);
+            } else if (data.qrCode) {
+                setQrCode(data.qrCode); setWsStatus('qrcode'); setWsTtl(60);
+                startWsPolling();
+            } else { throw new Error('QR Code não disponível.'); }
+        } catch (e: any) { setError(e.message); setWsStatus('idle'); }
+    };
+
+    const startWsPolling = () => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            if (!token.current) return;
+            try {
+                const r = await fetch('/api/instances', { headers: { Authorization: `Bearer ${token.current}` } });
+                if (r.ok) {
+                    const d = await r.json();
+                    const connected = Array.isArray(d) && d.some((i: any) => i.status === 'CONNECTED' || i.status === 'open');
+                    if (connected) { setWsStatus('connected'); clearInterval(pollRef.current!); go(18); }
+                }
+            } catch { }
+        }, 2000);
+    };
+
+    useEffect(() => {
+        let t: ReturnType<typeof setInterval>;
+        if (wsStatus === 'qrcode' && wsTtl > 0) { t = setInterval(() => setWsTtl(p => p - 1), 1000); }
+        return () => clearInterval(t);
+    }, [wsStatus, wsTtl]);
+
+    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+    // Confetti on step 18
+    useEffect(() => {
+        if (step === 18) {
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#7C3AED', '#8B5CF6', '#A78BFA', '#10B981'] });
+        }
+    }, [step]);
+
+    // ── Layout ────────────────────────────────────────────────────────────────
+    return (
+        <div className="min-h-screen bg-[#09090F] text-white flex">
+            {/* Glow BG */}
+            <div className="fixed inset-0 pointer-events-none">
+                <div className="absolute top-[-20%] left-[30%] w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-violet-900/6 rounded-full blur-[100px]" />
+            </div>
+
+            {/* Sidebar */}
+            <div className="relative z-10 hidden lg:block p-8 pr-0">
+                <ProgressSidebar step={step} />
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 flex flex-col items-center justify-start py-10 px-4 relative z-10 overflow-y-auto">
+                <div className="w-full max-w-lg">
+                    <MobileProgress step={step} />
+                    {error && <ErrorBanner msg={error} />}
+                    <StepContent
+                        step={step} form={form} set={set} toggleArr={toggleArr}
+                        next={next} loading={loading} go={go} files={files} setFiles={setFiles}
+                        chatMessages={chatMessages} chatInput={chatInput} setChatInput={setChatInput}
+                        sendChat={sendChat} chatLoading={chatLoading} msgsUsed={msgsUsed}
+                        chatEndRef={chatEndRef} pipelineVisible={pipelineVisible}
+                        qrCode={qrCode} wsStatus={wsStatus} wsTtl={wsTtl}
+                        connectWhatsApp={connectWhatsApp} navigate={navigate}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── Step Content ───────────────────────────────────────────────────────────────
+function StepContent({ step, form, set, toggleArr, next, loading, go, files, setFiles,
+    chatMessages, chatInput, setChatInput, sendChat, chatLoading, msgsUsed, chatEndRef,
+    pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate }: any) {
+
+    const INDUSTRIES = [
+        { v: 'imobiliario', l: 'Imobiliário', sub: ['Venda de imóveis', 'Aluguel de imóveis', 'Venda e aluguel'] },
+        { v: 'educacao', l: 'Educação', sub: ['Cursos online', 'Escola presencial', 'Mentoria'] },
+        { v: 'saude', l: 'Clínicas e Saúde', sub: ['Odontologia', 'Estética', 'Medicina', 'Nutrição'] },
+        { v: 'seguros', l: 'Seguros', sub: ['Seguro de vida', 'Seguro auto', 'Seguro empresarial'] },
+        { v: 'consultoria', l: 'Consultorias', sub: ['Consultoria empresarial', 'Consultoria de RH', 'Jurídica'] },
+        { v: 'tecnologia', l: 'Tecnologia', sub: ['SaaS / Software', 'Suporte TI', 'Desenvolvimento'] },
+        { v: 'servicos', l: 'Serviços locais', sub: ['Manutenção', 'Limpeza', 'Reforma', 'Jardinagem'] },
+        { v: 'ecommerce', l: 'E-commerce', sub: ['Produto físico', 'Dropshipping', 'Marketplace'] },
+        { v: 'outro', l: 'Outro', sub: [] },
+    ];
+
+    const selectedIndustry = INDUSTRIES.find(i => i.v === form.industry);
+
+    if (step === 1) return (
+        <div className="text-center space-y-6 animate-fade-in mt-16">
+            <div className="w-24 h-24 bg-gradient-to-br from-violet-600/30 to-violet-400/10 rounded-3xl flex items-center justify-center mx-auto border border-violet-500/20">
+                <Rocket className="w-12 h-12 text-violet-400" />
+            </div>
+            <div>
+                <p className="text-xs font-bold text-violet-400 uppercase tracking-widest mb-3">Revenue Operating System</p>
+                <h1 className="text-4xl font-bold text-white leading-tight">Bem-vindo à Nova Era<br />das Vendas no WhatsApp</h1>
+                <p className="text-white/45 mt-4 text-lg leading-relaxed max-w-sm mx-auto">
+                    Você está a poucos passos de transformar seu WhatsApp em um sistema inteligente de vendas que atende, qualifica e recupera clientes automaticamente.
+                </p>
+            </div>
+            <div className="flex flex-col gap-3 max-w-xs mx-auto text-left mt-6">
+                {[
+                    { icon: Brain, t: 'Crie sua IA de vendas personalizada' },
+                    { icon: GitBranch, t: 'Monte um pipeline automático de oportunidades' },
+                    { icon: MessageSquare, t: 'Conecte ao WhatsApp e comece a vender' },
+                ].map(({ icon: Icon, t }) => (
+                    <div key={t} className="flex items-center gap-3 text-sm text-white/55">
+                        <div className="w-7 h-7 rounded-lg bg-violet-600/15 border border-violet-500/20 flex items-center justify-center shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-violet-400" />
+                        </div>
+                        {t}
+                    </div>
+                ))}
+            </div>
+            <NextBtn onClick={next} label="Iniciar Ativação" />
+            <p className="text-xs text-white/20">Sem cartão de crédito · Grátis para começar</p>
+        </div>
+    );
+
+    if (step === 2) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 2 — Agente</p>
+                <h2 className="text-2xl font-bold text-white">Crie seu primeiro Agente de Vendas</h2>
+                <p className="text-white/45 text-sm mt-2">Esse será o primeiro agente da sua empresa responsável por conduzir oportunidades no WhatsApp.</p>
+            </div>
+            <FieldLabel>Qual o objetivo principal desse agente?</FieldLabel>
+            <div className="space-y-3">
+                {[
+                    { v: 'fechar_venda', l: 'Fechar vendas diretamente no WhatsApp', d: 'IA fecha o negócio sozinha, sem intervenção humana' },
+                    { v: 'qualificar_agendar', l: 'Qualificar e agendar reunião com um vendedor', d: 'IA qualifica e transfere para um humano fechar' },
+                    { v: 'aquecer_transferir', l: 'Aquecer o lead e transferir para um vendedor', d: 'IA cria interesse e passa o contato qualificado' },
+                ].map(o => <ChoiceCard key={o.v} value={o.v} label={o.l} desc={o.d} selected={form.agentObjective === o.v} onClick={() => set('agentObjective', o.v)} />)}
+            </div>
+            <p className="text-xs text-white/30 text-center">Você poderá criar outros agentes especializados depois.</p>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 3) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 3 — Mercado</p>
+                <h2 className="text-2xl font-bold text-white">Em qual mercado sua empresa atua?</h2>
+                <p className="text-white/45 text-sm mt-2">Isso adapta linguagem, objeções e padrões de conversa da sua IA.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+                {INDUSTRIES.map(i => (
+                    <button key={i.v} onClick={() => set('industry', i.v)}
+                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border text-left transition-all ${form.industry === i.v ? 'border-violet-500 bg-violet-500/10 text-violet-300' : 'border-white/10 text-white/55 hover:border-white/25'}`}>
+                        {form.industry === i.v && <Check className="w-3 h-3 inline mr-1.5 text-violet-400" />}{i.l}
+                    </button>
+                ))}
+            </div>
+            {selectedIndustry && selectedIndustry.sub.length > 0 && (
+                <div className="animate-fade-in space-y-2">
+                    <FieldLabel>Sua empresa trabalha com:</FieldLabel>
+                    <div className="space-y-2">
+                        {selectedIndustry.sub.map(s => (
+                            <ChoiceCard key={s} value={s} label={s} selected={form.industryDetail === s} onClick={() => set('industryDetail', s)} />
+                        ))}
+                    </div>
+                </div>
+            )}
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 4) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 4 — Identidade</p>
+                <h2 className="text-2xl font-bold text-white">Quem representará sua empresa?</h2>
+                <p className="text-white/45 text-sm mt-2">Esse será o nome que aparecerá nas conversas do WhatsApp.</p>
+            </div>
+            <div className="space-y-4">
+                <div>
+                    <FieldLabel>Nome da empresa</FieldLabel>
+                    <Input placeholder="Ex: Clínica Vida+" value={form.companyName} onChange={e => set('companyName', e.target.value)} />
+                </div>
+                <div>
+                    <FieldLabel>Nome da IA</FieldLabel>
+                    <Input placeholder="Ex: Ana, Max, Clara..." value={form.aiName} onChange={e => set('aiName', e.target.value)} />
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {['Ana', 'Max', 'Clara', 'Lia', 'Leo', 'Nina', 'Sol'].map(n => (
+                            <button key={n} onClick={() => set('aiName', n)}
+                                className="text-xs px-3 py-1 rounded-full border border-white/10 text-white/40 hover:border-violet-500/50 hover:text-violet-300 transition-colors">{n}</button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 5) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 5 — Produto</p>
+                <h2 className="text-2xl font-bold text-white">O que sua empresa vende?</h2>
+            </div>
+            <div className="space-y-4">
+                <div>
+                    <FieldLabel counter={<span className={form.mainProduct.length < 100 ? 'text-red-400' : 'text-green-400'}>{form.mainProduct.length}/100</span>}>Produto ou serviço principal</FieldLabel>
+                    <Textarea rows={4} placeholder="Descreva detalhadamente o que você vende, diferenciais e o valor que entrega para o cliente..." value={form.mainProduct} onChange={e => set('mainProduct', e.target.value)} />
+                </div>
+                <div>
+                    <FieldLabel counter={<span className={form.customerPain.length < 50 ? 'text-red-400' : 'text-green-400'}>{form.customerPain.length}/50</span>}>Qual problema seu cliente quer resolver?</FieldLabel>
+                    <Textarea rows={3} placeholder="Ex: O cliente tem medo de dentista e quer um atendimento humanizado..." value={form.customerPain} onChange={e => set('customerPain', e.target.value)} />
+                </div>
+                <div>
+                    <FieldLabel>Preço ou ticket médio <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel>
+                    <Input placeholder="Ex: R$ 1.500,00" value={form.productPrice} onChange={e => set('productPrice', e.target.value)} />
+                </div>
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 6) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 6 — Público</p>
+                <h2 className="text-2xl font-bold text-white">Para quem você vende?</h2>
+                <p className="text-white/45 text-sm mt-2">Pode selecionar ambos.</p>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { v: 'Pessoa Física', d: 'Consumidores individuais, B2C' },
+                    { v: 'Pessoa Jurídica', d: 'Empresas e negócios, B2B' },
+                ].map(o => <ChoiceCard key={o.v} value={o.v} label={o.v} desc={o.d}
+                    selected={form.targetAudience.includes(o.v)} onClick={() => toggleArr('targetAudience', o.v)} />)}
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 7) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 7 — Canais</p>
+                <h2 className="text-2xl font-bold text-white">Como seus clientes chegam até você?</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+                {['Instagram', 'Google', 'Indicação', 'WhatsApp direto', 'Facebook', 'Anúncios pagos', 'LinkedIn', 'Outros'].map(c => (
+                    <MultiChip key={c} label={c} selected={form.channels.includes(c)} onClick={() => toggleArr('channels', c)} />
+                ))}
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 8) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 8 — Ciclo</p>
+                <h2 className="text-2xl font-bold text-white">Quanto tempo leva para fechar uma venda?</h2>
+                <p className="text-white/45 text-sm mt-2">A IA vai adaptar o timing das mensagens ao seu ciclo.</p>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { v: 'horas', l: 'Horas', d: 'Decisão imediata, impulso' },
+                    { v: 'dias', l: 'Dias', d: '1 a 7 dias de avaliação' },
+                    { v: 'semanas', l: 'Semanas', d: 'Ciclo médio de 1 a 4 semanas' },
+                    { v: 'meses', l: 'Meses', d: 'Ciclos longos de negociação' },
+                ].map(o => <ChoiceCard key={o.v} value={o.v} label={o.l} desc={o.d} selected={form.salesCycle === o.v} onClick={() => set('salesCycle', o.v)} />)}
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 9) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 9 — Meta</p>
+                <h2 className="text-2xl font-bold text-white">Qual sua meta mensal de vendas?</h2>
+                <p className="text-white/45 text-sm mt-2">A Kogna usará essa meta para gerar recomendações e priorizar oportunidades.</p>
+            </div>
+            <div>
+                <FieldLabel>Meta mensal (R$)</FieldLabel>
+                <Input type="number" placeholder="Ex: 50000" value={form.revenueGoal} onChange={e => set('revenueGoal', e.target.value)} />
+            </div>
+            <div className="flex flex-wrap gap-2 mt-1">
+                {['5000', '10000', '25000', '50000', '100000', '250000'].map(v => (
+                    <button key={v} onClick={() => set('revenueGoal', v)}
+                        className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:border-violet-500/50 hover:text-violet-300 transition-colors font-mono">
+                        R$ {parseInt(v).toLocaleString('pt-BR')}
+                    </button>
+                ))}
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 10) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 10 — Protocolo</p>
+                <h2 className="text-2xl font-bold text-white">O que a IA faz quando não sabe responder?</h2>
+            </div>
+            <div className="space-y-3">
+                {[
+                    { v: 'transferir_humano', l: 'Transferir para um humano', d: 'Aciona um vendedor imediatamente' },
+                    { v: 'pedir_contato', l: 'Pedir contato para retorno', d: 'Registra e promete retorno' },
+                    { v: 'verificar_info', l: 'Informar que vai verificar', d: 'Ganha tempo para buscar a resposta' },
+                ].map(o => <ChoiceCard key={o.v} value={o.v} label={o.l} desc={o.d} selected={form.unknownBehavior === o.v} onClick={() => set('unknownBehavior', o.v)} />)}
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 11) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 11 — Personalidade</p>
+                <h2 className="text-2xl font-bold text-white">Qual o estilo da sua IA?</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {['Consultiva', 'Direta', 'Amigável', 'Executiva', 'Educadora'].map(t => (
+                    <button key={t} onClick={() => set('voiceTone', t)}
+                        className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${form.voiceTone === t ? 'border-violet-500 bg-violet-500/15 text-violet-300' : 'border-white/10 text-white/50 hover:border-white/25'}`}>
+                        {form.voiceTone === t && <Check className="w-3 h-3 inline mr-1" />}{t}
+                    </button>
+                ))}
+            </div>
+            <div>
+                <FieldLabel>Coisas que a IA nunca deve dizer <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel>
+                <Textarea rows={3} placeholder="Ex: nunca mencionar concorrentes, não prometer descontos sem aprovação..." value={form.restrictions} onChange={e => set('restrictions', e.target.value)} />
+            </div>
+            <NextBtn onClick={next} />
+        </div>
+    );
+
+    if (step === 12) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 12 — Conhecimento</p>
+                <h2 className="text-2xl font-bold text-white">Transfira conhecimento para sua IA</h2>
+                <p className="text-white/45 text-sm mt-2">Envie materiais que ajudam a IA a entender melhor seu negócio.</p>
+            </div>
+            <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/12 rounded-2xl py-10 cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/4 transition-all group">
+                <div className="w-12 h-12 rounded-xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/25 transition-colors">
+                    <Upload className="w-5 h-5 text-violet-400" />
+                </div>
+                <div className="text-center">
+                    <p className="text-sm text-white/60 font-medium">PDFs, documentos, manuais, apresentações</p>
+                    <p className="text-xs text-white/30 mt-1">Clique para selecionar (máx. 4MB cada)</p>
+                </div>
+                <input type="file" multiple accept=".pdf,.txt,.doc,.docx" className="hidden"
+                    onChange={e => setFiles(Array.from(e.target.files || []))} />
+            </label>
+            {files.length > 0 && (
+                <div className="space-y-2">
+                    {files.map((f: File, i: number) => (
+                        <div key={i} className="flex items-center gap-2 py-2 px-3 bg-white/4 rounded-lg border border-white/8">
+                            <div className="w-7 h-7 bg-violet-600/20 rounded-md flex items-center justify-center shrink-0">
+                                <Upload className="w-3.5 h-3.5 text-violet-400" />
+                            </div>
+                            <span className="text-xs text-white/60 truncate flex-1">{f.name}</span>
+                            <span className="text-[10px] text-white/30">{(f.size / 1024).toFixed(0)}KB</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <div className="flex gap-3">
+                <button onClick={() => go(13)} className="flex-1 py-3 text-sm text-white/40 hover:text-white/60 transition-colors border border-white/8 rounded-xl">Pular por agora</button>
+                <NextBtn onClick={next} label="Continuar" />
+            </div>
+        </div>
+    );
+
+    if (step === 13) return (
+        <div className="space-y-6 animate-fade-in text-center">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 13 — Pipeline</p>
+                <h2 className="text-2xl font-bold text-white">Seu sistema de vendas está sendo criado</h2>
+                <p className="text-white/45 text-sm mt-2">A Kogna organiza automaticamente suas conversas em um pipeline inteligente.</p>
+            </div>
+            <div className="relative py-6">
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-violet-600/60 to-transparent" />
+                {['Novo Lead', 'Qualificação', 'Diagnóstico', 'Proposta', 'Fechamento'].map((stage, i) => (
+                    <div key={stage} className={`flex items-center gap-3 mb-4 transition-all duration-500 ${pipelineVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
+                        style={{ transitionDelay: `${i * 400}ms` }}>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-violet-400 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/30 shrink-0 relative z-10">
+                            {pipelineVisible ? <Check className="w-4 h-4" /> : i + 1}
+                        </div>
+                        <div className="flex-1 text-left bg-white/4 border border-white/8 rounded-xl px-4 py-2.5">
+                            <p className="text-sm font-semibold text-white">{stage}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="flex items-center justify-center gap-2 text-violet-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Configurando sua inteligência de vendas...
+            </div>
+            <p className="text-white/30 text-xs">Cada conversa vira uma oportunidade de negócio.</p>
+        </div>
+    );
+
+    if (step === 14) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>
+                <h2 className="text-2xl font-bold text-white">Crie sua conta para ativar sua IA</h2>
+                <p className="text-white/45 text-sm mt-2">Falta apenas um passo para ativar sua IA.</p>
+            </div>
+            <div className="space-y-3">
+                <div><FieldLabel>Nome completo</FieldLabel><Input placeholder="João Silva" value={form.name} onChange={e => set('name', e.target.value)} /></div>
+                <div><FieldLabel>E-mail</FieldLabel><Input type="email" placeholder="joao@empresa.com" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+                <div><FieldLabel>WhatsApp <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel><Input type="tel" placeholder="+55 11 99999-9999" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
+                <div><FieldLabel>Senha</FieldLabel><Input type="password" placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => set('password', e.target.value)} /></div>
+                <div><FieldLabel>Confirmar senha</FieldLabel><Input type="password" placeholder="Confirme sua senha" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} /></div>
+            </div>
+            <NextBtn onClick={next} loading={loading} label="Criar Conta e Ativar IA" />
+            <p className="text-center text-xs text-white/25">Ao continuar, você concorda com os termos de uso da Kogna.</p>
+        </div>
+    );
+
+    if (step === 15) return (
+        <div className="space-y-4 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 15 — Teste</p>
+                <h2 className="text-2xl font-bold text-white">Vamos fazer um teste rápido</h2>
+                <p className="text-white/45 text-sm mt-1">Converse com sua IA como se fosse um cliente. Limite de 5 interações.</p>
+            </div>
+            <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8 bg-white/2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-sm font-semibold text-white">{form.aiName || 'IA'}</span>
+                    <span className="text-xs text-white/30 ml-auto">{5 - msgsUsed} mensagens restantes</span>
+                </div>
+                <div className="h-72 overflow-y-auto p-4 space-y-3 flex flex-col">
+                    {chatMessages.map((m: { role: string; text: string }, i: number) => (
+                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {m.role === 'ai' && (
+                                <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center mr-2 shrink-0 mt-1">
+                                    <Bot className="w-3 h-3 text-white" />
+                                </div>
+                            )}
+                            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-violet-600 text-white rounded-br-sm' : 'bg-white/8 text-white/85 rounded-bl-sm'}`}>
+                                {m.text}
+                            </div>
+                        </div>
+                    ))}
+                    {chatLoading && (
+                        <div className="flex justify-start">
+                            <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center mr-2 shrink-0">
+                                <Bot className="w-3 h-3 text-white" />
+                            </div>
+                            <div className="bg-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5 items-center">
+                                {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: `${d * 150}ms` }} />)}
+                            </div>
+                        </div>
+                    )}
+                    <div ref={chatEndRef} />
+                </div>
+                {msgsUsed < 5 ? (
+                    <div className="flex gap-2 p-3 border-t border-white/8">
+                        <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
+                            placeholder="Escreva como se fosse um cliente..." disabled={chatLoading}
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-all" />
+                        <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
+                            className="w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 flex items-center justify-center transition-colors shrink-0">
+                            <Send className="w-4 h-4 text-white" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="p-3 text-center text-xs text-white/40 border-t border-white/8">Limite de teste atingido.</div>
+                )}
+            </div>
+            <NextBtn onClick={() => go(16)} label="Finalizar teste" />
+        </div>
+    );
+
+    if (step === 16) return (
+        <div className="space-y-6 animate-fade-in">
+            <div>
+                <div className="w-16 h-16 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center mb-4">
+                    <Check className="w-8 h-8 text-green-400" />
+                </div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 16 — Melhorar IA</p>
+                <h2 className="text-2xl font-bold text-white">Sua IA já está funcionando</h2>
+                <p className="text-white/45 text-sm mt-2">Mas você pode melhorar ela rapidamente.</p>
+            </div>
+            <div className="space-y-2">
+                {['Ajustar abordagem de vendas', 'Adicionar informações importantes', 'Melhorar resposta de objeções', 'Ajustar tom de voz'].map(opt => (
+                    <button key={opt} onClick={() => go(17)}
+                        className="w-full text-left px-4 py-3 rounded-xl border border-white/10 text-white/60 hover:border-violet-500/40 hover:text-white/80 hover:bg-violet-500/5 text-sm transition-all">
+                        {opt} →
+                    </button>
+                ))}
+            </div>
+            <NextBtn onClick={() => go(17)} label="Concluir treinamento da IA" />
+        </div>
+    );
+
+    if (step === 17) return (
+        <div className="space-y-5 animate-fade-in">
+            <div>
+                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 17 — WhatsApp</p>
+                <h2 className="text-2xl font-bold text-white">Conecte sua IA ao WhatsApp</h2>
+                <p className="text-white/45 text-sm mt-2">Agora vamos dar voz à sua IA no WhatsApp.</p>
+            </div>
+            <div className="bg-white/3 border border-white/8 rounded-2xl p-6 flex flex-col items-center gap-4">
+                {wsStatus === 'idle' && (
+                    <>
+                        <div className="w-16 h-16 rounded-2xl bg-[#25D366]/15 border border-[#25D366]/25 flex items-center justify-center">
+                            <MessageSquare className="w-8 h-8 text-[#25D366]" />
+                        </div>
+                        <p className="text-sm text-white/50 text-center">Clique abaixo para gerar o QR Code de conexão.</p>
+                        <button onClick={connectWhatsApp}
+                            className="px-6 py-3 bg-[#25D366] hover:bg-[#20c45e] text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-[#25D366]/20">
+                            Conectar WhatsApp
+                        </button>
+                    </>
+                )}
+                {wsStatus === 'connecting' && (
+                    <div className="flex flex-col items-center gap-3 py-4">
+                        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                        <p className="text-sm text-white/50">Gerando QR Code...</p>
+                    </div>
+                )}
+                {wsStatus === 'qrcode' && qrCode && (
+                    <>
+                        <img src={qrCode} alt="QR Code" className="w-48 h-48 rounded-xl border border-white/10" />
+                        <p className="text-xs text-white/50 text-center">Abra o WhatsApp → Aparelhos conectados → Conectar aparelho</p>
+                        <span className="text-xs font-mono text-white/30">{wsTtl}s</span>
+                    </>
+                )}
+                {wsStatus === 'connected' && (
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="w-14 h-14 rounded-full bg-green-500/15 flex items-center justify-center">
+                            <Check className="w-7 h-7 text-green-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-green-400">WhatsApp conectado!</p>
+                    </div>
+                )}
+            </div>
+            <button onClick={() => go(18)} className="w-full py-3 text-sm text-white/30 hover:text-white/50 transition-colors">
+                Pular e conectar depois →
+            </button>
+        </div>
+    );
+
+    if (step === 18) return (
+        <div className="text-center space-y-6 animate-fade-in mt-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-violet-600/30 to-green-500/20 rounded-3xl flex items-center justify-center mx-auto border border-violet-500/20 shadow-2xl shadow-violet-500/10">
+                <Trophy className="w-12 h-12 text-yellow-400" />
+            </div>
+            <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/15 border border-violet-500/25 rounded-full text-violet-300 text-xs font-bold mb-4">
+                    <Zap className="w-3 h-3" /> Ativação Completa
+                </div>
+                <h1 className="text-3xl font-bold text-white">{form.aiName || 'Sua IA'} está ativa e pronta</h1>
+                <p className="text-white/45 text-sm mt-3 leading-relaxed max-w-sm mx-auto">
+                    A partir de agora ela poderá atender novos leads, qualificar oportunidades e transformar conversas em vendas.
+                </p>
+            </div>
+            <div className="bg-white/3 border border-white/8 rounded-2xl p-5 text-left space-y-3">
+                <p className="text-xs text-white/35 font-bold uppercase tracking-widest">O que foi criado para você</p>
+                {[
+                    { l: `Agente ${form.aiName || 'IA'} configurado` },
+                    { l: 'Pipeline de vendas automático' },
+                    { l: 'Painel de métricas ativo' },
+                    { l: 'Motor de qualificação de leads' },
+                ].map(({ l }) => (
+                    <div key={l} className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center shrink-0">
+                            <Check className="w-3.5 h-3.5 text-green-400" />
+                        </div>
+                        <span className="text-sm text-white/70">{l}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="bg-gradient-to-r from-violet-600/15 to-yellow-600/10 border border-yellow-500/20 rounded-2xl p-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
+                        <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400/50" />
+                    </div>
+                    <div className="text-left">
+                        <p className="text-sm font-bold text-yellow-300">+100 Koins creditados</p>
+                        <p className="text-xs text-white/35">Use para evoluir sua IA e acelerar suas vendas</p>
+                    </div>
+                </div>
+            </div>
+            <p className="text-white/35 text-sm">Parabéns, <strong className="text-white/70">{form.name || 'empreendedor'}</strong>. Seu sistema de vendas no WhatsApp foi criado.</p>
+            <button onClick={() => navigate('/crm')}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/25">
+                <Rocket className="w-4 h-4" /> Ir para o Dashboard
+            </button>
+        </div>
+    );
+
+    return null;
+}

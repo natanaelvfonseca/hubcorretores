@@ -5,6 +5,7 @@ import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { RevenueMetrics } from './pages/dashboard/RevenueMetrics';
 import { Onboarding } from './pages/onboarding/Onboarding';
+import { OnboardingV2 } from './pages/onboarding/OnboardingV2';
 import { AppShell } from './components/layout/AppShell';
 import { ThemeProvider } from './components/theme/ThemeProvider';
 import { WhatsAppConnection } from './pages/settings/WhatsAppConnection';
@@ -47,6 +48,7 @@ function App() {
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route path="/onboarding" element={<Onboarding />} />
+                            <Route path="/start" element={<OnboardingV2 />} />
                             <Route path="/partners/register" element={<PartnerRegister />} />
 
                             {/* Protected Routes */}
