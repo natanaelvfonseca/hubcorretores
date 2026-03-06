@@ -171,7 +171,7 @@ function MobileProgress({ step }: { step: number }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 export function OnboardingV2() {
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { refreshUser } = useAuth();
     const [step, setStep] = useState(1);
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
     const [error, setError] = useState('');
@@ -243,12 +243,15 @@ export function OnboardingV2() {
             const res = await fetch('/api/onboarding/register-and-save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, targetAudience: form.targetAudience, channels: form.channels }),
+                body: JSON.stringify({ ...form }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro ao criar conta.');
+            // Store session directly (same pattern as AuthContext.register)
+            localStorage.setItem('kogna_token', data.token);
+            localStorage.setItem('kogna_user', JSON.stringify(data.user));
             token.current = data.token;
-            await login(data.token, data.user);
+            await refreshUser();
             go(15);
         } catch (e: any) {
             setError(e.message);

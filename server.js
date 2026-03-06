@@ -2574,6 +2574,11 @@ const ensureOnboardingSessionsTable = async () => {
       )
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_sessions_sid ON onboarding_test_sessions(session_id)`);
+    // Ensure optional columns exist on ia_configs for onboarding V2 data
+    await pool.query(`ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS customer_pain TEXT`).catch(() => { });
+    await pool.query(`ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS product_price TEXT`).catch(() => { });
+    await pool.query(`ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS agent_objective TEXT`).catch(() => { });
+    await pool.query(`ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS customer_pain TEXT`).catch(() => { });
     log('[SYSTEM] onboarding_test_sessions table verified.');
   } catch (err) {
     log('[ERROR] ensureOnboardingSessionsTable: ' + err.message);
@@ -3143,34 +3148,29 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
   const client = await pool.connect();
   try {
     const {
-      // Account
       name, email, phone, password,
-      // Agent & Business
       agentObjective, industry, industryDetail,
       companyName, aiName, mainProduct, customerPain, productPrice,
       targetAudience, channels, salesCycle, revenueGoal,
       unknownBehavior, voiceTone, restrictions,
-      // Referral
       referral_code
     } = req.body;
 
     if (!name || !email || !password) return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
     if (password.length < 6) return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres.' });
 
-    // Check if email already exists
     const existCheck = await client.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
     if (existCheck.rows.length > 0) return res.status(409).json({ error: 'Este e-mail já está cadastrado. Faça login.' });
 
+    // ── Mandatory transaction: org + user ─────────────────────────────────────
     await client.query('BEGIN');
 
-    // Create organization
     const orgRes = await client.query(
       `INSERT INTO organizations (name, plan_type) VALUES ($1, 'basic') RETURNING *`,
       [companyName || name + "'s Organization"]
     );
     const org = orgRes.rows[0];
 
-    // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
     const userRes = await client.query(
       `INSERT INTO users (name, email, phone, password, organization_id, role, koins_balance)
@@ -3179,57 +3179,56 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
     );
     const user = userRes.rows[0];
 
-    // Update org owner
     await client.query('UPDATE organizations SET owner_id = $1 WHERE id = $2', [user.id, org.id]);
 
-    // Save AI config
+    // Mark onboarding complete (non-blocking if column missing)
+    await client.query(`UPDATE users SET onboarding_completed = true WHERE id = $1`, [user.id]).catch(() => { });
+
+    await client.query('COMMIT');
+
+    // ── Optional: save AI config (best-effort) ────────────────────────────────
     const agentObjectiveText =
       agentObjective === 'fechar_venda' ? 'Fechar vendas diretamente no WhatsApp' :
         agentObjective === 'qualificar_agendar' ? 'Qualificar leads e agendar reunião' :
           'Aquecer o lead e transferir para vendedor humano';
 
-    await client.query(
-      `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product, desired_revenue,
-        agent_objective, unknown_behavior, voice_tone, restrictions, customer_pain, product_price)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-       ON CONFLICT (organization_id) DO UPDATE SET
-         company_name=EXCLUDED.company_name, agent_name=EXCLUDED.agent_name,
-         main_product=EXCLUDED.main_product, desired_revenue=EXCLUDED.desired_revenue,
-         agent_objective=EXCLUDED.agent_objective, unknown_behavior=EXCLUDED.unknown_behavior,
-         voice_tone=EXCLUDED.voice_tone, restrictions=EXCLUDED.restrictions,
-         customer_pain=EXCLUDED.customer_pain, product_price=EXCLUDED.product_price`,
-      [org.id, user.id, companyName, aiName, mainProduct, revenueGoal,
-        agentObjectiveText, unknownBehavior, voiceTone, restrictions, customerPain, productPrice]
-    );
+    try {
+      await pool.query(
+        `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product, desired_revenue,
+          agent_objective, unknown_behavior, voice_tone, restrictions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         ON CONFLICT (organization_id) DO UPDATE SET
+           company_name=EXCLUDED.company_name, agent_name=EXCLUDED.agent_name,
+           main_product=EXCLUDED.main_product, desired_revenue=EXCLUDED.desired_revenue,
+           agent_objective=EXCLUDED.agent_objective, unknown_behavior=EXCLUDED.unknown_behavior,
+           voice_tone=EXCLUDED.voice_tone, restrictions=EXCLUDED.restrictions`,
+        [org.id, user.id, companyName, aiName, mainProduct, revenueGoal,
+          agentObjectiveText, unknownBehavior, voiceTone, restrictions]
+      );
+      // Try to update optional columns separately (they may not exist yet)
+      await pool.query(
+        `UPDATE ia_configs SET customer_pain=$1, product_price=$2 WHERE organization_id=$3`,
+        [customerPain, productPrice, org.id]
+      ).catch(() => { });
+    } catch (iaErr) {
+      log('[ONBOARDING-V2] ia_configs insert skipped: ' + iaErr.message);
+    }
 
-    // Create the first AI agent
-    const agentDescription =
-      `Agente de vendas ${aiName || 'IA'} da ${companyName}. ` +
-      `Objetivo: ${agentObjectiveText}. ` +
-      `Mercado: ${industry || 'geral'}${industryDetail ? ' — ' + industryDetail : ''}. ` +
-      `Tom: ${voiceTone}. Ciclo de venda: ${salesCycle}.`;
+    // ── Optional: create first agent (best-effort) ────────────────────────────
+    try {
+      const agentDescription =
+        `Agente de vendas ${aiName || 'IA'} da ${companyName}. ` +
+        `Objetivo: ${agentObjectiveText}. ` +
+        `Mercado: ${industry || 'geral'}${industryDetail ? ' — ' + industryDetail : ''}. ` +
+        `Tom: ${voiceTone}. Ciclo de venda: ${salesCycle}.`;
 
-    await client.query(
-      `INSERT INTO agents (organization_id, name, description, role, voice_tone, unknown_behavior, restrictions, status)
-       VALUES ($1, $2, $3, 'sdr', $4, $5, $6, 'active')`,
-      [org.id, aiName || 'Agente IA', agentDescription, voiceTone, unknownBehavior, restrictions || '']
-    );
-
-    // Mark onboarding complete
-    await client.query(
-      `UPDATE users SET onboarding_completed = true WHERE id = $1`,
-      [user.id]
-    ).catch(() => { }); // non-blocking if column doesn't exist yet
-
-    await client.query('COMMIT');
-
-    // Fire-and-forget: log industry selection
-    if (industry && industry !== 'outro') {
-      fetch(`http://localhost:${process.env.PORT || 8080}/api/industry/select`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1h' })}` },
-        body: JSON.stringify({ industry_slug: industry })
-      }).catch(() => { });
+      await pool.query(
+        `INSERT INTO agents (organization_id, name, description, role, voice_tone, unknown_behavior, restrictions, status)
+         VALUES ($1, $2, $3, 'sdr', $4, $5, $6, 'active')`,
+        [org.id, aiName || 'Agente IA', agentDescription, voiceTone, unknownBehavior, restrictions || '']
+      );
+    } catch (agentErr) {
+      log('[ONBOARDING-V2] agent insert skipped: ' + agentErr.message);
     }
 
     const { password: _, ...safeUser } = user;
