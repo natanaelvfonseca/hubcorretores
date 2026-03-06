@@ -1714,7 +1714,7 @@ Campos obrigatórios no JSON:
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (err) {
-    log(`[MEMORY] extractConversationMemory error: ${err.message}`);
+    log(`[AI ANALYST] extractConversationMemory error: ${err.message}`);
     return null;
   }
 }
@@ -1906,7 +1906,7 @@ const STAGE_PROMPTS = {
  * @param {string} options.currentTime - Formatted time string
  * @returns {string} Complete system prompt
  */
-function buildSystemPrompt({ agent, stage, knowledgeBase, currentDate, currentTime }) {
+function buildSystemPrompt({ agent, stage, knowledgeBase, currentDate, currentTime, activeAgent }) {
   const stageConf = STAGE_PROMPTS[stage] || STAGE_PROMPTS['qualificacao'];
 
   // ── 1. Identity Layer ────────────────────────────────────────────────────────
@@ -1915,6 +1915,17 @@ Data: ${currentDate} | Hora: ${currentTime} (Brasília)
 
 [IDENTIDADE E VOZ]
 ${agent.system_prompt || 'Você é um assistente virtual prestativo e profissional.'}`;
+
+  // ── 1b. Agent Persona Block ───────────────────────────────────────────────────
+  if (activeAgent && activeAgent.key !== 'analyst') {
+    prompt += `
+
+[AGENTE RESPONSÁVEL: ${activeAgent.name.toUpperCase()}]
+Papel: ${activeAgent.role}
+Missão: ${activeAgent.mission}
+Tom: ${activeAgent.tone}`;
+  }
+
 
   // ── 2. Stage Prompt ──────────────────────────────────────────────────────────
   prompt += `
@@ -2195,6 +2206,74 @@ async function executeSendFollowupMessage(orgId, leadId, instanceName, message, 
 }
 
 // ── END Backend Tool Router ───────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MULTI-AGENT ARCHITECTURE
+// Each CSE stage is handled by a named specialist agent with its own identity.
+// The Conversation Analyst runs async after every turn (not a message handler).
+// ══════════════════════════════════════════════════════════════════════════════
+
+const AGENT_DEFINITIONS = {
+
+  sdr: {
+    name: 'AI SDR',
+    role: 'Especialista em prospecção e qualificação de leads via WhatsApp.',
+    mission: 'Identificar o perfil do lead, entender sua necessidade principal e qualificá-lo para avançar no funil. Não fazer pitch de produto. Fazer perguntas cirúrgicas.',
+    tone: 'Curioso e acolhedor. Mensagens curtas. Uma pergunta por vez. Nunca parecendo um robô.',
+  },
+
+  closer: {
+    name: 'AI Closer',
+    role: 'Especialista em apresentação de valor, gestão de objeções e fechamento.',
+    mission: 'Conectar a solução à dor específica do lead usando o método FAB. Defender o investimento com ROI. Usar LAER para objeções. Nunca dar desconto espontaneamente.',
+    tone: 'Confiante, direto e orientado a resultado. Empático, mas sem enrolar.',
+  },
+
+  scheduler: {
+    name: 'AI Scheduler',
+    role: 'Especialista em agendamento de reuniões e demonstrações via WhatsApp.',
+    mission: 'Confirmar data e horário usando as ferramentas disponíveis. Oferecer exatamente 2 opções. Nunca fazer perguntas abertas de horário. Fechar o agendamento neste turno.',
+    tone: 'Eficiente e direto. Sem rodeios. Foco 100% em confirmar o next step.',
+  },
+
+  followup: {
+    name: 'AI Follow-up',
+    role: 'Especialista em reengajamento de leads inativos.',
+    mission: 'Reentrar na conversa com contexto do histórico anterior. Trazer um novo ângulo de valor ou dado relevante. Fazer 1 pergunta simples que force uma resposta curta. Nunca começar com "Oi, tudo bem?".',
+    tone: 'Relevante e surpreendente. Curto. Sem desespero. Mostra que lembra do lead.',
+  },
+
+  analyst: {
+    name: 'AI Analyst',
+    role: 'Especialista em extração de dados e inteligência conversacional.',
+    mission: 'Extrair dados estruturados de cada conversa. Preencher lead_memory com nome, empresa, dor, interesse, orçamento, objeção e sinais semânticos. Opera silenciosamente em background.',
+    tone: 'Não interage com o lead. Opera apenas no backend.',
+  },
+
+};
+
+// ─── Stage → Agent Router ─────────────────────────────────────────────────────
+const STAGE_TO_AGENT = {
+  novo: 'sdr',
+  qualificacao: 'sdr',
+  diagnostico: 'closer',
+  apresentacao: 'closer',
+  proposta: 'closer',
+  agendamento: 'scheduler',
+  followup: 'followup',
+};
+
+/**
+ * Returns the agent definition responsible for a given CSE stage.
+ * @param {string} stage - CSE lead_stage
+ * @returns {Object} Agent definition from AGENT_DEFINITIONS
+ */
+function resolveAgent(stage) {
+  const key = STAGE_TO_AGENT[stage] || 'sdr';
+  return { key, ...AGENT_DEFINITIONS[key] };
+}
+
+// ── END Multi-Agent Architecture ──────────────────────────────────────────────
 
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
@@ -11565,12 +11644,15 @@ async function processAIResponse(
       : { newStage: 'qualificacao', goal: STAGE_GOALS['qualificacao'], nextExpected: 'lead_share_context' };
     log(`[CSE] stage=${cseStage} for lead=${remoteJid}`);
 
-    // Rebuild systemPrompt with the real stage (replaces placeholder 'qualificacao')
-    systemPrompt = buildSystemPrompt({ agent, stage: cseStage, knowledgeBase, currentDate, currentTime });
+    // Rebuild systemPrompt with the real stage + active agent persona
+    const activeAgent = resolveAgent(cseStage);
+    log(`[MULTI-AGENT] ${activeAgent.name} handling stage=${cseStage} for lead=${remoteJid}`);
+    systemPrompt = buildSystemPrompt({ agent, stage: cseStage, knowledgeBase, currentDate, currentTime, activeAgent });
 
     // Append structured memory + semantic signals block
     systemPrompt += buildCSEStageDirective(cseStage, cseGoal, cseMemory);
     // ── END CSE state load ───────────────────────────────────────────────────────
+
 
 
     // 1.7 Fetch Last 3 Messages (CSE slim context — not full history)
