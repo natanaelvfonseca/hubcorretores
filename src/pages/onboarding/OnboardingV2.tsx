@@ -51,14 +51,14 @@ function ChoiceCard({ label, desc, selected, onClick }: {
     return (
         <button type="button" onClick={onClick}
             className={`w-full text-left px-4 py-4 rounded-xl border transition-all duration-200 relative group ${selected
-                ? 'border-violet-500 bg-violet-500/10 shadow-lg shadow-violet-500/10'
+                ? 'border-[#FF4C00] bg-[#FF4C00]/10 shadow-lg shadow-[#FF4C00]/10'
                 : 'border-white/10 hover:border-white/25 bg-white/3 hover:bg-white/5'}`}>
             {selected && (
-                <span className="absolute top-3 right-3 w-5 h-5 bg-violet-500 rounded-full flex items-center justify-center">
+                <span className="absolute top-3 right-3 w-5 h-5 bg-[#FF4C00] rounded-full flex items-center justify-center">
                     <Check className="w-3 h-3 text-white" />
                 </span>
             )}
-            <p className={`text-sm font-semibold ${selected ? 'text-violet-300' : 'text-white/85'}`}>{label}</p>
+            <p className={`text-sm font-semibold ${selected ? 'text-[#FF9070]' : 'text-white/85'}`}>{label}</p>
             {desc && <p className="text-xs text-white/45 mt-0.5">{desc}</p>}
         </button>
     );
@@ -68,7 +68,7 @@ function MultiChip({ label, selected, onClick }: { label: string; selected: bool
     return (
         <button type="button" onClick={onClick}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 border ${selected
-                ? 'border-violet-500 bg-violet-500/15 text-violet-300'
+                ? 'border-[#FF4C00] bg-[#FF4C00]/15 text-[#FF9070]'
                 : 'border-white/10 text-white/55 hover:border-white/25 hover:text-white/80'}`}>
             {selected && <Check className="w-3 h-3 inline mr-1" />}{label}
         </button>
@@ -87,7 +87,7 @@ function FieldLabel({ children, counter }: { children: React.ReactNode; counter?
 function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
     return (
         <input {...props}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all ${props.className || ''}`}
+            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-[#FF4C00]/60 focus:bg-white/8 transition-all ${props.className || ''}`}
         />
     );
 }
@@ -95,7 +95,7 @@ function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
 function Textarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
     return (
         <textarea {...props}
-            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-violet-500/60 focus:bg-white/8 transition-all resize-none ${props.className || ''}`}
+            className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 text-sm focus:outline-none focus:border-[#FF4C00]/60 focus:bg-white/8 transition-all resize-none ${props.className || ''}`}
         />
     );
 }
@@ -111,7 +111,7 @@ function ErrorBanner({ msg }: { msg: string }) {
 function NextBtn({ onClick, loading, label = 'Continuar' }: { onClick: () => void; loading?: boolean; label?: string }) {
     return (
         <button onClick={onClick} disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/25 disabled:opacity-50 mt-6">
+            className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-[#FF4C00]/20 disabled:opacity-50 mt-6">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{label} <ChevronRight className="w-4 h-4" /></>}
         </button>
     );
@@ -129,7 +129,7 @@ function ProgressSidebar({ step }: { step: number }) {
     return (
         <div className="hidden lg:flex flex-col w-52 shrink-0 pt-2">
             <div className="flex items-center gap-2 mb-8 px-1">
-                <div className="w-7 h-7 bg-gradient-to-br from-violet-600 to-violet-400 rounded-lg flex items-center justify-center shadow-glow">
+                <div className="w-7 h-7 bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] rounded-lg flex items-center justify-center shadow-glow">
                     <Zap className="w-4 h-4 text-white fill-white" />
                 </div>
                 <span className="font-bold text-white text-lg">Kogna</span>
@@ -141,7 +141,7 @@ function ProgressSidebar({ step }: { step: number }) {
                     const active = s === step;
                     return (
                         <div key={s} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-violet-500' : active ? 'bg-violet-600 ring-2 ring-violet-400/40 ring-offset-1 ring-offset-[#09090F]' : 'bg-white/8 border border-white/12'}`}>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-[#FF4C00]' : active ? 'bg-[#FF4C00] ring-2 ring-[#FF7A50]/40 ring-offset-1 ring-offset-[#09090F]' : 'bg-white/8 border border-white/12'}`}>
                                 {done ? <Check className="w-3 h-3 text-white" /> : <span className="text-[9px] font-bold text-white/50">{s}</span>}
                             </div>
                             <span className={`text-xs font-medium transition-colors ${active ? 'text-white' : done ? 'text-white/40' : 'text-white/28'}`}>{label}</span>
@@ -158,10 +158,10 @@ function MobileProgress({ step }: { step: number }) {
         <div className="lg:hidden mb-6">
             <div className="flex items-center justify-between text-xs text-white/40 mb-2">
                 <span className="font-mono">Passo {step} de {TOTAL_STEPS}</span>
-                <span className="text-violet-400 font-semibold">{STEP_LABELS[step - 1]}</span>
+                <span className="text-[#FF7A50] font-semibold">{STEP_LABELS[step - 1]}</span>
             </div>
             <div className="h-1 bg-white/8 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-violet-600 to-violet-400 rounded-full transition-all duration-500"
+                <div className="h-full bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] rounded-full transition-all duration-500"
                     style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
             </div>
         </div>
@@ -230,7 +230,6 @@ export function OnboardingV2() {
     const next = () => {
         const v = validate[step];
         if (v && !v()) return;
-        if (step === 13) { setPipelineVisible(true); setTimeout(() => go(14), 4500); return; }
         if (step === 14) { handleRegister(); return; }
         go(step + 1);
     };
@@ -341,10 +340,19 @@ export function OnboardingV2() {
 
     useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+    // Auto-advance Step 13 (Pipeline animation)
+    useEffect(() => {
+        if (step === 13) {
+            setPipelineVisible(true);
+            const t = setTimeout(() => go(14), 4500);
+            return () => clearTimeout(t);
+        }
+    }, [step]);
+
     // Confetti on step 18
     useEffect(() => {
         if (step === 18) {
-            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#7C3AED', '#8B5CF6', '#A78BFA', '#10B981'] });
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#FF4C00', '#FF7A50', '#FFB090', '#10B981'] });
         }
     }, [step]);
 
@@ -353,8 +361,8 @@ export function OnboardingV2() {
         <div className="min-h-screen bg-[#09090F] text-white flex">
             {/* Glow BG */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-[-20%] left-[30%] w-[500px] h-[500px] bg-violet-600/8 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-violet-900/6 rounded-full blur-[100px]" />
+                <div className="absolute top-[-20%] left-[30%] w-[500px] h-[500px] bg-[#FF4C00]/6 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-[#FF4C00]/4 rounded-full blur-[100px]" />
             </div>
 
             {/* Sidebar */}
@@ -365,6 +373,13 @@ export function OnboardingV2() {
             {/* Content */}
             <div className="flex-1 flex flex-col items-center justify-start py-10 px-4 relative z-10 overflow-y-auto">
                 <div className="w-full max-w-lg">
+                    {/* Mobile Logo */}
+                    <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] rounded-lg flex items-center justify-center shadow-lg">
+                            <Zap className="w-4 h-4 text-white fill-white" />
+                        </div>
+                        <span className="font-bold text-white text-xl">Kogna</span>
+                    </div>
                     <MobileProgress step={step} />
                     {error && <ErrorBanner msg={error} />}
                     <StepContent
@@ -403,11 +418,11 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
 
     if (step === 1) return (
         <div className="text-center space-y-6 animate-fade-in mt-16">
-            <div className="w-24 h-24 bg-gradient-to-br from-violet-600/30 to-violet-400/10 rounded-3xl flex items-center justify-center mx-auto border border-violet-500/20">
-                <Rocket className="w-12 h-12 text-violet-400" />
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
+                <Rocket className="w-12 h-12 text-[#FF7A50]" />
             </div>
             <div>
-                <p className="text-xs font-bold text-violet-400 uppercase tracking-widest mb-3">Revenue Operating System</p>
+                <p className="text-xs font-bold text-[#FF7A50] uppercase tracking-widest mb-3">Revenue Operating System</p>
                 <h1 className="text-4xl font-bold text-white leading-tight">Bem-vindo à Nova Era<br />das Vendas no WhatsApp</h1>
                 <p className="text-white/45 mt-4 text-lg leading-relaxed max-w-sm mx-auto">
                     Você está a poucos passos de transformar seu WhatsApp em um sistema inteligente de vendas que atende, qualifica e recupera clientes automaticamente.
@@ -420,8 +435,8 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     { icon: MessageSquare, t: 'Conecte ao WhatsApp e comece a vender' },
                 ].map(({ icon: Icon, t }) => (
                     <div key={t} className="flex items-center gap-3 text-sm text-white/55">
-                        <div className="w-7 h-7 rounded-lg bg-violet-600/15 border border-violet-500/20 flex items-center justify-center shrink-0">
-                            <Icon className="w-3.5 h-3.5 text-violet-400" />
+                        <div className="w-7 h-7 rounded-lg bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-[#FF7A50]" />
                         </div>
                         {t}
                     </div>
@@ -435,7 +450,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 2) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 2 — Agente</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 2 — Agente</p>
                 <h2 className="text-2xl font-bold text-white">Crie seu primeiro Agente de Vendas</h2>
                 <p className="text-white/45 text-sm mt-2">Esse será o primeiro agente da sua empresa responsável por conduzir oportunidades no WhatsApp.</p>
             </div>
@@ -455,15 +470,15 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 3) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 3 — Mercado</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 3 — Mercado</p>
                 <h2 className="text-2xl font-bold text-white">Em qual mercado sua empresa atua?</h2>
                 <p className="text-white/45 text-sm mt-2">Isso adapta linguagem, objeções e padrões de conversa da sua IA.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
                 {INDUSTRIES.map(i => (
                     <button key={i.v} onClick={() => set('industry', i.v)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border text-left transition-all ${form.industry === i.v ? 'border-violet-500 bg-violet-500/10 text-violet-300' : 'border-white/10 text-white/55 hover:border-white/25'}`}>
-                        {form.industry === i.v && <Check className="w-3 h-3 inline mr-1.5 text-violet-400" />}{i.l}
+                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border text-left transition-all ${form.industry === i.v ? 'border-[#FF4C00] bg-[#FF4C00]/10 text-[#FF9070]' : 'border-white/10 text-white/55 hover:border-white/25'}`}>
+                        {form.industry === i.v && <Check className="w-3 h-3 inline mr-1.5 text-[#FF7A50]" />}{i.l}
                     </button>
                 ))}
             </div>
@@ -484,7 +499,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 4) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 4 — Identidade</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 4 — Identidade</p>
                 <h2 className="text-2xl font-bold text-white">Quem representará sua empresa?</h2>
                 <p className="text-white/45 text-sm mt-2">Esse será o nome que aparecerá nas conversas do WhatsApp.</p>
             </div>
@@ -499,7 +514,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     <div className="flex flex-wrap gap-2 mt-2">
                         {['Ana', 'Max', 'Clara', 'Lia', 'Leo', 'Nina', 'Sol'].map(n => (
                             <button key={n} onClick={() => set('aiName', n)}
-                                className="text-xs px-3 py-1 rounded-full border border-white/10 text-white/40 hover:border-violet-500/50 hover:text-violet-300 transition-colors">{n}</button>
+                                className="text-xs px-3 py-1 rounded-full border border-white/10 text-white/40 hover:border-[#FF4C00]/50 hover:text-[#FF7A50] transition-colors">{n}</button>
                         ))}
                     </div>
                 </div>
@@ -511,7 +526,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 5) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 5 — Produto</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 5 — Produto</p>
                 <h2 className="text-2xl font-bold text-white">O que sua empresa vende?</h2>
             </div>
             <div className="space-y-4">
@@ -525,7 +540,11 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 </div>
                 <div>
                     <FieldLabel>Preço ou ticket médio <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel>
-                    <Input placeholder="Ex: R$ 1.500,00" value={form.productPrice} onChange={e => set('productPrice', e.target.value)} />
+                    <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/50 pointer-events-none select-none">R$</span>
+                        <Input placeholder="1.500,00" value={form.productPrice} className="pl-10"
+                            onChange={e => set('productPrice', e.target.value.replace(/[^\d.,]/g, ''))} />
+                    </div>
                 </div>
             </div>
             <NextBtn onClick={next} />
@@ -535,7 +554,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 6) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 6 — Público</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 6 — Público</p>
                 <h2 className="text-2xl font-bold text-white">Para quem você vende?</h2>
                 <p className="text-white/45 text-sm mt-2">Pode selecionar ambos.</p>
             </div>
@@ -553,7 +572,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 7) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 7 — Canais</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 7 — Canais</p>
                 <h2 className="text-2xl font-bold text-white">Como seus clientes chegam até você?</h2>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -568,7 +587,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 8) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 8 — Ciclo</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 8 — Ciclo</p>
                 <h2 className="text-2xl font-bold text-white">Quanto tempo leva para fechar uma venda?</h2>
                 <p className="text-white/45 text-sm mt-2">A IA vai adaptar o timing das mensagens ao seu ciclo.</p>
             </div>
@@ -587,18 +606,22 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 9) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 9 — Meta</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 9 — Meta</p>
                 <h2 className="text-2xl font-bold text-white">Qual sua meta mensal de vendas?</h2>
                 <p className="text-white/45 text-sm mt-2">A Kogna usará essa meta para gerar recomendações e priorizar oportunidades.</p>
             </div>
             <div>
                 <FieldLabel>Meta mensal (R$)</FieldLabel>
-                <Input type="number" placeholder="Ex: 50000" value={form.revenueGoal} onChange={e => set('revenueGoal', e.target.value)} />
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/50 pointer-events-none select-none">R$</span>
+                    <Input placeholder="50.000,00" value={form.revenueGoal} className="pl-10"
+                        onChange={e => set('revenueGoal', e.target.value.replace(/[^\d.,]/g, ''))} />
+                </div>
             </div>
             <div className="flex flex-wrap gap-2 mt-1">
                 {['5000', '10000', '25000', '50000', '100000', '250000'].map(v => (
                     <button key={v} onClick={() => set('revenueGoal', v)}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:border-violet-500/50 hover:text-violet-300 transition-colors font-mono">
+                        className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:border-[#FF4C00]/50 hover:text-[#FF7A50] transition-colors font-mono">
                         R$ {parseInt(v).toLocaleString('pt-BR')}
                     </button>
                 ))}
@@ -610,7 +633,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 10) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 10 — Protocolo</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 10 — Protocolo</p>
                 <h2 className="text-2xl font-bold text-white">O que a IA faz quando não sabe responder?</h2>
             </div>
             <div className="space-y-3">
@@ -627,14 +650,14 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 11) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 11 — Personalidade</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 11 — Personalidade</p>
                 <h2 className="text-2xl font-bold text-white">Qual o estilo da sua IA?</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {['Consultiva', 'Direta', 'Amigável', 'Executiva', 'Educadora'].map(t => (
                     <button key={t} onClick={() => set('voiceTone', t)}
-                        className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${form.voiceTone === t ? 'border-violet-500 bg-violet-500/15 text-violet-300' : 'border-white/10 text-white/50 hover:border-white/25'}`}>
-                        {form.voiceTone === t && <Check className="w-3 h-3 inline mr-1" />}{t}
+                        className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${form.voiceTone === t ? 'border-[#FF4C00] bg-[#FF4C00]/15 text-[#FF9070]' : 'border-white/10 text-white/50 hover:border-white/25'}`}>
+                        {form.voiceTone === t && <Check className="w-3 h-3 inline mr-1 text-[#FF7A50]" />}{t}
                     </button>
                 ))}
             </div>
@@ -649,13 +672,13 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 12) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 12 — Conhecimento</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 12 — Conhecimento</p>
                 <h2 className="text-2xl font-bold text-white">Transfira conhecimento para sua IA</h2>
                 <p className="text-white/45 text-sm mt-2">Envie materiais que ajudam a IA a entender melhor seu negócio.</p>
             </div>
             <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/12 rounded-2xl py-10 cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/4 transition-all group">
-                <div className="w-12 h-12 rounded-xl bg-violet-600/15 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/25 transition-colors">
-                    <Upload className="w-5 h-5 text-violet-400" />
+                <div className="w-12 h-12 rounded-xl bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center group-hover:bg-[#FF4C00]/25 transition-colors">
+                    <Upload className="w-5 h-5 text-[#FF7A50]" />
                 </div>
                 <div className="text-center">
                     <p className="text-sm text-white/60 font-medium">PDFs, documentos, manuais, apresentações</p>
@@ -668,8 +691,8 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 <div className="space-y-2">
                     {files.map((f: File, i: number) => (
                         <div key={i} className="flex items-center gap-2 py-2 px-3 bg-white/4 rounded-lg border border-white/8">
-                            <div className="w-7 h-7 bg-violet-600/20 rounded-md flex items-center justify-center shrink-0">
-                                <Upload className="w-3.5 h-3.5 text-violet-400" />
+                            <div className="w-7 h-7 bg-[#FF4C00]/20 rounded-md flex items-center justify-center shrink-0">
+                                <Upload className="w-3.5 h-3.5 text-[#FF7A50]" />
                             </div>
                             <span className="text-xs text-white/60 truncate flex-1">{f.name}</span>
                             <span className="text-[10px] text-white/30">{(f.size / 1024).toFixed(0)}KB</span>
@@ -677,9 +700,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     ))}
                 </div>
             )}
-            <div className="flex gap-3">
-                <button onClick={() => go(13)} className="flex-1 py-3 text-sm text-white/40 hover:text-white/60 transition-colors border border-white/8 rounded-xl">Pular por agora</button>
-                <NextBtn onClick={next} label="Continuar" />
+            <div className="flex gap-3 mt-6">
+                <button onClick={() => go(13)} className="flex-none px-5 py-3 text-sm text-white/40 hover:text-white/60 transition-colors border border-white/10 rounded-xl whitespace-nowrap">Pular</button>
+                <button onClick={next} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg shadow-[#FF4C00]/20">Continuar <ChevronRight className="w-4 h-4" /></button>
             </div>
         </div>
     );
@@ -687,16 +710,15 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 13) return (
         <div className="space-y-6 animate-fade-in text-center">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 13 — Pipeline</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 13 — Pipeline</p>
                 <h2 className="text-2xl font-bold text-white">Seu sistema de vendas está sendo criado</h2>
                 <p className="text-white/45 text-sm mt-2">A Kogna organiza automaticamente suas conversas em um pipeline inteligente.</p>
             </div>
             <div className="relative py-6">
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-violet-600/60 to-transparent" />
                 {['Novo Lead', 'Qualificação', 'Diagnóstico', 'Proposta', 'Fechamento'].map((stage, i) => (
                     <div key={stage} className={`flex items-center gap-3 mb-4 transition-all duration-500 ${pipelineVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}
                         style={{ transitionDelay: `${i * 400}ms` }}>
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-violet-400 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-violet-500/30 shrink-0 relative z-10">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-[#FF4C00]/20 shrink-0 relative z-10">
                             {pipelineVisible ? <Check className="w-4 h-4" /> : i + 1}
                         </div>
                         <div className="flex-1 text-left bg-white/4 border border-white/8 rounded-xl px-4 py-2.5">
@@ -705,7 +727,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     </div>
                 ))}
             </div>
-            <div className="flex items-center justify-center gap-2 text-violet-400 text-sm">
+            <div className="flex items-center justify-center gap-2 text-[#FF7A50] text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Configurando sua inteligência de vendas...
             </div>
@@ -716,7 +738,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 14) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>
                 <h2 className="text-2xl font-bold text-white">Crie sua conta para ativar sua IA</h2>
                 <p className="text-white/45 text-sm mt-2">Falta apenas um passo para ativar sua IA.</p>
             </div>
@@ -735,7 +757,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 15) return (
         <div className="space-y-4 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 15 — Teste</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 15 — Teste</p>
                 <h2 className="text-2xl font-bold text-white">Vamos fazer um teste rápido</h2>
                 <p className="text-white/45 text-sm mt-1">Converse com sua IA como se fosse um cliente. Limite de 5 interações.</p>
             </div>
@@ -749,18 +771,18 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     {chatMessages.map((m: { role: string; text: string }, i: number) => (
                         <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             {m.role === 'ai' && (
-                                <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center mr-2 shrink-0 mt-1">
+                                <div className="w-6 h-6 rounded-full bg-[#FF4C00] flex items-center justify-center mr-2 shrink-0 mt-1">
                                     <Bot className="w-3 h-3 text-white" />
                                 </div>
                             )}
-                            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-violet-600 text-white rounded-br-sm' : 'bg-white/8 text-white/85 rounded-bl-sm'}`}>
+                            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-[#FF4C00] text-white rounded-br-sm' : 'bg-white/8 text-white/85 rounded-bl-sm'}`}>
                                 {m.text}
                             </div>
                         </div>
                     ))}
                     {chatLoading && (
                         <div className="flex justify-start">
-                            <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center mr-2 shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-[#FF4C00] flex items-center justify-center mr-2 shrink-0">
                                 <Bot className="w-3 h-3 text-white" />
                             </div>
                             <div className="bg-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5 items-center">
@@ -775,9 +797,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                         <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
                             placeholder="Escreva como se fosse um cliente..." disabled={chatLoading}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-violet-500/60 transition-all" />
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF4C00]/60 transition-all" />
                         <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
-                            className="w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 flex items-center justify-center transition-colors shrink-0">
+                            className="w-10 h-10 rounded-xl bg-[#FF4C00] hover:bg-[#FF6A30] disabled:opacity-40 flex items-center justify-center transition-colors shrink-0">
                             <Send className="w-4 h-4 text-white" />
                         </button>
                     </div>
@@ -795,14 +817,14 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 <div className="w-16 h-16 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center mb-4">
                     <Check className="w-8 h-8 text-green-400" />
                 </div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 16 — Melhorar IA</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 16 — Melhorar IA</p>
                 <h2 className="text-2xl font-bold text-white">Sua IA já está funcionando</h2>
                 <p className="text-white/45 text-sm mt-2">Mas você pode melhorar ela rapidamente.</p>
             </div>
             <div className="space-y-2">
                 {['Ajustar abordagem de vendas', 'Adicionar informações importantes', 'Melhorar resposta de objeções', 'Ajustar tom de voz'].map(opt => (
                     <button key={opt} onClick={() => go(17)}
-                        className="w-full text-left px-4 py-3 rounded-xl border border-white/10 text-white/60 hover:border-violet-500/40 hover:text-white/80 hover:bg-violet-500/5 text-sm transition-all">
+                        className="w-full text-left px-4 py-3 rounded-xl border border-white/10 text-white/60 hover:border-[#FF4C00]/40 hover:text-white/80 hover:bg-[#FF4C00]/5 text-sm transition-all">
                         {opt} →
                     </button>
                 ))}
@@ -814,7 +836,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 17) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-violet-400 font-bold uppercase tracking-widest mb-1">Passo 17 — WhatsApp</p>
+                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 17 — WhatsApp</p>
                 <h2 className="text-2xl font-bold text-white">Conecte sua IA ao WhatsApp</h2>
                 <p className="text-white/45 text-sm mt-2">Agora vamos dar voz à sua IA no WhatsApp.</p>
             </div>
@@ -833,7 +855,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 )}
                 {wsStatus === 'connecting' && (
                     <div className="flex flex-col items-center gap-3 py-4">
-                        <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+                        <Loader2 className="w-8 h-8 text-[#FF7A50] animate-spin" />
                         <p className="text-sm text-white/50">Gerando QR Code...</p>
                     </div>
                 )}
@@ -861,11 +883,11 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
 
     if (step === 18) return (
         <div className="text-center space-y-6 animate-fade-in mt-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-violet-600/30 to-green-500/20 rounded-3xl flex items-center justify-center mx-auto border border-violet-500/20 shadow-2xl shadow-violet-500/10">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-green-500/20 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20 shadow-2xl shadow-[#FF4C00]/10">
                 <Trophy className="w-12 h-12 text-yellow-400" />
             </div>
             <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-violet-500/15 border border-violet-500/25 rounded-full text-violet-300 text-xs font-bold mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4C00]/15 border border-[#FF4C00]/25 rounded-full text-[#FF9070] text-xs font-bold mb-4">
                     <Zap className="w-3 h-3" /> Ativação Completa
                 </div>
                 <h1 className="text-3xl font-bold text-white">{form.aiName || 'Sua IA'} está ativa e pronta</h1>
@@ -889,7 +911,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     </div>
                 ))}
             </div>
-            <div className="bg-gradient-to-r from-violet-600/15 to-yellow-600/10 border border-yellow-500/20 rounded-2xl p-4">
+            <div className="bg-gradient-to-r from-[#FF4C00]/10 to-yellow-600/10 border border-yellow-500/20 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
                         <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400/50" />
@@ -902,7 +924,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
             </div>
             <p className="text-white/35 text-sm">Parabéns, <strong className="text-white/70">{form.name || 'empreendedor'}</strong>. Seu sistema de vendas no WhatsApp foi criado.</p>
             <button onClick={() => navigate('/crm')}
-                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/25">
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-[#FF4C00]/20">
                 <Rocket className="w-4 h-4" /> Ir para o Dashboard
             </button>
         </div>
