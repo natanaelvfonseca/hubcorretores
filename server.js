@@ -1972,6 +1972,230 @@ Após confirmação use confirmar_agendamento com o UUID exato do vendedor.`;
 
 
 
+// ══════════════════════════════════════════════════════════════════════════════
+// BACKEND TOOL ROUTER
+// Stage controls which tools the LLM can call. tool_choice: auto is replaced
+// by stage-aware routing. All calls are validated before execution.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─── Full Tool Registry ───────────────────────────────────────────────────────
+const TOOL_DEFINITIONS = {
+
+  consultar_horarios_disponiveis: {
+    type: 'function',
+    function: {
+      name: 'consultar_horarios_disponiveis',
+      description: 'Consulta horários disponíveis para agendamento em uma data específica.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'Data no formato YYYY-MM-DD' },
+          vendedorId: { type: 'string', description: 'ID opcional do vendedor específico' },
+        },
+        required: ['date'],
+      },
+    },
+  },
+
+  confirmar_agendamento: {
+    type: 'function',
+    function: {
+      name: 'confirmar_agendamento',
+      description: 'Confirma e realiza o agendamento de uma reunião ou demonstração.',
+      parameters: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'Data no formato YYYY-MM-DD' },
+          time: { type: 'string', description: 'Horário no formato HH:MM' },
+          vendedorId: { type: 'string', description: 'O UUID do vendedor retornado na consulta.' },
+          notas: { type: 'string', description: 'Notas adicionais sobre o agendamento' },
+        },
+        required: ['date', 'time', 'vendedorId'],
+      },
+    },
+  },
+
+  cancelar_agendamento: {
+    type: 'function',
+    function: {
+      name: 'cancelar_agendamento',
+      description: 'Cancela qualquer agendamento ativo (status agendado) que o lead possua atualmente.',
+      parameters: {
+        type: 'object',
+        properties: {
+          confirmacion: { type: 'boolean', description: 'Confirmação de que o usuário deseja cancelar.' },
+        },
+        required: ['confirmacion'],
+      },
+    },
+  },
+
+  crm_update_lead: {
+    type: 'function',
+    function: {
+      name: 'crm_update_lead',
+      description: 'Atualiza campos estruturados do lead no CRM (memória e perfil). Use para registrar informações coletadas durante a conversa.',
+      parameters: {
+        type: 'object',
+        properties: {
+          fields: {
+            type: 'object',
+            description: 'Campos a atualizar. Aceita: name, company, business_type, lead_interest, budget_range, purchase_moment, decision_role, pain_point, main_objection',
+            additionalProperties: { type: 'string' },
+          },
+        },
+        required: ['fields'],
+      },
+    },
+  },
+
+  send_followup_message: {
+    type: 'function',
+    function: {
+      name: 'send_followup_message',
+      description: 'Agenda uma mensagem de follow-up para ser enviada automaticamente após um período de tempo.',
+      parameters: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', description: 'Mensagem a ser enviada no follow-up.' },
+          delay_minutes: { type: 'number', description: 'Minutos até o envio (mínimo 1).' },
+        },
+        required: ['message', 'delay_minutes'],
+      },
+    },
+  },
+
+};
+
+// ─── Stage → Tools Map ────────────────────────────────────────────────────────
+const STAGE_TOOL_MAP = {
+  novo: { tools: [], tool_choice: 'none' },
+  qualificacao: { tools: ['crm_update_lead'], tool_choice: 'none' },
+  diagnostico: { tools: ['crm_update_lead'], tool_choice: 'none' },
+  apresentacao: { tools: ['crm_update_lead'], tool_choice: 'none' },
+  proposta: { tools: ['crm_update_lead'], tool_choice: 'none' },
+  agendamento: { tools: ['consultar_horarios_disponiveis', 'confirmar_agendamento', 'cancelar_agendamento'], tool_choice: 'auto' },
+  followup: { tools: ['send_followup_message', 'crm_update_lead'], tool_choice: 'none' },
+};
+
+/**
+ * Returns the OpenAI-ready tools array and tool_choice for a given CSE stage.
+ * @param {string} stage - CSE lead_stage
+ * @returns {{ tools: Array, toolChoice: string, allowedNames: Set<string> }}
+ */
+function getToolsForStage(stage) {
+  const config = STAGE_TOOL_MAP[stage] || STAGE_TOOL_MAP['qualificacao'];
+  const tools = config.tools.map(name => TOOL_DEFINITIONS[name]).filter(Boolean);
+  const allowedNames = new Set(config.tools);
+  log(`[TOOL ROUTER] Stage ${stage} → ${tools.length} tool(s): ${config.tools.join(', ') || 'none'}`);
+  return { tools, toolChoice: config.tool_choice, allowedNames };
+}
+
+/**
+ * Validates a tool call before execution.
+ * Returns { valid: true } or { valid: false, reason: string }.
+ */
+function validateToolCall(functionName, args, allowedNames) {
+  // 1. Check the tool is allowed for this stage
+  if (!allowedNames.has(functionName)) {
+    log(`[TOOL ROUTER] BLOCKED: tool "${functionName}" not allowed in current stage. Allowed: ${[...allowedNames].join(', ') || 'none'}`);
+    return { valid: false, reason: `Ferramenta "${functionName}" não está disponível neste momento.` };
+  }
+
+  // 2. Validate required args per tool
+  if (functionName === 'crm_update_lead') {
+    if (!args.fields || typeof args.fields !== 'object' || Object.keys(args.fields).length === 0) {
+      return { valid: false, reason: 'crm_update_lead requer o campo "fields" com pelo menos um campo.' };
+    }
+    const ALLOWED_FIELDS = new Set(['name', 'company', 'business_type', 'lead_interest', 'budget_range',
+      'purchase_moment', 'decision_role', 'pain_point', 'main_objection']);
+    for (const key of Object.keys(args.fields)) {
+      if (!ALLOWED_FIELDS.has(key)) {
+        return { valid: false, reason: `Campo inválido para crm_update_lead: "${key}"` };
+      }
+    }
+  }
+
+  if (functionName === 'send_followup_message') {
+    if (!args.message || typeof args.message !== 'string') {
+      return { valid: false, reason: 'send_followup_message requer o campo "message".' };
+    }
+    if (typeof args.delay_minutes !== 'number' || args.delay_minutes < 1) {
+      return { valid: false, reason: 'send_followup_message requer delay_minutes >= 1.' };
+    }
+  }
+
+  if (functionName === 'consultar_horarios_disponiveis' || functionName === 'confirmar_agendamento') {
+    if (!args.date || typeof args.date !== 'string') {
+      return { valid: false, reason: `${functionName} requer o campo "date" no formato YYYY-MM-DD.` };
+    }
+  }
+
+  if (functionName === 'confirmar_agendamento') {
+    if (!args.time || !args.vendedorId) {
+      return { valid: false, reason: 'confirmar_agendamento requer "time" e "vendedorId".' };
+    }
+  }
+
+  return { valid: true };
+}
+
+// ─── Tool Executor: crm_update_lead ──────────────────────────────────────────
+async function executeCrmUpdateLead(orgId, leadId, fields) {
+  try {
+    const ALLOWED_FIELDS = ['name', 'company', 'business_type', 'lead_interest', 'budget_range',
+      'purchase_moment', 'decision_role', 'pain_point', 'main_objection'];
+
+    const setClauses = [];
+    const values = [orgId, leadId];
+    let idx = 3;
+
+    for (const [key, val] of Object.entries(fields)) {
+      if (ALLOWED_FIELDS.includes(key) && val) {
+        setClauses.push(`${key} = COALESCE(${key}, $${idx++})`);
+        values.push(String(val).substring(0, 500));
+      }
+    }
+
+    if (setClauses.length === 0) return { success: false, updated: [] };
+
+    setClauses.push('updated_at = NOW()');
+    await pool.query(
+      `UPDATE lead_memory SET ${setClauses.join(', ')} WHERE organization_id = $1 AND lead_id = $2`,
+      values
+    );
+
+    const updated = Object.keys(fields).filter(k => ALLOWED_FIELDS.includes(k));
+    log(`[TOOL ROUTER] crm_update_lead: updated ${updated.join(', ')} for lead ${leadId}`);
+    return { success: true, updated };
+  } catch (err) {
+    log(`[TOOL ROUTER] executeCrmUpdateLead error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+// ─── Tool Executor: send_followup_message ─────────────────────────────────────
+async function executeSendFollowupMessage(orgId, leadId, instanceName, message, delayMinutes) {
+  try {
+    const scheduledAt = new Date(Date.now() + delayMinutes * 60 * 1000);
+
+    // Insert into followup_events (existing table from Follow-up Engine)
+    await pool.query(`
+      INSERT INTO followup_events
+        (organization_id, lead_id, instance_name, message, scheduled_at, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+    `, [orgId, leadId, instanceName, message, scheduledAt]);
+
+    log(`[TOOL ROUTER] send_followup_message scheduled for ${leadId} in ${delayMinutes}min`);
+    return { success: true, scheduled_at: scheduledAt.toISOString(), delay_minutes: delayMinutes };
+  } catch (err) {
+    log(`[TOOL ROUTER] executeSendFollowupMessage error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── END Backend Tool Router ───────────────────────────────────────────────────
+
 // Inicia as conexões e migrações em segundo plano para não travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
@@ -11499,77 +11723,8 @@ async function processAIResponse(
       currentUserMessage,
     ];
 
-    // 2. Generate AI Response (with Tool Calling)
-    const schedulingTools = [
-      {
-        type: "function",
-        function: {
-          name: "consultar_horarios_disponiveis",
-          description:
-            "Consulta horários disponíveis para agendamento em uma data específica.",
-          parameters: {
-            type: "object",
-            properties: {
-              date: {
-                type: "string",
-                description: "Data no formato YYYY-MM-DD",
-              },
-              vendedorId: {
-                type: "string",
-                description: "ID opcional do vendedor específico",
-              },
-            },
-            required: ["date"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "confirmar_agendamento",
-          description:
-            "Confirma e realiza o agendamento de uma reunião ou demonstração.",
-          parameters: {
-            type: "object",
-            properties: {
-              date: {
-                type: "string",
-                description: "Data no formato YYYY-MM-DD",
-              },
-              time: { type: "string", description: "Horário no formato HH:MM" },
-              vendedorId: {
-                type: "string",
-                description:
-                  "O UUID do vendedor (NÃO o nome) retornado na consulta.",
-              },
-              notas: {
-                type: "string",
-                description: "Notas adicionais sobre o agendamento",
-              },
-            },
-            required: ["date", "time", "vendedorId"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "cancelar_agendamento",
-          description:
-            "Cancela qualquer agendamento ativo (status 'agendado') que o lead possua atualmente.",
-          parameters: {
-            type: "object",
-            properties: {
-              confirmacion: {
-                type: "boolean",
-                description: "Confirmação de que o usuário deseja cancelar.",
-              },
-            },
-            required: ["confirmacion"],
-          },
-        },
-      },
-    ];
+    // 2. Generate AI Response — Tool Router selects tools by CSE stage
+    const { tools: activeTools, toolChoice, allowedNames } = getToolsForStage(cseStage);
 
     let aiResponse = "";
     let toolCallsAttempt = 0;
@@ -11582,8 +11737,7 @@ async function processAIResponse(
       const completion = await openai.chat.completions.create({
         model: model,
         messages: apiMessages,
-        tools: schedulingTools,
-        tool_choice: "auto",
+        ...(activeTools.length > 0 ? { tools: activeTools, tool_choice: toolChoice } : {}),
       });
 
       const message = completion.choices[0].message;
@@ -11612,16 +11766,35 @@ async function processAIResponse(
         for (const toolCall of message.tool_calls) {
           const functionName = toolCall.function.name;
           const args = JSON.parse(toolCall.function.arguments);
-          log(
-            `[AI - TOOL] Calling ${functionName} with ${JSON.stringify(args)}`,
-          );
+          log(`[AI - TOOL] Calling ${functionName} with ${JSON.stringify(args)}`);
+
+          // ── Backend validation guard ──────────────────────────────────────────
+          const validation = validateToolCall(functionName, args, allowedNames);
+          if (!validation.valid) {
+            log(`[TOOL ROUTER] Rejected tool call: ${validation.reason}`);
+            apiMessages.push({
+              role: 'tool',
+              tool_call_id: toolCall.id,
+              content: JSON.stringify({ error: validation.reason }),
+            });
+            continue; // Skip execution, let LLM recover
+          }
 
           let toolResult;
           try {
             const orgId = user.organization_id;
             log(`[AI - TOOL] Executing ${functionName} for Org: ${orgId}`);
 
-            if (functionName === "consultar_horarios_disponiveis") {
+            // ── New tools ────────────────────────────────────────────────────
+            if (functionName === 'crm_update_lead') {
+              toolResult = await executeCrmUpdateLead(orgId, remoteJid, args.fields);
+            } else if (functionName === 'send_followup_message') {
+              toolResult = await executeSendFollowupMessage(
+                orgId, remoteJid, instanceName, args.message, args.delay_minutes
+              );
+            }
+            // ── Existing calendar tools ──────────────────────────────────────
+            else if (functionName === "consultar_horarios_disponiveis") {
               let targetVendedorId = args.vendedorId;
               if (!targetVendedorId) {
                 const v = await getNextVendedor(orgId);
