@@ -3165,19 +3165,45 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
     // ── Mandatory transaction: org + user ─────────────────────────────────────
     await client.query('BEGIN');
 
-    const orgRes = await client.query(
-      `INSERT INTO organizations (name, plan_type) VALUES ($1, 'basic') RETURNING *`,
-      [companyName || name + "'s Organization"]
-    );
-    const org = orgRes.rows[0];
+    // Try with plan_type first, fall back without it
+    let org;
+    try {
+      const orgRes = await client.query(
+        `INSERT INTO organizations (name, plan_type) VALUES ($1, 'basic') RETURNING *`,
+        [companyName || name + "'s Organization"]
+      );
+      org = orgRes.rows[0];
+    } catch (e) {
+      if (e.message.includes('plan_type') || e.message.includes('column')) {
+        const orgRes = await client.query(
+          `INSERT INTO organizations (name) VALUES ($1) RETURNING *`,
+          [companyName || name + "'s Organization"]
+        );
+        org = orgRes.rows[0];
+      } else { throw e; }
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userRes = await client.query(
-      `INSERT INTO users (name, email, phone, password, organization_id, role, koins_balance)
-       VALUES ($1, $2, $3, $4, $5, 'user', 100) RETURNING *`,
-      [name, email.toLowerCase(), phone || null, hashedPassword, org.id]
-    );
-    const user = userRes.rows[0];
+
+    // Try with koins_balance, fall back without it
+    let user;
+    try {
+      const userRes = await client.query(
+        `INSERT INTO users (name, email, phone, password, organization_id, role, koins_balance)
+         VALUES ($1, $2, $3, $4, $5, 'user', 100) RETURNING *`,
+        [name, email.toLowerCase(), phone || null, hashedPassword, org.id]
+      );
+      user = userRes.rows[0];
+    } catch (e) {
+      if (e.message.includes('koins_balance') || e.message.includes('column')) {
+        const userRes = await client.query(
+          `INSERT INTO users (name, email, phone, password, organization_id, role)
+           VALUES ($1, $2, $3, $4, $5, 'user') RETURNING *`,
+          [name, email.toLowerCase(), phone || null, hashedPassword, org.id]
+        );
+        user = userRes.rows[0];
+      } else { throw e; }
+    }
 
     await client.query('UPDATE organizations SET owner_id = $1 WHERE id = $2', [user.id, org.id]);
 
@@ -3239,7 +3265,7 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => { });
     log('[ONBOARDING-V2] register-and-save error: ' + err.message);
-    res.status(500).json({ error: 'Erro ao criar conta. Tente novamente.' });
+    res.status(500).json({ error: 'Erro ao criar conta: ' + err.message });
   } finally {
     client.release();
   }
