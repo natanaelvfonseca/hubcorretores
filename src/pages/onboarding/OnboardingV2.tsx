@@ -176,6 +176,10 @@ export function OnboardingV2() {
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    // Step 16 improvement
+    const [improvementSelected, setImprovementSelected] = useState<string | null>(null);
+    const [improvementDetail, setImprovementDetail] = useState('');
+    const [improvementSending, setImprovementSending] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
     const [chatInput, setChatInput] = useState('');
@@ -394,6 +398,13 @@ export function OnboardingV2() {
                         chatEndRef={chatEndRef} pipelineVisible={pipelineVisible}
                         qrCode={qrCode} wsStatus={wsStatus} wsTtl={wsTtl}
                         connectWhatsApp={connectWhatsApp} navigate={navigate}
+                        improvementSelected={improvementSelected}
+                        setImprovementSelected={setImprovementSelected}
+                        improvementDetail={improvementDetail}
+                        setImprovementDetail={setImprovementDetail}
+                        improvementSending={improvementSending}
+                        setImprovementSending={setImprovementSending}
+                        token={token.current}
                     />
                 </div>
             </div>
@@ -404,7 +415,9 @@ export function OnboardingV2() {
 // ── Step Content ───────────────────────────────────────────────────────────────
 function StepContent({ step, form, set, toggleArr, next, loading, go, files, setFiles,
     chatMessages, chatInput, setChatInput, sendChat, chatLoading, msgsUsed, chatEndRef,
-    pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate }: any) {
+    pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate,
+    improvementSelected, setImprovementSelected, improvementDetail, setImprovementDetail,
+    improvementSending, setImprovementSending, token }: any) {
 
     const INDUSTRIES = [
         { v: 'imobiliario', l: 'Imobiliário', sub: ['Venda de imóveis', 'Aluguel de imóveis', 'Venda e aluguel'] },
@@ -827,13 +840,51 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
             </div>
             <div className="space-y-2">
                 {['Ajustar abordagem de vendas', 'Adicionar informações importantes', 'Melhorar resposta de objeções', 'Ajustar tom de voz'].map(opt => (
-                    <button key={opt} onClick={() => go(17)}
-                        className="w-full text-left px-4 py-3 rounded-xl border border-white/10 text-white/60 hover:border-[#FF4C00]/40 hover:text-white/80 hover:bg-[#FF4C00]/5 text-sm transition-all">
-                        {opt} →
+                    <button key={opt}
+                        onClick={() => { setImprovementSelected(opt); setImprovementDetail(''); }}
+                        className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${improvementSelected === opt
+                            ? 'border-[#FF4C00]/60 bg-[#FF4C00]/10 text-white'
+                            : 'border-white/10 text-white/60 hover:border-[#FF4C00]/40 hover:text-white/80 hover:bg-[#FF4C00]/5'
+                            }`}>
+                        {opt} {improvementSelected === opt ? '✓' : '→'}
                     </button>
                 ))}
             </div>
-            <NextBtn onClick={() => go(17)} label="Concluir treinamento da IA" />
+            {improvementSelected && (
+                <div className="space-y-3 animate-fade-in">
+                    <p className="text-xs text-white/50">Descreva o que você quer melhorar em <span className="text-[#FF7A50] font-semibold">{improvementSelected}</span>:</p>
+                    <textarea
+                        value={improvementDetail}
+                        onChange={e => setImprovementDetail(e.target.value)}
+                        placeholder="Ex: Quero que a IA seja mais direta ao mencionar o preço e não rodeie tanto..."
+                        rows={3}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF4C00]/60 resize-none transition-all"
+                    />
+                    <button
+                        disabled={!improvementDetail.trim() || improvementSending}
+                        onClick={async () => {
+                            setImprovementSending(true);
+                            try {
+                                await fetch('/api/ia-config', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token.current}` },
+                                    body: JSON.stringify({ restrictions: `[${improvementSelected}]: ${improvementDetail}` })
+                                });
+                            } catch (_) { /* best-effort */ } finally {
+                                setImprovementSending(false);
+                                go(17);
+                            }
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 disabled:opacity-40 text-white font-bold rounded-xl transition-all shadow-lg shadow-[#FF4C00]/20">
+                        {improvementSending ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : 'Enviar e continuar →'}
+                    </button>
+                </div>
+            )}
+            <div className="flex items-center gap-3">
+                <button onClick={() => go(17)} className="flex-1 py-3 text-sm text-white/30 hover:text-white/50 border border-white/8 rounded-xl transition-colors">
+                    {improvementSelected ? 'Pular esta melhoria' : 'Concluir treinamento da IA'} →
+                </button>
+            </div>
         </div>
     );
 
@@ -927,7 +978,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 </div>
             </div>
             <p className="text-white/35 text-sm">Parabéns, <strong className="text-white/70">{form.name || 'empreendedor'}</strong>. Seu sistema de vendas no WhatsApp foi criado.</p>
-            <button onClick={() => navigate('/crm')}
+            <button onClick={() => navigate('/dashboard/revenue-metrics')}
                 className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-[#FF4C00]/20">
                 <Rocket className="w-4 h-4" /> Ir para o Dashboard
             </button>

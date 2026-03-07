@@ -3270,6 +3270,195 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
 
 // ── END ONBOARDING V2 ENDPOINTS ───────────────────────────────────────────────
 
+// ── COMPANY DATA ENDPOINTS ────────────────────────────────────────────────────
+
+// GET /api/company-data — returns ia_configs mapped to CompanyData shape (used by MyAIs)
+app.get('/api/company-data', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const r = await pool.query(
+      `SELECT company_name, agent_name, main_product, desired_revenue, agent_objective,
+              unknown_behavior, voice_tone, restrictions, customer_pain, product_price
+       FROM ia_configs WHERE organization_id = $1`,
+      [orgId]
+    );
+    if (r.rows.length === 0) return res.json(null);
+    const d = r.rows[0];
+    res.json({
+      companyName: d.company_name || '',
+      companyProduct: d.main_product || '',
+      targetAudience: d.customer_pain || '',
+      voiceTone: d.voice_tone || '',
+      unknownBehavior: d.unknown_behavior || '',
+      restrictions: d.restrictions || '',
+      agentName: d.agent_name || '',
+      revenueGoal: d.desired_revenue || '',
+      agentObjective: d.agent_objective || '',
+      productPrice: d.product_price || '',
+    });
+  } catch (err) {
+    log('[COMPANY-DATA] GET error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao buscar dados da empresa.' });
+  }
+});
+
+// PUT /api/company-profile — saves ia_configs for the org
+app.put('/api/company-profile', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const { companyName, companyProduct, targetAudience, voiceTone, unknownBehavior, restrictions, agentName, revenueGoal, agentObjective, productPrice } = req.body;
+
+    await pool.query(
+      `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product,
+         desired_revenue, agent_objective, unknown_behavior, voice_tone, restrictions)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT (organization_id) DO UPDATE SET
+         company_name=EXCLUDED.company_name, agent_name=EXCLUDED.agent_name,
+         main_product=EXCLUDED.main_product, desired_revenue=EXCLUDED.desired_revenue,
+         agent_objective=EXCLUDED.agent_objective, unknown_behavior=EXCLUDED.unknown_behavior,
+         voice_tone=EXCLUDED.voice_tone, restrictions=EXCLUDED.restrictions`,
+      [orgId, req.userId, companyName, agentName, companyProduct, revenueGoal, agentObjective, unknownBehavior, voiceTone, restrictions]
+    );
+    // Optional columns
+    await pool.query(`UPDATE ia_configs SET customer_pain=$1, product_price=$2 WHERE organization_id=$3`,
+      [targetAudience, productPrice, orgId]).catch(() => { });
+
+    res.json({ success: true });
+  } catch (err) {
+    log('[COMPANY-PROFILE] PUT error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao salvar perfil da empresa.' });
+  }
+});
+
+// PATCH /api/ia-config — appends improvement note to restrictions
+app.patch('/api/ia-config', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+    const { restrictions } = req.body;
+    if (!restrictions) return res.json({ success: true });
+    await pool.query(
+      `UPDATE ia_configs SET restrictions = COALESCE(restrictions || E'\\n', '') || $1 WHERE organization_id = $2`,
+      [restrictions, orgId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    log('[IA-CONFIG] PATCH error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao salvar melhoria.' });
+  }
+});
+
+// ── END COMPANY DATA ENDPOINTS ────────────────────────────────────────────────
+
+// ── AGENTS CRUD ───────────────────────────────────────────────────────────────
+
+// GET /api/agents — list all agents for the user's org
+app.get('/api/agents', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.json([]);
+    const r = await pool.query(
+      `SELECT a.id, a.name,
+              COALESCE(a.role, 'sdr') AS type,
+              COALESCE(a.status, 'active') AS status,
+              a.created_at,
+              wi.instance_name AS whatsapp_instance_name,
+              wi.status AS whatsapp_instance_status
+       FROM agents a
+       LEFT JOIN whatsapp_instances wi ON wi.id = a.whatsapp_instance_id
+       WHERE a.organization_id = $1
+       ORDER BY a.created_at DESC`,
+      [orgId]
+    );
+    res.json(r.rows);
+  } catch (err) {
+    log('[AGENTS] GET error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao buscar agentes.' });
+  }
+});
+
+// POST /api/agents — create a new agent
+app.post('/api/agents', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const { name, type, system_prompt, model_config } = req.body;
+    if (!name) return res.status(400).json({ error: 'name é obrigatório' });
+
+    const r = await pool.query(
+      `INSERT INTO agents (organization_id, name, role, system_prompt, status)
+       VALUES ($1, $2, $3, $4, 'active') RETURNING *`,
+      [orgId, name, type || 'sdr', system_prompt || '']
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (err) {
+    log('[AGENTS] POST error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao criar agente.', details: err.message });
+  }
+});
+
+// DELETE /api/agents/:id
+app.delete('/api/agents/:id', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    const r = await pool.query(
+      'DELETE FROM agents WHERE id = $1 AND organization_id = $2 RETURNING id',
+      [req.params.id, orgId]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Agente não encontrado.' });
+    res.json({ success: true });
+  } catch (err) {
+    log('[AGENTS] DELETE error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao excluir agente.', details: err.message });
+  }
+});
+
+// POST /api/agents/:id/toggle-pause
+app.post('/api/agents/:id/toggle-pause', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    const curr = await pool.query(
+      'SELECT status FROM agents WHERE id = $1 AND organization_id = $2',
+      [req.params.id, orgId]
+    );
+    if (curr.rows.length === 0) return res.status(404).json({ error: 'Agente não encontrado.' });
+    const newStatus = curr.rows[0].status === 'paused' ? 'active' : 'paused';
+    await pool.query('UPDATE agents SET status = $1 WHERE id = $2', [newStatus, req.params.id]);
+    res.json({ status: newStatus });
+  } catch (err) {
+    log('[AGENTS] toggle-pause error: ' + err.message);
+    res.status(500).json({ error: 'Erro ao pausar/retomar agente.' });
+  }
+});
+
+// GET /api/industry/my-profile — returns org industry slug (used by MyAIs for agent suggestions)
+app.get('/api/industry/my-profile', verifyJWT, async (req, res) => {
+  try {
+    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.json({});
+    const r = await pool.query(
+      'SELECT industry AS industry_slug FROM ia_configs WHERE organization_id = $1',
+      [orgId]
+    );
+    res.json(r.rows[0] || {});
+  } catch (_) { res.json({}); }
+});
+
+// ── END AGENTS CRUD ───────────────────────────────────────────────────────────
+
 /**
  * @swagger
  * /api/me:

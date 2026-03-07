@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { LeadsSettings } from './LeadsSettings';
 import { IntegrationsSettings } from './IntegrationsSettings';
-import { Users, Layout, Globe } from 'lucide-react';
+import { Users, Layout, Globe, Building2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ProfileSettings } from './ProfileSettings';
+import { CompanyProfile } from './CompanyProfile';
 
 export function Settings() {
     const [searchParams] = useSearchParams();
@@ -24,6 +25,8 @@ export function Settings() {
                 return <LeadsSettings />;
             case 'integrations':
                 return <IntegrationsSettings />;
+            case 'company':
+                return <CompanyProfile />;
             default:
                 return (
                     <div className="bg-surface border border-border/50 rounded-xl p-8 text-center">
@@ -35,6 +38,7 @@ export function Settings() {
 
     const tabs = [
         { id: 'profile', label: 'Perfil', icon: Users },
+        { id: 'company', label: 'Perfil da Empresa', icon: Building2 },
         { id: 'leads', label: 'Leads & CRM', icon: Layout },
         { id: 'integrations', label: 'Integrações', icon: Globe },
     ];
