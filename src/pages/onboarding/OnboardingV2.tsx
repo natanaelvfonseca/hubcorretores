@@ -141,8 +141,8 @@ function ProgressSidebar({ step }: { step: number }) {
                     const active = s === step;
                     return (
                         <div key={s} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-[#FF4C00]' : active ? 'bg-[#FF4C00] ring-2 ring-[#FF7A50]/40 ring-offset-1 ring-offset-white' : 'bg-gray-100 border border-gray-200'}`}>
-                                {done ? <Check className="w-3 h-3 text-white" /> : <span className={`text-[9px] font-bold ${active ? 'text-white' : 'text-gray-400'}`}>{s}</span>}
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-[#FF4C00]' : active ? 'bg-[#FF4C00] ring-2 ring-[#FF4C00]/40 ring-offset-1 ring-offset-white' : 'bg-gray-100 border border-gray-200'}`}>
+                                {done ? <Check className="w-3 h-3 text-white" /> : <span className={`text-[9px] font-bold ${active ? 'text-gray-900' : 'text-gray-400'}`}>{s}</span>}
                             </div>
                             <span className={`text-xs font-medium transition-colors ${active ? 'text-gray-900 font-semibold' : done ? 'text-gray-400' : 'text-gray-300'}`}>{label}</span>
                         </div>
@@ -360,7 +360,7 @@ export function OnboardingV2() {
     // Confetti on step 18
     useEffect(() => {
         if (step === 18) {
-            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#FF4C00', '#FF7A50', '#FFB090', '#10B981'] });
+            confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#FF4C00', '#FF4C00', '#FFB090', '#10B981'] });
         }
     }, [step]);
 
@@ -436,10 +436,10 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 1) return (
         <div className="text-center space-y-6 animate-fade-in mt-16">
             <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
-                <Rocket className="w-12 h-12 text-[#FF7A50]" />
+                <Rocket className="w-12 h-12 text-[#FF4C00]" />
             </div>
             <div>
-                <p className="text-xs font-bold text-[#FF7A50] uppercase tracking-widest mb-3">Revenue Operating System</p>
+                <p className="text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-3">Revenue Operating System</p>
                 <h1 className="text-4xl font-bold text-gray-900 leading-tight">Bem-vindo à Nova Era<br />das Vendas no WhatsApp</h1>
                 <p className="text-gray-500 mt-4 text-lg leading-relaxed max-w-sm mx-auto">
                     Você está a poucos passos de transformar seu WhatsApp em um sistema inteligente de vendas que atende, qualifica e recupera clientes automaticamente.
@@ -453,7 +453,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 ].map(({ icon: Icon, t }) => (
                     <div key={t} className="flex items-center gap-3 text-sm text-gray-600">
                         <div className="w-7 h-7 rounded-lg bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center shrink-0">
-                            <Icon className="w-3.5 h-3.5 text-[#FF7A50]" />
+                            <Icon className="w-3.5 h-3.5 text-[#FF4C00]" />
                         </div>
                         {t}
                     </div>
@@ -467,7 +467,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 2) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 2 — Agente</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 2 — Agente</p>
                 <h2 className="text-2xl font-bold text-gray-900">Crie seu primeiro Agente de Vendas</h2>
                 <p className="text-gray-500 text-sm mt-2">Esse será o primeiro agente da sua empresa responsável por conduzir oportunidades no WhatsApp.</p>
             </div>
@@ -479,7 +479,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     { v: 'aquecer_transferir', l: 'Aquecer o lead e transferir para um vendedor', d: 'IA cria interesse e passa o contato qualificado' },
                 ].map(o => <ChoiceCard key={o.v} value={o.v} label={o.l} desc={o.d} selected={form.agentObjective === o.v} onClick={() => set('agentObjective', o.v)} />)}
             </div>
-            <p className="text-xs text-white/30 text-center">Você poderá criar outros agentes especializados depois.</p>
+            <p className="text-xs text-gray-400 text-center">Você poderá criar outros agentes especializados depois.</p>
             <NextBtn onClick={next} />
         </div>
     );
@@ -487,15 +487,15 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 3) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 3 — Mercado</p>
-                <h2 className="text-2xl font-bold text-white">Em qual mercado sua empresa atua?</h2>
-                <p className="text-white/45 text-sm mt-2">Isso adapta linguagem, objeções e padrões de conversa da sua IA.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 3 — Mercado</p>
+                <h2 className="text-2xl font-bold text-gray-900">Em qual mercado sua empresa atua?</h2>
+                <p className="text-gray-500 text-sm mt-2">Isso adapta linguagem, objeções e padrões de conversa da sua IA.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
                 {INDUSTRIES.map(i => (
                     <button key={i.v} onClick={() => set('industry', i.v)}
-                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border text-left transition-all ${form.industry === i.v ? 'border-[#FF4C00] bg-[#FF4C00]/10 text-[#FF9070]' : 'border-white/10 text-white/55 hover:border-white/25'}`}>
-                        {form.industry === i.v && <Check className="w-3 h-3 inline mr-1.5 text-[#FF7A50]" />}{i.l}
+                        className={`px-3 py-2.5 rounded-xl text-sm font-medium border text-left transition-all ${form.industry === i.v ? 'border-[#FF4C00] bg-[#FF4C00]/10 text-[#FF4C00]' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'}`}>
+                        {form.industry === i.v && <Check className="w-3 h-3 inline mr-1.5 text-[#FF4C00]" />}{i.l}
                     </button>
                 ))}
             </div>
@@ -516,9 +516,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 4) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 4 — Identidade</p>
-                <h2 className="text-2xl font-bold text-white">Quem representará sua empresa?</h2>
-                <p className="text-white/45 text-sm mt-2">Esse será o nome que aparecerá nas conversas do WhatsApp.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 4 — Identidade</p>
+                <h2 className="text-2xl font-bold text-gray-900">Quem representará sua empresa?</h2>
+                <p className="text-gray-500 text-sm mt-2">Esse será o nome que aparecerá nas conversas do WhatsApp.</p>
             </div>
             <div className="space-y-4">
                 <div>
@@ -531,7 +531,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     <div className="flex flex-wrap gap-2 mt-2">
                         {['Ana', 'Max', 'Clara', 'Lia', 'Leo', 'Nina', 'Sol'].map(n => (
                             <button key={n} onClick={() => set('aiName', n)}
-                                className="text-xs px-3 py-1 rounded-full border border-white/10 text-white/40 hover:border-[#FF4C00]/50 hover:text-[#FF7A50] transition-colors">{n}</button>
+                                className="text-xs px-3 py-1 rounded-full border border-gray-200 text-gray-400 hover:border-[#FF4C00]/50 hover:text-[#FF4C00] transition-colors">{n}</button>
                         ))}
                     </div>
                 </div>
@@ -543,8 +543,8 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 5) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 5 — Produto</p>
-                <h2 className="text-2xl font-bold text-white">O que sua empresa vende?</h2>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 5 — Produto</p>
+                <h2 className="text-2xl font-bold text-gray-900">O que sua empresa vende?</h2>
             </div>
             <div className="space-y-4">
                 <div>
@@ -556,9 +556,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     <Textarea rows={3} placeholder="Ex: O cliente tem medo de dentista e quer um atendimento humanizado..." value={form.customerPain} onChange={e => set('customerPain', e.target.value)} />
                 </div>
                 <div>
-                    <FieldLabel>Preço ou ticket médio <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel>
+                    <FieldLabel>Preço ou ticket médio <span className="text-gray-400 normal-case tracking-normal">(opcional)</span></FieldLabel>
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/50 pointer-events-none select-none">R$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">R$</span>
                         <Input placeholder="1.500,00" value={form.productPrice} className="pl-10"
                             onChange={e => set('productPrice', e.target.value.replace(/[^\d.,]/g, ''))} />
                     </div>
@@ -571,9 +571,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 6) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 6 — Público</p>
-                <h2 className="text-2xl font-bold text-white">Para quem você vende?</h2>
-                <p className="text-white/45 text-sm mt-2">Pode selecionar ambos.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 6 — Público</p>
+                <h2 className="text-2xl font-bold text-gray-900">Para quem você vende?</h2>
+                <p className="text-gray-500 text-sm mt-2">Pode selecionar ambos.</p>
             </div>
             <div className="space-y-3">
                 {[
@@ -589,8 +589,8 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 7) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 7 — Canais</p>
-                <h2 className="text-2xl font-bold text-white">Como seus clientes chegam até você?</h2>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 7 — Canais</p>
+                <h2 className="text-2xl font-bold text-gray-900">Como seus clientes chegam até você?</h2>
             </div>
             <div className="flex flex-wrap gap-2">
                 {['Instagram', 'Google', 'Indicação', 'WhatsApp direto', 'Facebook', 'Anúncios pagos', 'LinkedIn', 'Outros'].map(c => (
@@ -604,9 +604,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 8) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 8 — Ciclo</p>
-                <h2 className="text-2xl font-bold text-white">Quanto tempo leva para fechar uma venda?</h2>
-                <p className="text-white/45 text-sm mt-2">A IA vai adaptar o timing das mensagens ao seu ciclo.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 8 — Ciclo</p>
+                <h2 className="text-2xl font-bold text-gray-900">Quanto tempo leva para fechar uma venda?</h2>
+                <p className="text-gray-500 text-sm mt-2">A IA vai adaptar o timing das mensagens ao seu ciclo.</p>
             </div>
             <div className="space-y-3">
                 {[
@@ -623,14 +623,14 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 9) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 9 — Meta</p>
-                <h2 className="text-2xl font-bold text-white">Qual sua meta mensal de vendas?</h2>
-                <p className="text-white/45 text-sm mt-2">A Kogna usará essa meta para gerar recomendações e priorizar oportunidades.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 9 — Meta</p>
+                <h2 className="text-2xl font-bold text-gray-900">Qual sua meta mensal de vendas?</h2>
+                <p className="text-gray-500 text-sm mt-2">A Kogna usará essa meta para gerar recomendações e priorizar oportunidades.</p>
             </div>
             <div>
                 <FieldLabel>Meta mensal (R$)</FieldLabel>
                 <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/50 pointer-events-none select-none">R$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">R$</span>
                     <Input placeholder="50.000,00" value={form.revenueGoal} className="pl-10"
                         onChange={e => set('revenueGoal', e.target.value.replace(/[^\d.,]/g, ''))} />
                 </div>
@@ -638,7 +638,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
             <div className="flex flex-wrap gap-2 mt-1">
                 {['5000', '10000', '25000', '50000', '100000', '250000'].map(v => (
                     <button key={v} onClick={() => set('revenueGoal', v)}
-                        className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:border-[#FF4C00]/50 hover:text-[#FF7A50] transition-colors font-mono">
+                        className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-[#FF4C00]/50 hover:text-[#FF4C00] transition-colors font-mono">
                         R$ {parseInt(v).toLocaleString('pt-BR')}
                     </button>
                 ))}
@@ -650,8 +650,8 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 10) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 10 — Protocolo</p>
-                <h2 className="text-2xl font-bold text-white">O que a IA faz quando não sabe responder?</h2>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 10 — Protocolo</p>
+                <h2 className="text-2xl font-bold text-gray-900">O que a IA faz quando não sabe responder?</h2>
             </div>
             <div className="space-y-3">
                 {[
@@ -667,19 +667,19 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 11) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 11 — Personalidade</p>
-                <h2 className="text-2xl font-bold text-white">Qual o estilo da sua IA?</h2>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 11 — Personalidade</p>
+                <h2 className="text-2xl font-bold text-gray-900">Qual o estilo da sua IA?</h2>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {['Consultiva', 'Direta', 'Amigável', 'Executiva', 'Educadora'].map(t => (
                     <button key={t} onClick={() => set('voiceTone', t)}
-                        className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${form.voiceTone === t ? 'border-[#FF4C00] bg-[#FF4C00]/15 text-[#FF9070]' : 'border-white/10 text-white/50 hover:border-white/25'}`}>
-                        {form.voiceTone === t && <Check className="w-3 h-3 inline mr-1 text-[#FF7A50]" />}{t}
+                        className={`py-3 px-4 rounded-xl text-sm font-semibold border transition-all ${form.voiceTone === t ? 'border-[#FF4C00] bg-[#FF4C00]/15 text-[#FF4C00]' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300'}`}>
+                        {form.voiceTone === t && <Check className="w-3 h-3 inline mr-1 text-[#FF4C00]" />}{t}
                     </button>
                 ))}
             </div>
             <div>
-                <FieldLabel>Coisas que a IA nunca deve dizer <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel>
+                <FieldLabel>Coisas que a IA nunca deve dizer <span className="text-gray-400 normal-case tracking-normal">(opcional)</span></FieldLabel>
                 <Textarea rows={3} placeholder="Ex: nunca mencionar concorrentes, não prometer descontos sem aprovação..." value={form.restrictions} onChange={e => set('restrictions', e.target.value)} />
             </div>
             <NextBtn onClick={next} />
@@ -689,17 +689,17 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 12) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 12 — Conhecimento</p>
-                <h2 className="text-2xl font-bold text-white">Transfira conhecimento para sua IA</h2>
-                <p className="text-white/45 text-sm mt-2">Envie materiais que ajudam a IA a entender melhor seu negócio.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 12 — Conhecimento</p>
+                <h2 className="text-2xl font-bold text-gray-900">Transfira conhecimento para sua IA</h2>
+                <p className="text-gray-500 text-sm mt-2">Envie materiais que ajudam a IA a entender melhor seu negócio.</p>
             </div>
-            <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/12 rounded-2xl py-10 cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/4 transition-all group">
+            <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-gray-200 rounded-2xl py-10 cursor-pointer hover:border-violet-500/40 hover:bg-violet-500/4 transition-all group">
                 <div className="w-12 h-12 rounded-xl bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center group-hover:bg-[#FF4C00]/25 transition-colors">
-                    <Upload className="w-5 h-5 text-[#FF7A50]" />
+                    <Upload className="w-5 h-5 text-[#FF4C00]" />
                 </div>
                 <div className="text-center">
-                    <p className="text-sm text-white/60 font-medium">PDFs, documentos, manuais, apresentações</p>
-                    <p className="text-xs text-white/30 mt-1">Clique para selecionar (máx. 4MB cada)</p>
+                    <p className="text-sm text-gray-600 font-medium">PDFs, documentos, manuais, apresentações</p>
+                    <p className="text-xs text-gray-400 mt-1">Clique para selecionar (máx. 4MB cada)</p>
                 </div>
                 <input type="file" multiple accept=".pdf,.txt,.doc,.docx" className="hidden"
                     onChange={e => setFiles(Array.from(e.target.files || []))} />
@@ -707,18 +707,18 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
             {files.length > 0 && (
                 <div className="space-y-2">
                     {files.map((f: File, i: number) => (
-                        <div key={i} className="flex items-center gap-2 py-2 px-3 bg-white/4 rounded-lg border border-white/8">
+                        <div key={i} className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="w-7 h-7 bg-[#FF4C00]/20 rounded-md flex items-center justify-center shrink-0">
-                                <Upload className="w-3.5 h-3.5 text-[#FF7A50]" />
+                                <Upload className="w-3.5 h-3.5 text-[#FF4C00]" />
                             </div>
-                            <span className="text-xs text-white/60 truncate flex-1">{f.name}</span>
-                            <span className="text-[10px] text-white/30">{(f.size / 1024).toFixed(0)}KB</span>
+                            <span className="text-xs text-gray-600 truncate flex-1">{f.name}</span>
+                            <span className="text-[10px] text-gray-400">{(f.size / 1024).toFixed(0)}KB</span>
                         </div>
                     ))}
                 </div>
             )}
             <div className="flex gap-3 mt-6">
-                <button onClick={() => go(13)} className="flex-none px-5 py-3 text-sm text-white/40 hover:text-white/60 transition-colors border border-white/10 rounded-xl whitespace-nowrap">Pular</button>
+                <button onClick={() => go(13)} className="flex-none px-5 py-3 text-sm text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded-xl whitespace-nowrap">Pular</button>
                 <button onClick={next} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg shadow-[#FF4C00]/20">Continuar <ChevronRight className="w-4 h-4" /></button>
             </div>
         </div>
@@ -727,9 +727,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 13) return (
         <div className="space-y-6 animate-fade-in text-center">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 13 — Pipeline</p>
-                <h2 className="text-2xl font-bold text-white">Seu sistema de vendas está sendo criado</h2>
-                <p className="text-white/45 text-sm mt-2">A Kogna organiza automaticamente suas conversas em um pipeline inteligente.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 13 — Pipeline</p>
+                <h2 className="text-2xl font-bold text-gray-900">Seu sistema de vendas está sendo criado</h2>
+                <p className="text-gray-500 text-sm mt-2">A Kogna organiza automaticamente suas conversas em um pipeline inteligente.</p>
             </div>
             <div className="relative py-6">
                 {['Novo Lead', 'Qualificação', 'Diagnóstico', 'Proposta', 'Fechamento'].map((stage, i) => (
@@ -738,51 +738,51 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-[#FF4C00]/20 shrink-0 relative z-10">
                             {pipelineVisible ? <Check className="w-4 h-4" /> : i + 1}
                         </div>
-                        <div className="flex-1 text-left bg-white/4 border border-white/8 rounded-xl px-4 py-2.5">
-                            <p className="text-sm font-semibold text-white">{stage}</p>
+                        <div className="flex-1 text-left bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5">
+                            <p className="text-sm font-semibold text-gray-900">{stage}</p>
                         </div>
                     </div>
                 ))}
             </div>
-            <div className="flex items-center justify-center gap-2 text-[#FF7A50] text-sm">
+            <div className="flex items-center justify-center gap-2 text-[#FF4C00] text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Configurando sua inteligência de vendas...
             </div>
-            <p className="text-white/30 text-xs">Cada conversa vira uma oportunidade de negócio.</p>
+            <p className="text-gray-400 text-xs">Cada conversa vira uma oportunidade de negócio.</p>
         </div>
     );
 
     if (step === 14) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>
-                <h2 className="text-2xl font-bold text-white">Crie sua conta para ativar sua IA</h2>
-                <p className="text-white/45 text-sm mt-2">Falta apenas um passo para ativar sua IA.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>
+                <h2 className="text-2xl font-bold text-gray-900">Crie sua conta para ativar sua IA</h2>
+                <p className="text-gray-500 text-sm mt-2">Falta apenas um passo para ativar sua IA.</p>
             </div>
             <div className="space-y-3">
                 <div><FieldLabel>Nome completo</FieldLabel><Input placeholder="João Silva" value={form.name} onChange={e => set('name', e.target.value)} /></div>
                 <div><FieldLabel>E-mail</FieldLabel><Input type="email" placeholder="joao@empresa.com" value={form.email} onChange={e => set('email', e.target.value)} /></div>
-                <div><FieldLabel>WhatsApp <span className="text-white/25 normal-case tracking-normal">(opcional)</span></FieldLabel><Input type="tel" placeholder="+55 11 99999-9999" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
+                <div><FieldLabel>WhatsApp <span className="text-gray-400 normal-case tracking-normal">(opcional)</span></FieldLabel><Input type="tel" placeholder="+55 11 99999-9999" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
                 <div><FieldLabel>Senha</FieldLabel><Input type="password" placeholder="Mínimo 6 caracteres" value={form.password} onChange={e => set('password', e.target.value)} /></div>
                 <div><FieldLabel>Confirmar senha</FieldLabel><Input type="password" placeholder="Confirme sua senha" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} /></div>
             </div>
             <NextBtn onClick={next} loading={loading} label="Criar Conta e Ativar IA" />
-            <p className="text-center text-xs text-white/25">Ao continuar, você concorda com os termos de uso da Kogna.</p>
+            <p className="text-center text-xs text-gray-400">Ao continuar, você concorda com os termos de uso da Kogna.</p>
         </div>
     );
 
     if (step === 15) return (
         <div className="space-y-4 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 15 — Teste</p>
-                <h2 className="text-2xl font-bold text-white">Vamos fazer um teste rápido</h2>
-                <p className="text-white/45 text-sm mt-1">Converse com sua IA como se fosse um cliente. Limite de 5 interações.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 15 — Teste</p>
+                <h2 className="text-2xl font-bold text-gray-900">Vamos fazer um teste rápido</h2>
+                <p className="text-gray-500 text-sm mt-1">Converse com sua IA como se fosse um cliente. Limite de 5 interações.</p>
             </div>
-            <div className="bg-white/3 border border-white/8 rounded-2xl overflow-hidden">
-                <div className="flex items-center gap-2 px-4 py-3 border-b border-white/8 bg-white/2">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-sm font-semibold text-white">{form.aiName || 'IA'}</span>
-                    <span className="text-xs text-white/30 ml-auto">{5 - msgsUsed} mensagens restantes</span>
+                    <span className="text-sm font-semibold text-gray-900">{form.aiName || 'IA'}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{5 - msgsUsed} mensagens restantes</span>
                 </div>
                 <div className="h-72 overflow-y-auto p-4 space-y-3 flex flex-col">
                     {chatMessages.map((m: { role: string; text: string }, i: number) => (
@@ -792,7 +792,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                                     <Bot className="w-3 h-3 text-white" />
                                 </div>
                             )}
-                            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-[#FF4C00] text-white rounded-br-sm' : 'bg-white/8 text-white/85 rounded-bl-sm'}`}>
+                            <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-[#FF4C00] text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
                                 {m.text}
                             </div>
                         </div>
@@ -802,26 +802,26 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                             <div className="w-6 h-6 rounded-full bg-[#FF4C00] flex items-center justify-center mr-2 shrink-0">
                                 <Bot className="w-3 h-3 text-white" />
                             </div>
-                            <div className="bg-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5 items-center">
-                                {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: `${d * 150}ms` }} />)}
+                            <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex gap-1.5 items-center">
+                                {[0, 1, 2].map(d => <div key={d} className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-bounce" style={{ animationDelay: `${d * 150}ms` }} />)}
                             </div>
                         </div>
                     )}
                     <div ref={chatEndRef} />
                 </div>
                 {msgsUsed < 5 ? (
-                    <div className="flex gap-2 p-3 border-t border-white/8">
+                    <div className="flex gap-2 p-3 border-t border-gray-200">
                         <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
                             placeholder="Escreva como se fosse um cliente..." disabled={chatLoading}
-                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF4C00]/60 transition-all" />
+                            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FF4C00]/60 transition-all" />
                         <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
                             className="w-10 h-10 rounded-xl bg-[#FF4C00] hover:bg-[#FF6A30] disabled:opacity-40 flex items-center justify-center transition-colors shrink-0">
                             <Send className="w-4 h-4 text-white" />
                         </button>
                     </div>
                 ) : (
-                    <div className="p-3 text-center text-xs text-white/40 border-t border-white/8">Limite de teste atingido.</div>
+                    <div className="p-3 text-center text-xs text-gray-400 border-t border-gray-200">Limite de teste atingido.</div>
                 )}
             </div>
             <NextBtn onClick={() => go(16)} label="Finalizar teste" />
@@ -834,17 +834,17 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 <div className="w-16 h-16 rounded-2xl bg-green-500/15 border border-green-500/25 flex items-center justify-center mb-4">
                     <Check className="w-8 h-8 text-green-400" />
                 </div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 16 — Melhorar IA</p>
-                <h2 className="text-2xl font-bold text-white">Sua IA já está funcionando</h2>
-                <p className="text-white/45 text-sm mt-2">Mas você pode melhorar ela rapidamente.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 16 — Melhorar IA</p>
+                <h2 className="text-2xl font-bold text-gray-900">Sua IA já está funcionando</h2>
+                <p className="text-gray-500 text-sm mt-2">Mas você pode melhorar ela rapidamente.</p>
             </div>
             <div className="space-y-2">
                 {['Ajustar abordagem de vendas', 'Adicionar informações importantes', 'Melhorar resposta de objeções', 'Ajustar tom de voz'].map(opt => (
                     <button key={opt}
                         onClick={() => { setImprovementSelected(opt); setImprovementDetail(''); }}
                         className={`w-full text-left px-4 py-3 rounded-xl border text-sm transition-all ${improvementSelected === opt
-                            ? 'border-[#FF4C00]/60 bg-[#FF4C00]/10 text-white'
-                            : 'border-white/10 text-white/60 hover:border-[#FF4C00]/40 hover:text-white/80 hover:bg-[#FF4C00]/5'
+                            ? 'border-[#FF4C00]/60 bg-[#FF4C00]/10 text-[#FF4C00]'
+                            : 'border-gray-200 text-gray-600 hover:border-[#FF4C00]/40 hover:text-[#FF4C00] hover:bg-[#FF4C00]/5'
                             }`}>
                         {opt} {improvementSelected === opt ? '✓' : '→'}
                     </button>
@@ -852,13 +852,13 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
             </div>
             {improvementSelected && (
                 <div className="space-y-3 animate-fade-in">
-                    <p className="text-xs text-white/50">Descreva o que você quer melhorar em <span className="text-[#FF7A50] font-semibold">{improvementSelected}</span>:</p>
+                    <p className="text-xs text-gray-500">Descreva o que você quer melhorar em <span className="text-[#FF4C00] font-semibold">{improvementSelected}</span>:</p>
                     <textarea
                         value={improvementDetail}
                         onChange={e => setImprovementDetail(e.target.value)}
                         placeholder="Ex: Quero que a IA seja mais direta ao mencionar o preço e não rodeie tanto..."
                         rows={3}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-[#FF4C00]/60 resize-none transition-all"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FF4C00]/60 resize-none transition-all"
                     />
                     <button
                         disabled={!improvementDetail.trim() || improvementSending}
@@ -881,7 +881,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 </div>
             )}
             <div className="flex items-center gap-3">
-                <button onClick={() => go(17)} className="flex-1 py-3 text-sm text-white/30 hover:text-white/50 border border-white/8 rounded-xl transition-colors">
+                <button onClick={() => go(17)} className="flex-1 py-3 text-sm text-gray-400 hover:text-gray-500 border border-gray-200 rounded-xl transition-colors">
                     {improvementSelected ? 'Pular esta melhoria' : 'Concluir treinamento da IA'} →
                 </button>
             </div>
@@ -891,17 +891,17 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
     if (step === 17) return (
         <div className="space-y-5 animate-fade-in">
             <div>
-                <p className="text-xs text-[#FF7A50] font-bold uppercase tracking-widest mb-1">Passo 17 — WhatsApp</p>
-                <h2 className="text-2xl font-bold text-white">Conecte sua IA ao WhatsApp</h2>
-                <p className="text-white/45 text-sm mt-2">Agora vamos dar voz à sua IA no WhatsApp.</p>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 17 — WhatsApp</p>
+                <h2 className="text-2xl font-bold text-gray-900">Conecte sua IA ao WhatsApp</h2>
+                <p className="text-gray-500 text-sm mt-2">Agora vamos dar voz à sua IA no WhatsApp.</p>
             </div>
-            <div className="bg-white/3 border border-white/8 rounded-2xl p-6 flex flex-col items-center gap-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 flex flex-col items-center gap-4">
                 {wsStatus === 'idle' && (
                     <>
                         <div className="w-16 h-16 rounded-2xl bg-[#25D366]/15 border border-[#25D366]/25 flex items-center justify-center">
                             <MessageSquare className="w-8 h-8 text-[#25D366]" />
                         </div>
-                        <p className="text-sm text-white/50 text-center">Clique abaixo para gerar o QR Code de conexão.</p>
+                        <p className="text-sm text-gray-500 text-center">Clique abaixo para gerar o QR Code de conexão.</p>
                         <button onClick={connectWhatsApp}
                             className="px-6 py-3 bg-[#25D366] hover:bg-[#20c45e] text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-[#25D366]/20">
                             Conectar WhatsApp
@@ -910,15 +910,15 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 )}
                 {wsStatus === 'connecting' && (
                     <div className="flex flex-col items-center gap-3 py-4">
-                        <Loader2 className="w-8 h-8 text-[#FF7A50] animate-spin" />
-                        <p className="text-sm text-white/50">Gerando QR Code...</p>
+                        <Loader2 className="w-8 h-8 text-[#FF4C00] animate-spin" />
+                        <p className="text-sm text-gray-500">Gerando QR Code...</p>
                     </div>
                 )}
                 {wsStatus === 'qrcode' && qrCode && (
                     <>
-                        <img src={qrCode} alt="QR Code" className="w-48 h-48 rounded-xl border border-white/10" />
-                        <p className="text-xs text-white/50 text-center">Abra o WhatsApp → Aparelhos conectados → Conectar aparelho</p>
-                        <span className="text-xs font-mono text-white/30">{wsTtl}s</span>
+                        <img src={qrCode} alt="QR Code" className="w-48 h-48 rounded-xl border border-gray-200" />
+                        <p className="text-xs text-gray-500 text-center">Abra o WhatsApp → Aparelhos conectados → Conectar aparelho</p>
+                        <span className="text-xs font-mono text-gray-400">{wsTtl}s</span>
                     </>
                 )}
                 {wsStatus === 'connected' && (
@@ -930,7 +930,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     </div>
                 )}
             </div>
-            <button onClick={() => go(18)} className="w-full py-3 text-sm text-white/30 hover:text-white/50 transition-colors">
+            <button onClick={() => go(18)} className="w-full py-3 text-sm text-gray-400 hover:text-gray-500 transition-colors">
                 Pular e conectar depois →
             </button>
         </div>
@@ -942,16 +942,16 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 <Trophy className="w-12 h-12 text-yellow-400" />
             </div>
             <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4C00]/15 border border-[#FF4C00]/25 rounded-full text-[#FF9070] text-xs font-bold mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#FF4C00]/15 border border-[#FF4C00]/25 rounded-full text-[#FF4C00] text-xs font-bold mb-4">
                     <Zap className="w-3 h-3" /> Ativação Completa
                 </div>
-                <h1 className="text-3xl font-bold text-white">{form.aiName || 'Sua IA'} está ativa e pronta</h1>
-                <p className="text-white/45 text-sm mt-3 leading-relaxed max-w-sm mx-auto">
+                <h1 className="text-3xl font-bold text-gray-900">{form.aiName || 'Sua IA'} está ativa e pronta</h1>
+                <p className="text-gray-500 text-sm mt-3 leading-relaxed max-w-sm mx-auto">
                     A partir de agora ela poderá atender novos leads, qualificar oportunidades e transformar conversas em vendas.
                 </p>
             </div>
-            <div className="bg-white/3 border border-white/8 rounded-2xl p-5 text-left space-y-3">
-                <p className="text-xs text-white/35 font-bold uppercase tracking-widest">O que foi criado para você</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-left space-y-3">
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">O que foi criado para você</p>
                 {[
                     { l: `Agente ${form.aiName || 'IA'} configurado` },
                     { l: 'Pipeline de vendas automático' },
@@ -962,7 +962,7 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                         <div className="w-7 h-7 rounded-lg bg-green-500/15 border border-green-500/20 flex items-center justify-center shrink-0">
                             <Check className="w-3.5 h-3.5 text-green-400" />
                         </div>
-                        <span className="text-sm text-white/70">{l}</span>
+                        <span className="text-sm text-gray-700">{l}</span>
                     </div>
                 ))}
             </div>
@@ -973,11 +973,11 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     </div>
                     <div className="text-left">
                         <p className="text-sm font-bold text-yellow-300">+100 Koins creditados</p>
-                        <p className="text-xs text-white/35">Use para evoluir sua IA e acelerar suas vendas</p>
+                        <p className="text-xs text-gray-400">Use para evoluir sua IA e acelerar suas vendas</p>
                     </div>
                 </div>
             </div>
-            <p className="text-white/35 text-sm">Parabéns, <strong className="text-white/70">{form.name || 'empreendedor'}</strong>. Seu sistema de vendas no WhatsApp foi criado.</p>
+            <p className="text-gray-400 text-sm">Parabéns, <strong className="text-gray-700">{form.name || 'empreendedor'}</strong>. Seu sistema de vendas no WhatsApp foi criado.</p>
             <button onClick={() => navigate('/dashboard/revenue-metrics')}
                 className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-[#FF4C00]/20">
                 <Rocket className="w-4 h-4" /> Ir para o Dashboard
