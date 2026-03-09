@@ -3502,12 +3502,19 @@ async function sendWhatsAppMsg(instanceName, phone, message) {
 
 async function sendInternalNotification(userId, message) {
   try {
+    // Try with title column first (newer schema), fallback to simpler schema
     await pool.query(
-      `INSERT INTO notifications (user_id, message, is_read, created_at)
-       VALUES ($1, $2, false, NOW())
-       ON CONFLICT DO NOTHING`,
-      [userId, message]
-    );
+      `INSERT INTO notifications (user_id, title, message, read, created_at)
+       VALUES ($1, $2, $3, false, NOW())`,
+      [userId, 'Mensagem da Kogna', message]
+    ).catch(async () => {
+      // Fallback: schema without title or with is_read
+      await pool.query(
+        `INSERT INTO notifications (user_id, message, is_read, created_at)
+         VALUES ($1, $2, false, NOW())`,
+        [userId, message]
+      );
+    });
   } catch (e) { log('[INTERNAL_NOTIF] ' + e.message); }
 }
 
@@ -3713,16 +3720,14 @@ app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, r
   }
 });
 
-// ── GET /api/admin/whatsapp-instances — list admin's WA instances ─────────────
+// ── GET /api/admin/whatsapp-instances — list all WA instances ───────────────────
 app.get('/api/admin/whatsapp-instances', verifyJWT, requireAdmin, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT wi.instance_name, wi.phone_number, wi.status,
-              u.name AS owner_name, u.email AS owner_email
-       FROM whatsapp_instances wi
-       LEFT JOIN organizations o ON o.id=wi.organization_id
-       LEFT JOIN users u ON u.organization_id=o.id AND u.role='admin'
-       ORDER BY wi.created_at DESC LIMIT 50`
+      `SELECT instance_name, phone_number, status, organization_id, created_at
+       FROM whatsapp_instances
+       ORDER BY created_at DESC
+       LIMIT 100`
     );
     res.json(r.rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
