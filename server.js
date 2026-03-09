@@ -3670,26 +3670,48 @@ app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, r
       recipients = r.rows;
     }
 
+    // ── Anti-ban helpers ─────────────────────────────────────────────────────
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    // Slight humanization: random trailing variation fools Meta's duplicate-detection
+    const humanize = (text) => {
+      const tweaks = ['', ' ', '  ', '.'];
+      return text.trimEnd() + tweaks[randInt(0, tweaks.length - 1)];
+    };
+
+    // Simulate WhatsApp typing presence (best-effort)
+    const simulateTyping = async (instanceName, phone) => {
+      const EVO_URL = process.env.EVOLUTION_API_URL;
+      const EVO_KEY = process.env.EVOLUTION_API_KEY;
+      if (!EVO_URL || !EVO_KEY) return;
+      await fetch(`${EVO_URL}/chat/sendPresence/${instanceName}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': EVO_KEY },
+        body: JSON.stringify({ number: phone + '@s.whatsapp.net', options: { delay: 1200, presence: 'composing' } }),
+      }).catch(() => { });
+    };
+    // ────────────────────────────────────────────────────────────────────────
+
     let sent = 0;
     const chs = Array.isArray(channels) ? channels : ['internal'];
+    const waQueue = []; // WA sends queued separately for rate-limiting
 
-    // If WhatsApp selected, fetch users with their org agent phone numbers
+    // Fetch user phones from registration data (personal_phone column)
     let userPhones = {};
     if (chs.includes('whatsapp') && wa_instance) {
-      // Fetch user phones from their registration data (personal_phone column)
       const phoneRes = await pool.query(
         `SELECT id, personal_phone FROM users WHERE role='user' AND personal_phone IS NOT NULL AND personal_phone <> ''`
       ).catch(() => ({ rows: [] }));
       for (const row of phoneRes.rows) {
-        // Strip all non-digits, then ensure 55 prefix (Brazil)
         const digits = row.personal_phone.replace(/\D/g, '');
         if (digits.length >= 8) {
-          // Prepend 55 only if not already starting with 55
           userPhones[row.id] = digits.startsWith('55') ? digits : `55${digits}`;
         }
       }
     }
 
+    // Process internal + email IMMEDIATELY
     for (const u of recipients) {
       const vars = { nome: u.name, email: u.email, link_dashboard: 'https://ia.kogna.co' };
       const msg = interpolateTemplate(message, vars);
@@ -3700,19 +3722,54 @@ app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, r
         await sendInternalNotification(u.id, msg, notification_title || 'Mensagem da Kogna');
       }
       if (chs.includes('whatsapp') && wa_instance && userPhones[u.id]) {
-        await sendWhatsAppMsg(wa_instance, userPhones[u.id], msg).catch(() => { });
+        waQueue.push({ u, msg });
       }
       sent++;
     }
 
-    // Log
+    // Log + respond to client NOW (WA sends happen in background)
     await pool.query(
       `INSERT INTO automation_logs (automation_name, recipients_count, channel, status)
        VALUES ($1, $2, $3, 'sent')`,
       ['Envio Manual', sent, chs.join(',')]
     ).catch(() => { });
 
-    res.json({ sent, total: recipients.length });
+    res.json({ sent, total: recipients.length, wa_queued: waQueue.length });
+
+    // ── WA anti-ban send queue (async background after HTTP response) ─────────
+    if (waQueue.length > 0) {
+      (async () => {
+        log(`[WA-BLAST] Iniciando fila: ${waQueue.length} destinatários`);
+        for (let i = 0; i < waQueue.length; i++) {
+          const { u, msg } = waQueue[i];
+          try {
+            // Simulate typing 1-3s before sending
+            await simulateTyping(wa_instance, userPhones[u.id]);
+            await sleep(randInt(1000, 3000));
+
+            await sendWhatsAppMsg(wa_instance, userPhones[u.id], humanize(msg)).catch(() => { });
+            log(`[WA-BLAST] ${i + 1}/${waQueue.length} → ...${userPhones[u.id].slice(-4)}`);
+
+            if (i + 1 >= waQueue.length) break;
+
+            // Batch cooldown every 10 messages (45-90s)
+            if ((i + 1) % 10 === 0) {
+              const pause = randInt(45000, 90000);
+              log(`[WA-BLAST] Pausa de lote: ${Math.round(pause / 1000)}s`);
+              await sleep(pause);
+            } else {
+              // Normal inter-message delay: 7-23s
+              const delay = randInt(7000, 23000);
+              log(`[WA-BLAST] Aguardando ${Math.round(delay / 1000)}s`);
+              await sleep(delay);
+            }
+          } catch (err) {
+            log(`[WA-BLAST] Erro: ${err.message}`);
+          }
+        }
+        log(`[WA-BLAST] Fila concluída: ${waQueue.length} mensagens.`);
+      })();
+    }
   } catch (e) {
     log('[MANUAL NOTIF] ' + e.message);
     res.status(500).json({ error: e.message });
