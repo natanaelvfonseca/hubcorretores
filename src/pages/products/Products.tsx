@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
-const authHeader = () => ({ 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' });
+const authHeader = () => ({ 'Authorization': `Bearer ${localStorage.getItem('kogna_token')}`, 'Content-Type': 'application/json' });
 
 const TRIGGER_TYPES = [
     { value: 'primeiro_contato', label: 'Primeiro Contato', color: 'bg-blue-500/15 text-blue-400' },
