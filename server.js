@@ -3500,15 +3500,13 @@ async function sendWhatsAppMsg(instanceName, phone, message) {
   });
 }
 
-async function sendInternalNotification(userId, message) {
+async function sendInternalNotification(userId, message, title = 'Mensagem da Kogna') {
   try {
-    // Try with title column first (newer schema), fallback to simpler schema
     await pool.query(
       `INSERT INTO notifications (user_id, title, message, read, created_at)
        VALUES ($1, $2, $3, false, NOW())`,
-      [userId, 'Mensagem da Kogna', message]
+      [userId, title, message]
     ).catch(async () => {
-      // Fallback: schema without title or with is_read
       await pool.query(
         `INSERT INTO notifications (user_id, message, is_read, created_at)
          VALUES ($1, $2, false, NOW())`,
@@ -3651,7 +3649,7 @@ app.post('/api/admin/automations/:id/trigger', verifyJWT, requireAdmin, async (r
 // ── POST /api/admin/notifications/send — Manual send ─────────────────────────
 app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, res) => {
   try {
-    const { message, subject, channels, audience_type, user_ids, filter_tags, wa_instance } = req.body;
+    const { message, subject, channels, audience_type, user_ids, filter_tags, wa_instance, notification_title } = req.body;
     if (!message) return res.status(400).json({ error: 'message é obrigatório.' });
 
     let recipients = [];
@@ -3698,7 +3696,7 @@ app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, r
         await sendEmail(u.email, subject || 'Mensagem da Kogna', `<p>${msg.replace(/\n/g, '<br>')}</p>`).catch(() => { });
       }
       if (chs.includes('internal')) {
-        await sendInternalNotification(u.id, msg);
+        await sendInternalNotification(u.id, msg, notification_title || 'Mensagem da Kogna');
       }
       if (chs.includes('whatsapp') && wa_instance && userPhones[u.id]) {
         await sendWhatsAppMsg(wa_instance, userPhones[u.id], msg).catch(() => { });
@@ -3724,9 +3722,11 @@ app.post('/api/admin/notifications/send', verifyJWT, requireAdmin, async (req, r
 app.get('/api/admin/whatsapp-instances', verifyJWT, requireAdmin, async (req, res) => {
   try {
     const r = await pool.query(
-      `SELECT instance_name, phone_number, status, organization_id, created_at
-       FROM whatsapp_instances
-       ORDER BY created_at DESC
+      `SELECT wi.instance_name, wi.status, wi.organization_id,
+              a.name AS agent_name
+       FROM whatsapp_instances wi
+       LEFT JOIN agents a ON a.whatsapp_instance_id = wi.id
+       ORDER BY wi.created_at DESC
        LIMIT 100`
     );
     res.json(r.rows);

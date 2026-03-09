@@ -10,7 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface WaInstance {
     instance_name: string;
-    phone_number: string | null;
+    agent_name: string | null;
     status: string;
 }
 interface Automation {
@@ -597,6 +597,7 @@ function ManualSendPanel({
     const [error, setError] = useState('');
     const [waInstances, setWaInstances] = useState<WaInstance[]>([]);
     const [waInstance, setWaInstance] = useState('');
+    const [notifTitle, setNotifTitle] = useState('Mensagem da Kogna');
 
     useEffect(() => {
         fetch('/api/admin/whatsapp-instances', { headers: apiHeaders() })
@@ -620,7 +621,10 @@ function ManualSendPanel({
         const target = audienceType === 'all' ? 'todos os usuários' : `usuários com tag "${tagFilter}"`;
         if (!confirm(`Confirmar envio para ${target}?`)) return;
         setSending(true);
-        const body: Record<string, unknown> = { message, subject, channels, audience_type: audienceType };
+        const body: Record<string, unknown> = {
+            message, subject, channels, audience_type: audienceType,
+            notification_title: notifTitle || 'Mensagem da Kogna',
+        };
         if (audienceType === 'filtered' && tagFilter.trim()) {
             body.filter_tags = tagFilter.split(',').map(t => t.trim()).filter(Boolean);
         }
@@ -729,7 +733,7 @@ function ManualSendPanel({
                                 <option value="">Selecione um número...</option>
                                 {waInstances.map(wi => (
                                     <option key={wi.instance_name} value={wi.instance_name}>
-                                        {wi.phone_number ? `${wi.phone_number} — ` : ''}{wi.instance_name} ({wi.status})
+                                        {wi.instance_name}{wi.agent_name ? ` — ${wi.agent_name}` : ''} ({wi.status})
                                     </option>
                                 ))}
                             </select>
@@ -747,6 +751,21 @@ function ManualSendPanel({
                             value={subject}
                             onChange={e => setSubject(e.target.value)}
                             placeholder="Ex: Atualização importante da Kogna"
+                            className="w-full bg-background border border-purple-500/20 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500/40 outline-none"
+                        />
+                    </div>
+                )}
+
+                {/* Notification Title (internal only) */}
+                {channels.includes('internal') && (
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 block">
+                            Título da Notificação Interna
+                        </label>
+                        <input
+                            value={notifTitle}
+                            onChange={e => setNotifTitle(e.target.value)}
+                            placeholder="Ex: Novidade importante!"
                             className="w-full bg-background border border-purple-500/20 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500/40 outline-none"
                         />
                     </div>
