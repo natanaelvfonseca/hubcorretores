@@ -3206,8 +3206,8 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
 
     await client.query('COMMIT');
 
-    // Best-effort: save whatsapp number if the column exists
-    if (phone) pool.query(`UPDATE users SET whatsapp=$1 WHERE id=$2`, [phone, user.id]).catch(() => { });
+    // Best-effort: save whatsapp number in personal_phone column
+    if (phone) pool.query(`UPDATE users SET personal_phone=$1 WHERE id=$2`, [phone, user.id]).catch(() => { });
 
     // ── Optional: save AI config (best-effort) ────────────────────────────────
     const agentObjectiveText =
@@ -3239,17 +3239,31 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
 
     // ── Optional: create first agent (best-effort) ────────────────────────────
     try {
-      const agentDescription =
-        `Agente de vendas ${aiName || 'IA'} da ${companyName}. ` +
-        `Objetivo: ${agentObjectiveText}. ` +
-        `Mercado: ${industry || 'geral'}${industryDetail ? ' — ' + industryDetail : ''}. ` +
-        `Tom: ${voiceTone}. Ciclo de venda: ${salesCycle}.`;
+      // Build a rich system prompt from all onboarding context
+      const systemPrompt = `Você é ${aiName || 'uma IA de vendas'}, assistente virtual da empresa ${companyName}.
+
+OBJETIVO PRINCIPAL: ${agentObjectiveText}.
+
+PRODUTO / SERVIÇO: ${mainProduct || 'Não informado'}.
+PREÇO MÉDIO: ${productPrice ? 'R$ ' + productPrice : 'Não informado'}.
+DOR DO CLIENTE: ${customerPain || 'Não informado'}.
+PÚBLICO-ALVO: ${(targetAudience || []).join(', ') || 'Não informado'}.
+MERCADO: ${industry || 'geral'}${industryDetail ? ' — ' + industryDetail : ''}.
+CANAIS DE AQUISIÇÃO: ${(channels || []).join(', ') || 'Não informado'}.
+CICLO DE VENDA: ${salesCycle || 'Não informado'}.
+META MENSAL: ${revenueGoal ? 'R$ ' + revenueGoal : 'Não informado'}.
+ESTILO DE COMUNICAÇÃO: ${voiceTone || 'Consultiva'}.
+QUANDO NÃO SOUBER RESPONDER: ${unknownBehavior === 'transferir_humano' ? 'Transfira imediatamente para um humano.' : unknownBehavior === 'pedir_contato' ? 'Peça o contato para retorno em breve.' : 'Informe que vai verificar e retornar.'}.
+${restrictions ? 'RESTRIÇÕES: ' + restrictions : ''}
+
+Seja sempre proativo, orientado a resultados, e conduza o cliente em direção ao fechamento.`;
 
       await pool.query(
-        `INSERT INTO agents (organization_id, name, description, role, voice_tone, unknown_behavior, restrictions, status)
-         VALUES ($1, $2, $3, 'sdr', $4, $5, $6, 'active')`,
-        [org.id, aiName || 'Agente IA', agentDescription, voiceTone, unknownBehavior, restrictions || '']
+        `INSERT INTO agents (organization_id, name, type, status, system_prompt)
+         VALUES ($1, $2, 'sdr', 'active', $3)`,
+        [org.id, aiName || 'Agente IA', systemPrompt]
       );
+      log(`[ONBOARDING-V2] Agent created for org ${org.id}`);
     } catch (agentErr) {
       log('[ONBOARDING-V2] agent insert skipped: ' + agentErr.message);
     }
