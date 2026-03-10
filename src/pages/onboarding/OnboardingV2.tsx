@@ -125,33 +125,6 @@ const STEP_LABELS = [
     'Melhorar', 'WhatsApp', 'Concluído'
 ];
 
-function ProgressSidebar({ step }: { step: number }) {
-    return (
-        <div className="hidden lg:flex flex-col w-52 shrink-0 pt-2">
-            <div className="flex items-center gap-2 mb-8 px-1">
-                <div className="w-7 h-7 bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] rounded-lg flex items-center justify-center shadow-glow">
-                    <Zap className="w-4 h-4 text-white fill-white" />
-                </div>
-                <span className="font-bold text-gray-900 text-lg">Kogna</span>
-            </div>
-            <div className="space-y-0.5">
-                {STEP_LABELS.map((label, i) => {
-                    const s = i + 1;
-                    const done = s < step;
-                    const active = s === step;
-                    return (
-                        <div key={s} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${done ? 'bg-[#FF4C00]' : active ? 'bg-[#FF4C00] ring-2 ring-[#FF4C00]/40 ring-offset-1 ring-offset-white' : 'bg-gray-100 border border-gray-200'}`}>
-                                {done ? <Check className="w-3 h-3 text-white" /> : <span className={`text-[9px] font-bold ${active ? 'text-gray-900' : 'text-gray-400'}`}>{s}</span>}
-                            </div>
-                            <span className={`text-xs font-medium transition-colors ${active ? 'text-gray-900 font-semibold' : done ? 'text-gray-400' : 'text-gray-300'}`}>{label}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
 
 function MobileProgress({ step }: { step: number }) {
     return (
@@ -380,10 +353,6 @@ export function OnboardingV2() {
                 <div className="absolute bottom-[-10%] right-[10%] w-[400px] h-[400px] bg-[#FF4C00]/3 rounded-full blur-[120px]" />
             </div>
 
-            {/* Sidebar */}
-            <div className="relative z-10 hidden lg:block p-8 pr-0">
-                <ProgressSidebar step={step} />
-            </div>
 
             {/* Content */}
             <div className="flex-1 flex flex-col items-center justify-start py-10 px-4 relative z-10 overflow-y-auto">
@@ -999,14 +968,14 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     </div>
                 ))}
             </div>
-            <div className="bg-gradient-to-r from-[#FF4C00]/10 to-yellow-600/10 border border-yellow-500/20 rounded-2xl p-4">
+            <div className="bg-gradient-to-r from-[#FF4C00]/15 to-orange-500/10 border border-[#FF4C00]/25 rounded-2xl p-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0">
-                        <Zap className="w-5 h-5 text-yellow-400 fill-yellow-400/50" />
+                    <div className="w-10 h-10 rounded-xl bg-[#FF4C00]/20 flex items-center justify-center shrink-0">
+                        <Zap className="w-5 h-5 text-[#FF4C00] fill-[#FF4C00]/50" />
                     </div>
                     <div className="text-left">
-                        <p className="text-sm font-bold text-yellow-300">+100 Koins creditados</p>
-                        <p className="text-xs text-gray-400">Use para evoluir sua IA e acelerar suas vendas</p>
+                        <p className="text-sm font-bold text-[#FF4C00]">+100 Koins creditados</p>
+                        <p className="text-xs text-gray-500">As Koins será usada para abastecer sua IA e atender seus clientes</p>
                     </div>
                 </div>
             </div>

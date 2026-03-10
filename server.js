@@ -3234,6 +3234,7 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
           'Aquecer o lead e transferir para vendedor humano';
 
     try {
+      // UPSERT including optional fields in one shot
       await pool.query(
         `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product, desired_revenue,
           agent_objective, unknown_behavior, voice_tone, restrictions)
@@ -3244,15 +3245,23 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
            agent_objective=EXCLUDED.agent_objective, unknown_behavior=EXCLUDED.unknown_behavior,
            voice_tone=EXCLUDED.voice_tone, restrictions=EXCLUDED.restrictions`,
         [org.id, user.id, companyName, aiName, mainProduct, revenueGoal,
-          agentObjectiveText, unknownBehavior, voiceTone, restrictions]
+          agentObjectiveText, unknownBehavior, voiceTone, restrictions || '']
       );
-      // Try to update optional columns separately (they may not exist yet)
+      // Save optional columns (best-effort)
       await pool.query(
         `UPDATE ia_configs SET customer_pain=$1, product_price=$2 WHERE organization_id=$3`,
-        [customerPain, productPrice, org.id]
+        [customerPain || '', productPrice || '', org.id]
       ).catch(() => { });
     } catch (iaErr) {
-      log('[ONBOARDING-V2] ia_configs insert skipped: ' + iaErr.message);
+      log('[ONBOARDING-V2] ia_configs insert failed: ' + iaErr.message);
+      // Fallback: plain INSERT (no unique constraint)
+      await pool.query(
+        `INSERT INTO ia_configs (organization_id, user_id, company_name, agent_name, main_product, desired_revenue,
+          agent_objective, unknown_behavior, voice_tone, restrictions)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [org.id, user.id, companyName, aiName, mainProduct, revenueGoal,
+          agentObjectiveText, unknownBehavior, voiceTone, restrictions || '']
+      ).catch(e2 => log('[ONBOARDING-V2] ia_configs fallback also failed: ' + e2.message));
     }
 
     // ── Optional: create first agent (best-effort) ────────────────────────────
@@ -3277,7 +3286,7 @@ ${restrictions ? 'RESTRIÇÕES: ' + restrictions : ''}
 Seja sempre proativo, orientado a resultados, e conduza o cliente em direção ao fechamento.`;
 
       await pool.query(
-        `INSERT INTO agents (organization_id, name, role, status, system_prompt)
+        `INSERT INTO agents (organization_id, name, type, status, system_prompt)
          VALUES ($1, $2, 'sdr', 'active', $3)`,
         [org.id, aiName || 'Agente IA', systemPrompt]
       );
@@ -3399,7 +3408,7 @@ app.get('/api/agents', verifyJWT, async (req, res) => {
     if (!orgId) return res.json([]);
     const r = await pool.query(
       `SELECT a.id, a.name,
-              COALESCE(a.role, 'sdr') AS type,
+              COALESCE(a.type, 'sdr') AS type,
               COALESCE(a.status, 'active') AS status,
               a.created_at,
               wi.instance_name AS whatsapp_instance_name,
@@ -3428,7 +3437,7 @@ app.post('/api/agents', verifyJWT, async (req, res) => {
     if (!name) return res.status(400).json({ error: 'name é obrigatório' });
 
     const r = await pool.query(
-      `INSERT INTO agents (organization_id, name, role, system_prompt, status)
+      `INSERT INTO agents (organization_id, name, type, system_prompt, status)
        VALUES ($1, $2, $3, $4, 'active') RETURNING *`,
       [orgId, name, type || 'sdr', system_prompt || '']
     );
