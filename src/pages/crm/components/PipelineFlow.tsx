@@ -93,7 +93,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                 viewBox={`0 0 ${VW} ${HEIGHT}`}
                 preserveAspectRatio="none"
                 className="w-full"
-                style={{ height: HEIGHT, marginTop: 16 }}
+                style={{ height: HEIGHT, marginTop: 28 }}
             >
                 <defs>
                     {stages.map((_s, i) => (
