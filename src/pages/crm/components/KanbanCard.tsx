@@ -18,12 +18,11 @@ interface KanbanCardProps {
     onDelete?: (leadId: string) => void;
     onEdit?: (lead: Lead) => void;
     onMarkAsClient?: (leadId: string) => void;
-    onAssignVendedor?: (leadId: string, vendedorId: string | null) => void;
     vendedores?: Vendedor[];
     token?: string;
 }
 
-export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient, onAssignVendedor, vendedores = [], token }: KanbanCardProps) {
+export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient, vendedores = [], token }: KanbanCardProps) {
     if (!lead) return null;
 
     const [showMenu, setShowMenu] = useState(false);
@@ -210,31 +209,6 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                                     <UserCheck size={14} />
                                     Fechar Negócio (Cliente)
                                 </button>
-                            )}
-
-                            {/* Option: Assign Vendor */}
-                            {onAssignVendedor && (
-                                <div>
-                                    <div className="border-t border-border/30 mt-1 pt-1 mb-1" />
-                                    <div className="px-3 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">Atribuir Vendedor</div>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, null); setShowMenu(false); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-text-secondary transition-colors"
-                                    >
-                                        <User size={14} className="opacity-0" />
-                                        — Sem Vendedor
-                                    </button>
-                                    {vendedores.map(v => (
-                                        <button
-                                            key={v.id}
-                                            onClick={(e) => { e.stopPropagation(); onAssignVendedor(lead.id, v.id); setShowMenu(false); }}
-                                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 transition-colors ${v.id === (lead as any).assignedTo ? 'text-primary font-semibold' : 'text-text-primary'}`}
-                                        >
-                                            <User size={14} className={v.id === (lead as any).assignedTo ? 'text-primary' : 'text-text-muted'} />
-                                            {v.nome}
-                                        </button>
-                                    ))}
-                                </div>
                             )}
 
                             {/* Option: Delete */}

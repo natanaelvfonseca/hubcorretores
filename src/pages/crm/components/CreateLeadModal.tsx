@@ -18,12 +18,14 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
     const [error, setError] = useState('');
     const [sources, setSources] = useState<{ id: string; name: string }[]>([]);
     const [firstColumnTitle, setFirstColumnTitle] = useState('Novos Leads');
+    const [vendedores, setVendedores] = useState<{ id: string; nome: string }[]>([]);
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
         email: '',
         value: '',
-        source: ''
+        source: '',
+        assignedTo: ''
     });
 
     const isEditing = !!leadToEdit;
@@ -32,16 +34,18 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
         if (isOpen) {
             fetchSources();
             fetchColumns();
+            fetchVendedores();
             if (leadToEdit) {
                 setFormData({
                     name: leadToEdit.name,
                     phone: leadToEdit.phone || '',
                     email: leadToEdit.email || '',
                     value: leadToEdit.value?.toString() || '',
-                    source: leadToEdit.source || ''
+                    source: leadToEdit.source || '',
+                    assignedTo: (leadToEdit as any).assignedTo || ''
                 });
             } else {
-                setFormData({ name: '', phone: '', email: '', value: '', source: '' });
+                setFormData({ name: '', phone: '', email: '', value: '', source: '', assignedTo: '' });
             }
         }
     }, [isOpen, leadToEdit]);
@@ -62,7 +66,7 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
     const fetchColumns = async () => {
         try {
             const res = await fetch(`${API_URL}/settings/columns`, {
-                headers: { 'Authorization': `Bearer mock-jwt-token-for-${user?.id}` }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 const cols = await res.json();
@@ -72,6 +76,19 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
             }
         } catch (e) {
             console.error("Failed to fetch columns", e);
+        }
+    };
+
+    const fetchVendedores = async () => {
+        try {
+            const res = await fetch(`${API_URL}/vendedores`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setVendedores(await res.json());
+            }
+        } catch (e) {
+            console.error("Failed to fetch vendedores", e);
         }
     };
 
@@ -94,7 +111,8 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
                 phone: formData.phone,
                 email: formData.email,
                 value: Number(formData.value),
-                source: formData.source
+                source: formData.source,
+                assigned_to: formData.assignedTo || null
             };
 
             if (!isEditing) {
@@ -114,7 +132,7 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
                 throw new Error(`Falha ao ${isEditing ? 'atualizar' : 'criar'} lead`);
             }
 
-            setFormData({ name: '', phone: '', email: '', value: '', source: '' });
+            setFormData({ name: '', phone: '', email: '', value: '', source: '', assignedTo: '' });
             onSuccess();
             onClose();
         } catch (err) {
@@ -231,6 +249,27 @@ export function LeadModal({ isOpen, onClose, onSuccess, leadToEdit }: LeadModalP
                                     className="w-full bg-background/50 border border-border/50 rounded-lg pl-10 pr-4 py-2.5 text-text-primary focus:outline-none focus:border-primary/50 transition-colors placeholder:text-text-muted/50"
                                     placeholder="0,00"
                                 />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-text-secondary mb-1.5 uppercase tracking-wide">
+                                Vendedor Atribuído
+                            </label>
+                            <div className="relative">
+                                <select
+                                    name="assignedTo"
+                                    value={formData.assignedTo}
+                                    onChange={handleChange}
+                                    className="w-full bg-background/50 border border-border/50 rounded-lg px-4 py-2.5 text-text-primary focus:outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer"
+                                >
+                                    <option value="">Sem vendedor atribuído</option>
+                                    {vendedores.map(v => (
+                                        <option key={v.id} value={v.id} className="bg-surface text-text-primary">
+                                            {v.nome}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

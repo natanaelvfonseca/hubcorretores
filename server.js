@@ -5074,7 +5074,7 @@ app.get("/api/clients", verifyJWT, async (req, res) => {
 // Update Lead/Client API
 app.put("/api/leads/:id", verifyJWT, async (req, res) => {
   const { id } = req.params;
-  const { name, email, phone, company, value, productId, notes, status } =
+  const { name, email, phone, company, value, productId, notes, status, assigned_to } =
     req.body;
 
   try {
@@ -5099,8 +5099,9 @@ app.put("/api/leads/:id", verifyJWT, async (req, res) => {
                 product_id = $6,
                 notes = COALESCE($7, notes),
                 status = COALESCE($8, status),
+                assigned_to = COALESCE($9, assigned_to),
                 last_contact = NOW()
-             WHERE id = $9 AND organization_id = $10 RETURNING *`,
+             WHERE id = $10 AND organization_id = $11 RETURNING *`,
       [
         name,
         email,
@@ -5110,6 +5111,7 @@ app.put("/api/leads/:id", verifyJWT, async (req, res) => {
         productId || null,
         notes,
         status,
+        assigned_to || null,
         id,
         orgId,
       ],
@@ -7254,7 +7256,7 @@ app.post("/chat/findMessages/:instanceName", async (req, res) => {
 async function ensureLeadsColumns() {
   try {
     const check = await pool.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'leads' AND column_name IN ('phone', 'email')",
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'leads' AND column_name IN ('phone', 'email', 'assigned_to')",
     );
     const existing = check.rows.map((r) => r.column_name);
     if (!existing.includes("phone")) {
@@ -7265,6 +7267,10 @@ async function ensureLeadsColumns() {
       await pool.query("ALTER TABLE leads ADD COLUMN email TEXT DEFAULT ''");
       log("[MIGRATION] Added email column to leads table");
     }
+    if (!existing.includes("assigned_to")) {
+      await pool.query("ALTER TABLE leads ADD COLUMN assigned_to UUID REFERENCES vendedores(id) ON DELETE SET NULL");
+      log("[MIGRATION] Added assigned_to column to leads table");
+    }
   } catch (e) {
     log("[MIGRATION] ensureLeadsColumns error: " + e.message);
   }
@@ -7274,7 +7280,7 @@ ensureLeadsColumns();
 
 // POST /api/leads - Create a new lead
 app.post("/api/leads", verifyJWT, async (req, res) => {
-  const { name, company, phone, email, value, status, tags, source } = req.body;
+  const { name, company, phone, email, value, status, tags, source, assigned_to } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: "Name is required" });
@@ -7291,7 +7297,7 @@ app.post("/api/leads", verifyJWT, async (req, res) => {
     if (!orgId) return res.status(403).json({ error: "No organization" });
 
     const result = await pool.query(
-      "INSERT INTO leads (user_id, organization_id, name, company, phone, email, value, status, tags, source) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
+      "INSERT INTO leads (user_id, organization_id, name, company, phone, email, value, status, tags, source, assigned_to) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *",
       [
         userId,
         orgId,
@@ -7303,6 +7309,7 @@ app.post("/api/leads", verifyJWT, async (req, res) => {
         status || "new",
         tags || [],
         source || "",
+        assigned_to || null,
       ],
     );
 
@@ -7330,7 +7337,7 @@ app.post("/api/leads", verifyJWT, async (req, res) => {
 // PUT /api/leads/:id - Update a lead
 app.put("/api/leads/:id", verifyJWT, async (req, res) => {
   const { id } = req.params;
-  const { name, phone, email, value, source } = req.body;
+  const { name, phone, email, value, source, assigned_to } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: "Name is required" });
@@ -7347,9 +7354,9 @@ app.put("/api/leads/:id", verifyJWT, async (req, res) => {
     if (!orgId) return res.status(403).json({ error: "No organization" });
 
     const result = await pool.query(
-      `UPDATE leads SET name = $1, phone = $2, email = $3, value = $4, source = $5, last_contact = NOW()
-             WHERE id = $6 AND organization_id = $7 RETURNING * `,
-      [name, phone || "", email || "", value || 0, source || "", id, orgId],
+      `UPDATE leads SET name = $1, phone = $2, email = $3, value = $4, source = $5, last_contact = NOW(), assigned_to = $6
+             WHERE id = $7 AND organization_id = $8 RETURNING *`,
+      [name, phone || "", email || "", value || 0, source || "", assigned_to || null, id, orgId],
     );
 
     if (result.rows.length === 0) {

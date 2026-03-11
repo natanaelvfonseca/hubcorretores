@@ -16,6 +16,7 @@ export interface Lead {
     temperature?: string;
     intentLabel?: 'HOT' | 'WARM' | 'COLD' | null;
     briefing?: string | null;
+    assignedTo?: string;
 }
 
 export interface KanbanColumn {
