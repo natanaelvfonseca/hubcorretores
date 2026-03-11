@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Calendar, DollarSign, Trash2, Phone, Mail, Globe, UserCheck, User, Brain, Bell } from 'lucide-react';
+import { Calendar, DollarSign, Trash2, Phone, Mail, Globe, MoreHorizontal, UserCheck, User, Brain, Bell } from 'lucide-react';
 import { Lead } from '../types';
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -199,16 +199,16 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                     </button>
 
                     {showMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-surface border border-border rounded-lg shadow-xl z-50 py-1 overflow-hidden transform origin-top-right">
+                        <div className="absolute right-0 top-full mt-1 w-52 bg-surface border border-border rounded-lg shadow-xl z-50 py-1 overflow-hidden transform origin-top-right">
 
-                            {/* Option: Edit */}
-                            {onEdit && (
+                            {/* Option: Close Deal */}
+                            {onMarkAsClient && lead.status !== 'Cliente' && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onEdit(lead); setShowMenu(false); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-white/5 text-text-primary transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); if (confirm(`Marcar ${lead.name} como Cliente?`)) { onMarkAsClient(lead.id); } setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-green-500/10 text-green-500 transition-colors"
                                 >
-                                    <MoreHorizontal size={14} className="text-text-muted" />
-                                    Editar Negócio
+                                    <UserCheck size={14} />
+                                    Fechar Negócio (Cliente)
                                 </button>
                             )}
 
@@ -234,6 +234,19 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                                             {v.nome}
                                         </button>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Option: Delete */}
+                            {onDelete && (
+                                <div className="border-t border-border/30 mt-1 pt-1">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); if (confirm('Excluir este lead?')) { onDelete(lead.id); } setShowMenu(false); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-red-500/10 text-red-500 transition-colors"
+                                    >
+                                        <Trash2 size={14} />
+                                        Excluir Lead
+                                    </button>
                                 </div>
                             )}
 

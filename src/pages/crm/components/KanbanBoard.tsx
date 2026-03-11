@@ -204,7 +204,7 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     return (
         <div className="flex flex-col h-full gap-0">
             {/* Pipeline Flow Visualization */}
-            <div className="flex-shrink-0 px-1 pb-2">
+            <div className="flex-shrink-0 px-1 pb-1">
                 <PipelineFlow stages={pipelineStages} />
             </div>
             {/* Kanban Board */}

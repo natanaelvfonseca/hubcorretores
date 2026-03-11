@@ -20,7 +20,7 @@ export function CRM() {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-6">
+        <div className="h-full flex flex-col p-4 space-y-3">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold text-text-primary">Funil de Vendas</h1>
