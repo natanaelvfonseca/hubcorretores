@@ -9363,27 +9363,8 @@ app.post("/api/evolution/webhook", async (req, res) => {
     // ── Auto-create lead in CRM (BEFORE agent check) ──────────────────────────
     // This runs even if no agent is linked to the instance yet
     if (instanceOrgId && remoteJid && !remoteJid.includes('g.us')) {
-      try {
-        const phoneRaw = remoteJid.split('@')[0];
-
-        // Check if lead already exists for this number
-        const existingLead = await pool.query(
-          `SELECT id FROM leads WHERE organization_id = $1 AND (phone LIKE $2 OR mobile_phone LIKE $2) LIMIT 1`,
-          [instanceOrgId, `%${phoneRaw}%`]
-        );
-
-        if (existingLead.rows.length === 0) {
-          const leadName = pushName && pushName !== 'Unknown' ? pushName : `WhatsApp ${phoneRaw}`;
-          await pool.query(
-            `INSERT INTO leads (organization_id, name, mobile_phone, source, pipeline_stage, status, created_at)
-             VALUES ($1, $2, $3, 'WhatsApp', 'Novo Lead', 'new', NOW())`,
-            [instanceOrgId, leadName, phoneRaw]
-          );
-          log(`[WEBHOOK] Auto-created lead '${leadName}' (${phoneRaw}) for org ${instanceOrgId}`);
-        }
-      } catch (leadErr) {
-        log(`[WEBHOOK] Auto-lead error: ${leadErr.message}`);
-      }
+      ensureLeadFromWhatsApp(remoteJid, pushName, instanceOrgId)
+        .catch(e => log(`[WEBHOOK] Auto-lead error: ${e.message}`));
     }
 
     // Find Active Agent for this instance
@@ -9401,24 +9382,20 @@ app.post("/api/evolution/webhook", async (req, res) => {
     const agent = agentRes.rows[0];
 
     // 4. Log User Message to DB
-    // Check if message already exists (dedup by ID if possible, but simplest is just insert)
     // Evolution sends 'id' in data.key.id
     const msgId = data.key.id;
-
-    // Optional: Check duplication
-    // const dupCheck = await pool.query('SELECT id FROM chat_messages WHERE metadata->>\'whatsapp_id\' = $1', [msgId]);
 
     const inputMessage = {
       role: "user",
       content: content,
-      imageUrl: imageUrl, // logic TBD
+      imageUrl: imageUrl,
       isAudio: isAudio,
       metadata: { pushName, whatsapp_id: msgId },
     };
 
     await pool.query(
       `INSERT INTO chat_messages (agent_id, remote_jid, role, content) 
-             VALUES ($1, $2, 'user', $3)`,
+           VALUES ($1, $2, 'user', $3)`,
       [agent.id, remoteJid, content],
     );
 
@@ -12383,7 +12360,7 @@ async function ensureLeadFromWhatsApp(remoteJid, pushName, organizationId) {
     const existing = await pool.query(
       `SELECT id FROM leads 
        WHERE organization_id = $1 
-         AND (phone = $2 OR phone = $3 OR mobile_phone = $2 OR mobile_phone = $3)
+         AND (phone = $2 OR phone = $3)
        LIMIT 1`,
       [organizationId, cleanPhone, rawPhone]
     );
