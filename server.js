@@ -588,12 +588,27 @@ async function calculateOpportunityScore(orgId, leadId) {
     // Temperature
     const temperature = score >= 70 ? 'quente' : score >= 40 ? 'morno' : 'frio';
 
-    // Target Pipeline Stage mapping
-    let targetStage = 'Novo Lead';
-    if (score >= 81) targetStage = 'Negociação';
-    else if (score >= 61) targetStage = 'Proposta';
-    else if (score >= 41) targetStage = 'Interesse';
-    else if (score >= 21) targetStage = 'Qualificação';
+    // Target Pipeline Stage mapping — uses real org columns instead of hardcoded names
+    let targetStage = null; // resolved below after fetching real columns
+    try {
+      const colsRes = await pool.query(
+        `SELECT title FROM lead_columns WHERE organization_id = $1 ORDER BY order_index ASC`,
+        [orgId]
+      );
+      const cols = colsRes.rows.map(r => r.title);
+      if (cols.length > 0) {
+        // Map score to column by relative position:
+        // 0–20 → col[0], 21–40 → col[1], 41–60 → col[2], 61–80 → col[3], 81–100 → col[4]
+        let targetColIndex = 0;
+        if (score >= 81 && cols.length > 4) targetColIndex = 4;
+        else if (score >= 61 && cols.length > 3) targetColIndex = 3;
+        else if (score >= 41 && cols.length > 2) targetColIndex = 2;
+        else if (score >= 21 && cols.length > 1) targetColIndex = 1;
+        targetStage = cols[targetColIndex];
+      }
+    } catch (colErr) {
+      log(`[OSE] Could not fetch org columns, skipping pipeline movement: ${colErr.message}`);
+    }
 
     const cleanObjection = (latestMsg.objections && latestMsg.objections.length > 0) ? latestMsg.objections[0].replace(/['"\\[\\]]/g, '') : null;
 
@@ -622,13 +637,14 @@ async function calculateOpportunityScore(orgId, leadId) {
 
     const row = upsertRes.rows[0];
 
-    // 4. Automatic Pipeline Movement
-    if (row && row.auto_pipeline_enabled) {
+    // 4. Automatic Pipeline Movement + temperature update
+    if (row && row.auto_pipeline_enabled && targetStage) {
       await pool.query(`
         UPDATE leads 
-        SET status = $1, updated_at = NOW()
-        WHERE id = $2 AND organization_id = $3 AND status != 'Cliente' AND status != $1
-      `, [row.pipeline_stage, leadId, orgId]);
+        SET status = $1, temperature = $2, updated_at = NOW()
+        WHERE id = $3 AND organization_id = $4 AND status != 'Cliente' AND status != $1
+      `, [targetStage, temperature, leadId, orgId]);
+      log(`[OSE] Lead ${leadId} moved to '${targetStage}' (temp: ${temperature})`);
     }
 
     log(`[OSE] Score calculated for lead ${leadId}: ${score} (${temperature}) | Stage: ${targetStage}`);
@@ -7200,7 +7216,7 @@ app.post("/chat/findMessages/:instanceName", async (req, res) => {
 async function ensureLeadsColumns() {
   try {
     const check = await pool.query(
-      "SELECT column_name FROM information_schema.columns WHERE table_name = 'leads' AND column_name IN ('phone', 'email', 'assigned_to')",
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'leads' AND column_name IN ('phone', 'email', 'assigned_to', 'temperature')",
     );
     const existing = check.rows.map((r) => r.column_name);
     if (!existing.includes("phone")) {
@@ -7215,12 +7231,17 @@ async function ensureLeadsColumns() {
       await pool.query("ALTER TABLE leads ADD COLUMN assigned_to UUID REFERENCES vendedores(id) ON DELETE SET NULL");
       log("[MIGRATION] Added assigned_to column to leads table");
     }
+    if (!existing.includes("temperature")) {
+      await pool.query("ALTER TABLE leads ADD COLUMN temperature TEXT DEFAULT 'frio'");
+      log("[MIGRATION] Added temperature column to leads table");
+    }
   } catch (e) {
     log("[MIGRATION] ensureLeadsColumns error: " + e.message);
   }
 }
 // Run migration on startup
 ensureLeadsColumns();
+
 
 // GET /api/leads - List leads for the org
 app.get("/api/leads", verifyJWT, async (req, res) => {
