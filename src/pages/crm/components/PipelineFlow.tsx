@@ -21,8 +21,8 @@ const STAGE_COLORS = [
     '#22c55e', // green
 ];
 
-const HEIGHT = 48;
-const PADDING_Y = 6;
+const HEIGHT = 80;
+const PADDING_Y = 8;
 
 // Smooth bezier path between two rectangles (left center → right center)
 function buildStreamPath(
@@ -72,12 +72,15 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
     // Removed conversion rates as per user request
 
     return (
-        <div className="w-full relative select-none" style={{ height: HEIGHT + 48 }}>
+        <div className="w-full relative select-none" style={{ height: HEIGHT + 56 }}>
             {/* Labels above */}
-            <div className="absolute top-0 left-0 right-0 flex" style={{ height: 24 }}>
+            <div className="absolute top-0 left-0 right-0 flex" style={{ height: 28 }}>
                 {stages.map((s, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center" style={{ minWidth: 0 }}>
-                        <span className="text-[10px] font-semibold text-text-secondary truncate px-1 max-w-full">
+                    <div key={i} className="flex-1 flex flex-col items-center justify-end pb-1" style={{ minWidth: 0 }}>
+                        <span
+                            className="text-[11px] font-semibold text-text-secondary px-1 text-center leading-tight"
+                            style={{ wordBreak: 'break-word', maxWidth: '100%' }}
+                        >
                             {s.title}
                         </span>
                     </div>
@@ -90,7 +93,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                 viewBox={`0 0 ${VW} ${HEIGHT}`}
                 preserveAspectRatio="none"
                 className="w-full"
-                style={{ height: HEIGHT, marginTop: 12 }}
+                style={{ height: HEIGHT, marginTop: 16 }}
             >
                 <defs>
                     {stages.map((_s, i) => (
@@ -149,13 +152,13 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                                 onMouseLeave={() => setTooltip(null)}
                             />
                             {/* Count label inside band if tall enough */}
-                            {h > 28 && (
+                            {h > 14 && (
                                 <text
                                     x={x + w / 2}
                                     y={b.top + h / 2 + 1}
                                     textAnchor="middle"
                                     dominantBaseline="middle"
-                                    fontSize={h > 50 ? 14 : 11}
+                                    fontSize={h > 50 ? 16 : h > 30 ? 13 : 10}
                                     fontWeight="bold"
                                     fill="white"
                                     opacity={0.9}

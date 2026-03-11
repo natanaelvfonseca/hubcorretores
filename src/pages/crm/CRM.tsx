@@ -30,7 +30,7 @@ export function CRM() {
                     {/* Actions like Add Lead, Filters could go here */}
                     <button
                         onClick={() => setCreateModalOpen(true)}
-                        className="bg-primary hover:brightness-110 text-white font-medium px-3 py-1.5 rounded-lg transition-colors text-xs shadow-lg shadow-primary/20"
+                        className="bg-primary hover:brightness-110 text-white font-semibold px-5 py-2.5 rounded-lg transition-colors text-sm shadow-lg shadow-primary/20"
                     >
                         Novo Lead
                     </button>
