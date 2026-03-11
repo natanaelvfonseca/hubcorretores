@@ -21,8 +21,8 @@ const STAGE_COLORS = [
     '#22c55e', // green
 ];
 
-const HEIGHT = 72;
-const PADDING_Y = 10; // vertical padding so min width has breathing room
+const HEIGHT = 48;
+const PADDING_Y = 6;
 
 // Smooth bezier path between two rectangles (left center → right center)
 function buildStreamPath(
@@ -90,7 +90,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                 viewBox={`0 0 ${VW} ${HEIGHT}`}
                 preserveAspectRatio="none"
                 className="w-full"
-                style={{ height: HEIGHT, marginTop: 32 }}
+                style={{ height: HEIGHT, marginTop: 12 }}
             >
                 <defs>
                     {stages.map((_s, i) => (

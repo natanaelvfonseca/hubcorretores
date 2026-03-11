@@ -5071,62 +5071,6 @@ app.get("/api/clients", verifyJWT, async (req, res) => {
   }
 });
 
-// Update Lead/Client API
-app.put("/api/leads/:id", verifyJWT, async (req, res) => {
-  const { id } = req.params;
-  const { name, email, phone, company, value, productId, notes, status, assigned_to } =
-    req.body;
-
-  try {
-    const userId = req.userId;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    const userRes = await pool.query(
-      "SELECT organization_id FROM users WHERE id = $1",
-      [userId],
-    );
-    const orgId = userRes.rows[0]?.organization_id;
-
-    if (!orgId) return res.status(403).json({ error: "No organization" });
-
-    const result = await pool.query(
-      `UPDATE leads SET 
-                name = COALESCE($1, name),
-                email = COALESCE($2, email),
-                phone = COALESCE($3, phone),
-                company = COALESCE($4, company),
-                value = COALESCE($5, value),
-                product_id = $6,
-                notes = COALESCE($7, notes),
-                status = COALESCE($8, status),
-                assigned_to = COALESCE($9, assigned_to),
-                last_contact = NOW()
-             WHERE id = $10 AND organization_id = $11 RETURNING *`,
-      [
-        name,
-        email,
-        phone,
-        company,
-        value,
-        productId || null,
-        notes,
-        status,
-        assigned_to || null,
-        id,
-        orgId,
-      ],
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Lead/Cliente não encontrado" });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    log(`PUT /api/leads/${id} error: ${err.toString()}`);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
 
 // ==================== PRODUCTS API ====================
 
@@ -7278,6 +7222,43 @@ async function ensureLeadsColumns() {
 // Run migration on startup
 ensureLeadsColumns();
 
+// GET /api/leads - List leads for the org
+app.get("/api/leads", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(403).json({ error: "No organization" });
+
+    const result = await pool.query(
+      "SELECT * FROM leads WHERE organization_id = $1 ORDER BY last_contact DESC",
+      [orgId]
+    );
+
+    // Map rows to frontend-friendly format (snake_case to camelCase where needed)
+    const leads = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      company: row.company,
+      phone: row.phone,
+      email: row.email,
+      value: Number(row.value),
+      status: row.status,
+      tags: row.tags || [],
+      source: row.source,
+      lastContact: row.last_contact,
+      assignedTo: row.assigned_to,
+      briefing: row.briefing,
+      temperature: row.temperature
+    }));
+
+    res.json(leads);
+  } catch (err) {
+    log("GET /api/leads error: " + err.toString());
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/leads - Create a new lead
 app.post("/api/leads", verifyJWT, async (req, res) => {
   const { name, company, phone, email, value, status, tags, source, assigned_to } = req.body;
@@ -7325,6 +7306,7 @@ app.post("/api/leads", verifyJWT, async (req, res) => {
       tags: resultRow.tags || [],
       source: resultRow.source,
       lastContact: resultRow.last_contact,
+      assignedTo: resultRow.assigned_to
     };
 
     res.status(201).json(newLead);
@@ -7337,11 +7319,7 @@ app.post("/api/leads", verifyJWT, async (req, res) => {
 // PUT /api/leads/:id - Update a lead
 app.put("/api/leads/:id", verifyJWT, async (req, res) => {
   const { id } = req.params;
-  const { name, phone, email, value, source, assigned_to } = req.body;
-
-  if (!name) {
-    return res.status(400).json({ error: "Name is required" });
-  }
+  const { name, phone, email, value, source, assigned_to, status, notes, product_id } = req.body;
 
   try {
     const userId = req.userId;
@@ -7354,33 +7332,73 @@ app.put("/api/leads/:id", verifyJWT, async (req, res) => {
     if (!orgId) return res.status(403).json({ error: "No organization" });
 
     const result = await pool.query(
-      `UPDATE leads SET name = $1, phone = $2, email = $3, value = $4, source = $5, last_contact = NOW(), assigned_to = $6
-             WHERE id = $7 AND organization_id = $8 RETURNING *`,
-      [name, phone || "", email || "", value || 0, source || "", assigned_to || null, id, orgId],
+      `UPDATE leads SET 
+         name = COALESCE($1, name), 
+         phone = COALESCE($2, phone), 
+         email = COALESCE($3, email), 
+         value = COALESCE($4, value), 
+         source = COALESCE($5, source), 
+         last_contact = NOW(), 
+         assigned_to = COALESCE($6, assigned_to),
+         status = COALESCE($7, status),
+         notes = COALESCE($8, notes),
+         product_id = COALESCE($9, product_id)
+       WHERE id = $10 AND organization_id = $11 RETURNING *`,
+      [name, phone, email, value, source, assigned_to, status, notes, product_id, id, orgId],
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Lead not found" });
     }
 
-    const row = result.rows[0];
-    const updatedLead = {
-      id: row.id,
-      name: row.name,
-      company: row.company,
-      phone: row.phone,
-      email: row.email,
-      value: Number(row.value),
-      status: row.status,
-      tags: row.tags || [],
-      source: row.source,
-      lastContact: row.last_contact,
-    };
-
-    res.json(updatedLead);
+    res.json(result.rows[0]);
   } catch (err) {
     log("PUT /api/leads/:id error: " + err.toString());
     res.status(500).json({ error: "Failed to update lead" });
+  }
+});
+
+// DELETE /api/leads/:id - Delete a lead
+app.delete("/api/leads/:id", verifyJWT, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const userId = req.userId;
+    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(403).json({ error: "No organization" });
+
+    const result = await pool.query(
+      "DELETE FROM leads WHERE id = $1 AND organization_id = $2 RETURNING *",
+      [id, orgId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Lead not found" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    log("DELETE /api/leads/:id error: " + err.toString());
+    res.status(500).json({ error: "Failed to delete lead" });
+  }
+});
+
+// GET /api/vendedores - List vendors for the org
+app.get("/api/vendedores", verifyJWT, async (req, res) => {
+  try {
+    const userId = req.userId;
+    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
+    const orgId = orgRes.rows[0]?.organization_id;
+    if (!orgId) return res.status(403).json({ error: "No organization" });
+
+    const result = await pool.query(
+      "SELECT id, nome, email, whatsapp, ativo FROM vendedores WHERE organization_id = $1 AND ativo = true ORDER BY nome",
+      [orgId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    log("GET /api/vendedores error: " + err.toString());
+    res.status(500).json({ error: "Failed to list vendors" });
   }
 });
 
@@ -8859,54 +8877,7 @@ app.patch("/api/leads/:id/assign", verifyJWT, async (req, res) => {
   }
 });
 
-// GET /api/vendedores - List vendors for the org
-app.get("/api/vendedores", verifyJWT, async (req, res) => {
-  try {
-    const userId = req.userId;
-    const orgRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
-    if (!orgId) return res.status(403).json({ error: "No organization" });
 
-    const result = await pool.query(
-      "SELECT id, nome, email, whatsapp, ativo FROM vendedores WHERE organization_id = $1 AND ativo = true ORDER BY nome",
-      [orgId]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    log("GET /api/vendedores error: " + err.toString());
-    res.status(500).json({ error: "Failed to list vendors" });
-  }
-});
-
-// DELETE /api/leads/:id - Delete a lead
-app.delete("/api/leads/:id", verifyJWT, async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const userId = req.userId;
-    const userRes = await pool.query(
-      "SELECT organization_id FROM users WHERE id = $1",
-      [userId],
-    );
-    const orgId = userRes.rows[0]?.organization_id;
-
-    if (!orgId) return res.status(403).json({ error: "No organization" });
-
-    const result = await pool.query(
-      "DELETE FROM leads WHERE id = $1 AND organization_id = $2 RETURNING id",
-      [id, orgId],
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Lead not found or unauthorized" });
-    }
-
-    res.json({ success: true, id: result.rows[0].id });
-  } catch (err) {
-    log("DELETE /api/leads/:id error: " + err.toString());
-    res.status(500).json({ error: "Failed to delete lead" });
-  }
-});
 
 // -- Leads Settings API --
 

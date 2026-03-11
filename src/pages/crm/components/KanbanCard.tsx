@@ -84,10 +84,10 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
         <div
             draggable
             onDragStart={(e) => onDragStart(e, lead.id)}
-            className={`bg-surface border rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-move group animate-fade-in mb-3 active:scale-95 active:rotate-1 overflow-hidden ${intentCfg ? intentCfg.cardBorder : 'border-border/50'} hover:border-primary/30`}
+            className={`bg-surface border rounded-lg p-2.5 shadow-sm hover:shadow-md transition-all cursor-move group animate-fade-in mb-2 active:scale-95 active:rotate-1 overflow-hidden ${intentCfg ? intentCfg.cardBorder : 'border-border/50'} hover:border-primary/30`}
         >
             {/* Header Row */}
-            <div className="flex justify-between items-start mb-3">
+            <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
@@ -157,11 +157,11 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
                             <p className="text-xs text-text-secondary flex items-center gap-1 mt-0.5"><Globe size={10} />{lead.source}</p>
                         )}
                         {lead.briefing && (
-                            <p className="text-[10px] text-text-muted italic mt-1 leading-snug line-clamp-2" title={lead.briefing}>{lead.briefing}</p>
+                            <p className="text-[10px] text-text-muted italic mt-0.5 leading-tight line-clamp-1" title={lead.briefing}>{lead.briefing}</p>
                         )}
                         {/* AI Intelligence: detected intent + product + top objection */}
                         {intelligence && (
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <div className="flex flex-wrap gap-1 mt-1.5">
                                 {intelligence.intent && (
                                     <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
                                         {intelligence.intent}
@@ -231,7 +231,7 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
 
             {/* Vendor badge */}
             {assignedVendedor && (
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-1 mb-1.5">
                     <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
                         <User size={9} />
                         {assignedVendedor.nome}
@@ -240,21 +240,21 @@ export function KanbanCard({ lead, onDragStart, onDelete, onEdit, onMarkAsClient
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between text-xs text-text-secondary border-t border-border/30 pt-3 mt-1">
+            <div className="flex items-center justify-between text-[10px] text-text-secondary border-t border-border/30 pt-2 mt-1">
                 <div className="flex items-center gap-1.5 font-medium text-text-primary/80">
-                    <DollarSign size={12} className="text-green-500" />
+                    <DollarSign size={10} className="text-green-500" />
                     {formatValue(lead.value || 0)}
                 </div>
                 <div className="flex items-center gap-1.5" title={lead.lastContact}>
-                    <Calendar size={12} />
+                    <Calendar size={10} />
                     {formatDate(lead.lastContact)}
                 </div>
             </div>
 
             {lead.tags && lead.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
+                <div className="flex flex-wrap gap-1 mt-2">
                     {lead.tags.map(tag => (
-                        <span key={tag} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-text-primary/5 text-text-secondary border border-text-primary/5">{tag}</span>
+                        <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-text-primary/5 text-text-secondary border border-text-primary/5">{tag}</span>
                     ))}
                 </div>
             )}

@@ -20,17 +20,17 @@ export function CRM() {
     };
 
     return (
-        <div className="h-full flex flex-col p-4 space-y-3">
-            <div className="flex justify-between items-center">
+        <div className="h-full flex flex-col p-2 space-y-1">
+            <div className="flex justify-between items-center px-2 py-1">
                 <div>
-                    <h1 className="text-2xl font-bold text-text-primary">Funil de Vendas</h1>
-                    <p className="text-text-secondary text-sm">Gerencie seus leads e oportunidades</p>
+                    <h1 className="text-xl font-bold text-text-primary">Funil de Vendas</h1>
+                    <p className="text-text-secondary text-[11px]">Gerencie seus leads e oportunidades</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     {/* Actions like Add Lead, Filters could go here */}
                     <button
                         onClick={() => setCreateModalOpen(true)}
-                        className="bg-primary hover:brightness-110 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm shadow-lg shadow-primary/20"
+                        className="bg-primary hover:brightness-110 text-white font-medium px-3 py-1.5 rounded-lg transition-colors text-xs shadow-lg shadow-primary/20"
                     >
                         Novo Lead
                     </button>

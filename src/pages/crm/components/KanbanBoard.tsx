@@ -14,7 +14,6 @@ interface DbColumn {
     is_system?: boolean;
 }
 
-interface Vendedor { id: string; nome: string; }
 
 // Legacy status-to-title mapping for leads created before column integration
 const LEGACY_STATUS_MAP: Record<string, string> = {
@@ -34,7 +33,6 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [columns, setColumns] = useState<DbColumn[]>([]);
-    const [vendedores, setVendedores] = useState<Vendedor[]>([]);
     const navigate = useNavigate();
 
     const API_URL = '/api';
@@ -58,10 +56,9 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [leadsRes, colsRes, vendRes] = await Promise.all([
+            const [leadsRes, colsRes] = await Promise.all([
                 fetch(`${API_URL}/leads`, { headers: authHeaders() }),
                 fetch(`${API_URL}/settings/columns`, { headers: authHeaders() }),
-                fetch(`${API_URL}/vendedores`, { headers: authHeaders() }),
             ]);
 
             if (colsRes.ok) {
@@ -71,10 +68,6 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
             if (leadsRes.ok) {
                 const data = await leadsRes.json();
                 setLeads(Array.isArray(data) ? data : []);
-            }
-            if (vendRes.ok) {
-                const vdata = await vendRes.json();
-                setVendedores(Array.isArray(vdata) ? vdata : []);
             }
         } catch (e) {
             console.error("Error fetching data:", e);
@@ -128,22 +121,6 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
         }
     };
 
-    const handleAssignVendedor = async (leadId: string, vendedorId: string | null) => {
-        try {
-            const res = await fetch(`${API_URL}/leads/${leadId}/assign`, {
-                method: 'PATCH',
-                headers: authHeaders(),
-                body: JSON.stringify({ vendedorId }),
-            });
-            if (res.ok) {
-                setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assignedTo: vendedorId } as any : l));
-                const vend = vendedores.find(v => v.id === vendedorId);
-                showToast(vend ? `Atribuído a ${vend.nome}` : 'Atribuição removida', '', 'success');
-            }
-        } catch (err) {
-            console.error('Failed to assign vendor:', err);
-        }
-    };
 
     const handleDeleteLead = async (leadId: string) => {
         setSyncing(true);
@@ -237,8 +214,6 @@ export function KanbanBoard({ refreshTrigger, onEditLead }: { refreshTrigger: nu
                             onDeleteLead={handleDeleteLead}
                             onEditLead={onEditLead}
                             onMarkAsClient={handleMarkAsClient}
-                            onAssignVendedor={handleAssignVendedor}
-                            vendedores={vendedores}
                             token={token || undefined}
                         />
                     </div>

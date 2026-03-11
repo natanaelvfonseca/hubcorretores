@@ -3,7 +3,6 @@ import { KanbanCard } from './KanbanCard';
 import { KanbanColumn as KanbanColumnType } from '../types';
 import { Plus } from 'lucide-react';
 
-interface Vendedor { id: string; nome: string; }
 
 interface KanbanColumnProps {
     column: KanbanColumnType;
@@ -13,12 +12,10 @@ interface KanbanColumnProps {
     onDeleteLead?: (leadId: string) => void;
     onEditLead?: (lead: any) => void;
     onMarkAsClient?: (leadId: string) => void;
-    onAssignVendedor?: (leadId: string, vendedorId: string | null) => void;
-    vendedores?: Vendedor[];
     token?: string;
 }
 
-export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDeleteLead, onEditLead, onMarkAsClient, onAssignVendedor, vendedores, token }: KanbanColumnProps) {
+export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDeleteLead, onEditLead, onMarkAsClient, token }: KanbanColumnProps) {
     const columnRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(20);
 
@@ -30,13 +27,13 @@ export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDelete
     const visibleLeads = column.leads.slice(0, visibleCount);
 
     return (
-        <div className="flex-shrink-0 w-80 min-w-80 h-full flex flex-col bg-background/5 border border-border/20 rounded-xl p-3 shadow-sm hover:border-primary/20 transition-all">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-border/10">
+        <div className="flex-shrink-0 w-80 min-w-80 h-full flex flex-col bg-background/5 border border-border/20 rounded-xl p-2 shadow-sm hover:border-primary/20 transition-all">
+            <div className="flex justify-between items-center mb-2 pb-1 border-b border-border/10">
                 <h3 className="text-sm font-semibold text-text-primary px-2">{column.title}</h3>
                 <span className="text-xs font-mono text-text-muted bg-white/5 px-2 py-0.5 rounded-full">{column.leads.length}</span>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-1 scrollbar-hide space-y-3"
+            <div className="flex-1 overflow-y-auto px-1 scrollbar-hide space-y-2"
                 onDrop={(e) => onDrop(e, column.id)}
                 onDragOver={onDragOver}
                 ref={columnRef}
@@ -49,8 +46,6 @@ export function KanbanColumn({ column, onDrop, onDragOver, onDragStart, onDelete
                         onDelete={onDeleteLead}
                         onEdit={onEditLead}
                         onMarkAsClient={onMarkAsClient}
-                        onAssignVendedor={onAssignVendedor}
-                        vendedores={vendedores}
                         token={token}
                     />
                 ))}
