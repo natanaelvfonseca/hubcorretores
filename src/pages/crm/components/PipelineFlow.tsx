@@ -72,9 +72,9 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
     // Removed conversion rates as per user request
 
     return (
-        <div className="w-full relative select-none" style={{ height: HEIGHT + 28 }}>
+        <div className="w-full relative select-none" style={{ height: HEIGHT + 48 }}>
             {/* Labels above */}
-            <div className="absolute top-0 left-0 right-0 flex" style={{ height: 16 }}>
+            <div className="absolute top-0 left-0 right-0 flex" style={{ height: 24 }}>
                 {stages.map((s, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center" style={{ minWidth: 0 }}>
                         <span className="text-[10px] font-semibold text-text-secondary truncate px-1 max-w-full">
@@ -90,7 +90,7 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
                 viewBox={`0 0 ${VW} ${HEIGHT}`}
                 preserveAspectRatio="none"
                 className="w-full"
-                style={{ height: HEIGHT, marginTop: 16 }}
+                style={{ height: HEIGHT, marginTop: 30 }}
             >
                 <defs>
                     {stages.map((_s, i) => (
