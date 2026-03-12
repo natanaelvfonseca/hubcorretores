@@ -12371,11 +12371,29 @@ async function ensureLeadFromWhatsApp(remoteJid, pushName, organizationId) {
       return;
     }
 
-    // Check if lead already exists (dedup by phone)
-    // Fix: We order by last_contact to find the MOST RECENT active lead, 
-    // in case there are ghost duplicates in the database that confusingly hide the active one.
+    // 1. Get the real pipeline columns for the org
+    // We need this to check if an existing lead has a valid status, or if we need to fall back to the first column.
+    let validColumns = [];
+    let firstColumnTitle = 'Novos Leads';
+    try {
+      const colRes = await pool.query(
+        `SELECT title FROM kanban_columns 
+         WHERE organization_id = $1 
+         ORDER BY order_index ASC`,
+        [organizationId]
+      );
+      if (colRes.rows.length > 0) {
+        validColumns = colRes.rows.map(r => r.title);
+        firstColumnTitle = validColumns[0];
+      }
+    } catch (colErr) {
+      log(`[AUTO-LEAD] Could not fetch columns, using default: ${colErr.message}`);
+    }
+
+    // 2. Check if lead already exists (dedup by phone)
+    // Order by last_contact to find the MOST RECENT active lead.
     const existing = await pool.query(
-      `SELECT id FROM leads 
+      `SELECT id, status FROM leads 
        WHERE organization_id = $1 
          AND (phone = $2 OR phone = $3 OR phone LIKE $4)
        ORDER BY last_contact DESC NULLS LAST, created_at DESC
@@ -12384,27 +12402,23 @@ async function ensureLeadFromWhatsApp(remoteJid, pushName, organizationId) {
     );
 
     if (existing.rows.length > 0) {
-      log(`[AUTO-LEAD] Lead already exists for ${cleanPhone} in org ${organizationId}. Skipping.`);
-      return; // No duplicate
-    }
-
-    // Get the first pipeline column title for the org (or fallback to 'Novos Leads')
-    let firstColumnTitle = 'Novos Leads';
-    try {
-      const colRes = await pool.query(
-        `SELECT title FROM kanban_columns 
-         WHERE organization_id = $1 
-         ORDER BY order_index ASC LIMIT 1`,
-        [organizationId]
-      );
-      if (colRes.rows.length > 0) {
-        firstColumnTitle = colRes.rows[0].title;
+      const lead = existing.rows[0];
+      // RESURRECTION LOGIC: 
+      // If the lead exists but its status is not a valid column (and not 'Cliente'), 
+      // it's "hidden" from the Kanban. We must resurrect it to the first column.
+      if (lead.status !== 'Cliente' && validColumns.length > 0 && !validColumns.includes(lead.status)) {
+        await pool.query(
+          `UPDATE leads SET status = $1, last_contact = NOW() WHERE id = $2`,
+          [firstColumnTitle, lead.id]
+        );
+        log(`[AUTO-LEAD] Resurrected hidden lead ${lead.id} from invalid status '${lead.status}' to '${firstColumnTitle}'`);
+      } else {
+        log(`[AUTO-LEAD] Lead already exists & visible for ${cleanPhone} in org ${organizationId}. Skipping.`);
       }
-    } catch (colErr) {
-      log(`[AUTO-LEAD] Could not fetch columns, using default: ${colErr.message}`);
+      return; // Stop here since the lead exists
     }
 
-    // Create the lead
+    // 3. Create new lead if none exists
     const contactName = (pushName && pushName.trim()) ? pushName.trim() : `WhatsApp ${cleanPhone.slice(-4)}`;
     await pool.query(
       `INSERT INTO leads 
@@ -12413,7 +12427,7 @@ async function ensureLeadFromWhatsApp(remoteJid, pushName, organizationId) {
       [contactName, cleanPhone, 'whatsapp', firstColumnTitle, organizationId]
     );
 
-    log(`[AUTO-LEAD] Created lead "${contactName}" (${cleanPhone}) in column "${firstColumnTitle}" for org ${organizationId}`);
+    log(`[AUTO-LEAD] Created NEW lead "${contactName}" (${cleanPhone}) in column "${firstColumnTitle}" for org ${organizationId}`);
   } catch (err) {
     log(`[AUTO-LEAD] Error creating lead: ${err.message}`);
   }
@@ -12731,18 +12745,6 @@ async function processAIResponse(
     log(
       `[AI] Processing buffered messages for ${remoteJid}. Input count: ${inputMessages.length}`,
     );
-
-    // ── Auto-create lead in CRM funnel (best-effort, runs on every message) ────
-    // Uses organization_id from agent if available, otherwise looks up from instance
-    if (remoteJid && !remoteJid.includes('@g.us') && !remoteJid.includes('@broadcast')) {
-      const orgIdForLead = agent?.organization_id || null;
-      if (orgIdForLead) {
-        const pushNameForLead = inputMessages?.[0]?.metadata?.pushName || inputMessages?.[0]?.metadata?.['pushName'] || null;
-        ensureLeadFromWhatsApp(remoteJid, pushNameForLead, orgIdForLead).catch(e =>
-          log(`[AUTO-LEAD] ensureLeadFromWhatsApp error: ${e.message}`)
-        );
-      }
-    }
 
     // Check if any input was audio OR if user is asking AI to send audio
     const audioTriggerKeywords = ['manda um audio', 'manda audio', 'me manda um audio', 'envia um audio', 'envia audio', 'send audio', 'me manda audio', 'pode mandar um audio', 'fala por audio', 'responde em audio', 'responde por audio'];
