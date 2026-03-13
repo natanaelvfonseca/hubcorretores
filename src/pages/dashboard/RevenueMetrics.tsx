@@ -494,18 +494,52 @@ export function RevenueMetrics() {
                         subtitle="Leads que precisam de ação agora e insights gerados pela IA"
                         color="text-orange-400"
                     />
-                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="bg-background border border-border rounded-2xl p-5">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <BrainCircuit size={16} className="text-indigo-500" />
+                                    <h3 className="text-sm font-semibold text-foreground">IA Diretor de Vendas</h3>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-4">Leads que precisam de ação agora com insights práticos da IA.</p>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {recommendations.map(r => {
+                                        const rc = recColors[r.type];
+                                        return (
+                                            <div key={r.id} className={`relative p-3.5 border rounded-xl ${rc.bg}`}>
+                                                <button
+                                                    onClick={() => setDismissedRecs(prev => [...prev, r.id])}
+                                                    className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                                <div className="flex items-start gap-2 pr-4">
+                                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${rc.dot}`} />
+                                                    <div>
+                                                        <p className="text-xs font-bold text-foreground">{r.title}</p>
+                                                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{r.desc}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
 
-                        {/* Lead Heat Map — spans 3 cols */}
-                        <div className="xl:col-span-3 bg-background border border-border rounded-2xl p-5">
+                        <div className="bg-background border border-border rounded-2xl p-5">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <Flame size={15} className="text-orange-400" />
                                     <span className="text-sm font-semibold text-foreground">Ações Necessárias</span>
                                 </div>
+                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                    <span className="font-bold">{urgencyCounts[urgencyTab]} leads</span>
+                                    <span>•</span>
+                                    <span>Temperatura definida</span>
+                                </div>
                             </div>
 
-                            {/* Tabs */}
                             <div className="flex gap-2 mb-4">
                                 {(['now', 'today', 'at_risk'] as const).map(tab => {
                                     const cfg = URGENCY_CONFIG[tab];
@@ -525,7 +559,6 @@ export function RevenueMetrics() {
                                 })}
                             </div>
 
-                            {/* Lead List */}
                             {urgencyLoading ? <Skeleton className="h-64" /> : urgencyLeads.length === 0 ? (
                                 <div className="h-48 flex flex-col items-center justify-center gap-2 text-center">
                                     <div className="w-10 h-10 bg-muted/20 rounded-full flex items-center justify-center">
@@ -566,7 +599,6 @@ export function RevenueMetrics() {
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
                             <div className="flex gap-2 mt-4 pt-4 border-t border-border/40">
                                 <button
                                     onClick={() => navigate('/crm')}
@@ -586,78 +618,6 @@ export function RevenueMetrics() {
                                 >
                                     <AlertTriangle size={13} /> Agir Hoje
                                 </button>
-                            </div>
-                        </div>
-
-                        {/* AI Recommendations + Bottleneck — spans 2 cols */}
-                        <div className="xl:col-span-2 space-y-4">
-                            {/* Recommendations */}
-                            <div className="bg-background border border-border rounded-2xl p-5 h-fit">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Sparkles size={15} className="text-indigo-400" />
-                                    <span className="text-sm font-semibold text-foreground">Recomendações da IA</span>
-                                </div>
-                                <div className="space-y-3">
-                                    {recommendations.map(r => {
-                                        const rc = recColors[r.type];
-                                        return (
-                                            <div key={r.id} className={`relative p-3.5 border rounded-xl ${rc.bg}`}>
-                                                <button
-                                                    onClick={() => setDismissedRecs(prev => [...prev, r.id])}
-                                                    className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                                <div className="flex items-start gap-2 pr-4">
-                                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${rc.dot}`} />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-foreground">{r.title}</p>
-                                                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{r.desc}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Bottleneck Detection */}
-                            <div className="bg-background border border-border rounded-2xl p-5">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <AlertTriangle size={15} className="text-amber-400" />
-                                    <span className="text-sm font-semibold text-foreground">Detecção de Gargalos</span>
-                                </div>
-                                {velocityLoading ? <Skeleton className="h-32" /> : !velocity?.length ? (
-                                    <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">Sem dados</div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {velocity
-                                            .filter(s => s.avg_hours_idle > 24)
-                                            .sort((a, b) => b.avg_hours_idle - a.avg_hours_idle)
-                                            .slice(0, 4)
-                                            .map(s => {
-                                                const severity = s.avg_hours_idle > 72 ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-                                                return (
-                                                    <div key={s.stage} className={`flex items-center justify-between p-2.5 rounded-xl border ${severity}`}>
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <Timer size={12} />
-                                                            <span className="text-xs font-medium truncate">{s.stage}</span>
-                                                        </div>
-                                                        <div className="text-right shrink-0 ml-2">
-                                                            <p className="text-xs font-bold">{fmtHours(s.avg_hours_idle)}</p>
-                                                            <p className="text-[9px] opacity-70">{s.count} leads</p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        {velocity.filter(s => s.avg_hours_idle > 24).length === 0 && (
-                                            <div className="flex items-center gap-2 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                                                <CheckCircle size={14} className="text-emerald-400" />
-                                                <span className="text-xs text-emerald-400 font-medium">Nenhum gargalo detectado</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>
