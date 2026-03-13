@@ -1,7 +1,7 @@
 import {
     DollarSign, CheckCircle, Target, Flame, AlertTriangle, Timer,
     ArrowRight, TrendingUp, Zap, Clock, MessageSquare, BarChart3,
-    Activity, BrainCircuit, Sparkles, X
+    Activity, BrainCircuit, X
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -148,7 +148,7 @@ export function RevenueMetrics() {
         `/api/dashboard/metrics?days=${selectedDays}`, token, [selectedDays]
     );
     const { data: forecast, loading: forecastLoading } = useAPI<ForecastData>('/api/dashboard/forecast', token);
-    const { data: velocity, loading: velocityLoading } = useAPI<VelocityStage[]>('/api/dashboard/velocity', token);
+    const { data: velocity } = useAPI<VelocityStage[]>('/api/dashboard/velocity', token);
     const { data: urgency, loading: urgencyLoading } = useAPI<UrgencyData>('/api/dashboard/urgency', token);
     const { data: revIntel, loading: revIntelLoading } = useAPI<RevenueIntelligenceData>(
         `/api/dashboard/revenue-intelligence?days=${selectedDays}`, token, [selectedDays]
