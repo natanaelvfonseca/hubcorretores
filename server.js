@@ -2690,6 +2690,7 @@ const ensureProductEngineTables = async () => {
     log('[PRODUCT ENGINE] All tables verified.');
   } catch (err) {
     log('[PRODUCT ENGINE] ensureProductEngineTables error: ' + err.message);
+    throw err;
   }
 };
 
@@ -16228,8 +16229,11 @@ app.post('/api/catalog/products', verifyJWT, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    log('POST /api/catalog/products error: ' + err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    log('POST /api/catalog/products error: ' + (err.stack || err.message));
+    res.status(500).json({
+      error: 'Erro ao salvar produto',
+      details: err.message,
+    });
   }
 });
 
@@ -16413,8 +16417,11 @@ app.post('/api/catalog/products/:id/images/upload', verifyJWT, upload.single('fi
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    log('POST /api/catalog/products/:id/images/upload error: ' + err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    log('POST /api/catalog/products/:id/images/upload error: ' + (err.stack || err.message));
+    res.status(500).json({
+      error: 'Erro ao enviar imagem',
+      details: err.message,
+    });
   }
 });
 

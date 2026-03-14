@@ -447,7 +447,11 @@ export function Products() {
     fetchProducts();
   };
   const addImage = async () => {
-    if ((!newImageUrl && !newImageFile) || !selected?.id) return;
+    if (!newImageUrl && !newImageFile) return;
+    if (!selected?.id) {
+      showToast("Salve o produto antes de enviar uma imagem.", "error");
+      return;
+    }
     setUploadingImage(true);
     try {
       let res: Response;
@@ -1204,6 +1208,11 @@ export function Products() {
                             <p className="mt-1 text-sm text-muted-foreground">
                               A imagem enviada aqui fica pronta para a Evolution encaminhar no WhatsApp quando a IA apresentar o produto.
                             </p>
+                            {!selected?.id && (
+                              <p className="mt-2 text-xs font-medium text-primary">
+                                Salve o produto primeiro para liberar o upload da imagem.
+                              </p>
+                            )}
                           </div>
                           {newImageFile && (
                             <button
@@ -1267,7 +1276,7 @@ export function Products() {
                         </select>
                         <button
                           onClick={addImage}
-                          disabled={(!newImageUrl && !newImageFile) || !selected?.id || uploadingImage}
+                          disabled={(!newImageUrl && !newImageFile) || uploadingImage}
                           className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(245,121,59,0.25)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Plus className="h-4 w-4" />
