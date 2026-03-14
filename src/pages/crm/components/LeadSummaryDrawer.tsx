@@ -132,6 +132,7 @@ export function LeadSummaryDrawer({
     const recommendation = data?.summary?.recommendation || data?.memory?.next_recommendation || 'Continuar acompanhando a conversa e registrar o proximo passo.';
     const stage = data?.summary?.stage || data?.state?.lead_stage || lead.status;
     const intent = data?.summary?.intent || data?.memory?.last_intent || null;
+    const canConvertToClient = lead.status !== 'Cliente';
     const lastContactLabel = lead.lastContact
         ? new Intl.DateTimeFormat('pt-BR', {
             dateStyle: 'short',
@@ -187,22 +188,22 @@ export function LeadSummaryDrawer({
                     )}
 
                     <section className="rounded-3xl border border-border bg-surface p-5">
-                        <div className="flex flex-wrap gap-3">
+                        <div className={`grid gap-2 ${canConvertToClient ? 'grid-cols-3' : 'grid-cols-2'}`}>
                             <button
                                 type="button"
                                 onClick={onEdit}
                                 disabled={isProcessing}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-primary/25 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <User size={15} />
                                 Editar lead
                             </button>
-                            {lead.status !== 'Cliente' && (
+                            {canConvertToClient && (
                                 <button
                                     type="button"
                                     onClick={onConvertToClient}
                                     disabled={isProcessing}
-                                    className="inline-flex items-center gap-2 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-500 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-500 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <UserCheck size={15} />
                                     Converter em cliente
@@ -212,7 +213,7 @@ export function LeadSummaryDrawer({
                                 type="button"
                                 onClick={onDelete}
                                 disabled={isProcessing}
-                                className="inline-flex items-center gap-2 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <Trash2 size={15} />
                                 Excluir lead
