@@ -530,97 +530,112 @@ export function RevenueMetrics() {
                         color="text-orange-400"
                     />
                     <div className="bg-background border border-border rounded-2xl p-5">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Flame size={15} className="text-orange-400" />
-                                    <span className="text-sm font-semibold text-foreground">Ações Necessárias</span>
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                    <span className="font-bold">{urgencyCounts[urgencyTab]} leads</span>
-                                    <span>•</span>
-                                    <span>Temperatura definida</span>
-                                </div>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <Flame size={15} className="text-orange-400" />
+                                <span className="text-sm font-semibold text-foreground">Ações Necessárias</span>
                             </div>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span className="font-bold">{urgencyCounts[urgencyTab]} leads</span>
+                                <span>•</span>
+                                <span>Temperatura definida</span>
+                            </div>
+                        </div>
 
-                            <div className="flex gap-2 mb-4">
-                                {(['now', 'today', 'at_risk'] as const).map(tab => {
-                                    const cfg = URGENCY_CONFIG[tab];
-                                    const Icon = cfg.icon;
-                                    const count = urgencyCounts[tab];
+                        <div className="flex gap-2 mb-4">
+                            {(['now', 'today', 'at_risk'] as const).map(tab => {
+                                const cfg = URGENCY_CONFIG[tab];
+                                const Icon = cfg.icon;
+                                const count = urgencyCounts[tab];
+                                return (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setUrgencyTab(tab)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${urgencyTab === tab ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                                    >
+                                        <Icon size={12} />
+                                        {cfg.label}
+                                        {count > 0 && (
+                                            <span className={`w-4 h-4 rounded-full ${cfg.dot} flex items-center justify-center text-[9px] text-white font-black`}>
+                                                {count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {urgencyLoading ? (
+                            <Skeleton className="h-64" />
+                        ) : urgencyLeads.length === 0 ? (
+                            <div className="h-48 flex flex-col items-center justify-center gap-2 text-center">
+                                <div className="w-10 h-10 bg-muted/20 rounded-full flex items-center justify-center">
+                                    <CheckCircle size={20} className="text-emerald-400" />
+                                </div>
+                                <p className="text-sm font-medium text-foreground">Nenhum lead nesta categoria</p>
+                                <p className="text-xs text-muted-foreground">Ótimo! Não há leads exigindo ação urgente aqui.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                {urgencyLeads.map(lead => {
+                                    const cfg = URGENCY_CONFIG[urgencyTab];
+                                    const tempColor =
+                                        lead.intentLabel === 'HOT'
+                                            ? 'text-orange-400 bg-orange-500/10'
+                                            : lead.intentLabel === 'WARM'
+                                                ? 'text-yellow-400 bg-yellow-500/10'
+                                                : 'text-blue-400 bg-blue-500/10';
                                     return (
-                                        <button
-                                            key={tab}
-                                            onClick={() => setUrgencyTab(tab)}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${urgencyTab === tab ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                                        <div
+                                            key={lead.id}
+                                            className="flex items-center gap-3 p-3 bg-muted/10 hover:bg-muted/20 rounded-xl border border-border/30 hover:border-border/60 transition-all group cursor-pointer"
                                         >
-                                            <Icon size={12} />
-                                            {cfg.label}
-                                            {count > 0 && <span className={`w-4 h-4 rounded-full ${cfg.dot} flex items-center justify-center text-[9px] text-white font-black`}>{count}</span>}
-                                        </button>
+                                            <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot} animate-pulse`} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-semibold text-foreground truncate">{lead.name}</p>
+                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tempColor}`}>
+                                                        {lead.intentLabel}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                    {fmtHours(lead.hours_idle)} sem contato · Score {lead.score}
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xs font-bold text-foreground">{fmt(lead.value)}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate('/crm')}
+                                                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                                            >
+                                                <ArrowRight size={14} className="text-primary" />
+                                            </button>
+                                        </div>
                                     );
                                 })}
                             </div>
+                        )}
 
-                            {urgencyLoading ? <Skeleton className="h-64" /> : urgencyLeads.length === 0 ? (
-                                <div className="h-48 flex flex-col items-center justify-center gap-2 text-center">
-                                    <div className="w-10 h-10 bg-muted/20 rounded-full flex items-center justify-center">
-                                        <CheckCircle size={20} className="text-emerald-400" />
-                                    </div>
-                                    <p className="text-sm font-medium text-foreground">Nenhum lead nesta categoria</p>
-                                    <p className="text-xs text-muted-foreground">Ótimo! Não há leads exigindo ação urgente aqui.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                                    {urgencyLeads.map(lead => {
-                                        const cfg = URGENCY_CONFIG[urgencyTab];
-                                        const tempColor = lead.intentLabel === 'HOT' ? 'text-orange-400 bg-orange-500/10' : lead.intentLabel === 'WARM' ? 'text-yellow-400 bg-yellow-500/10' : 'text-blue-400 bg-blue-500/10';
-                                        return (
-                                            <div key={lead.id} className="flex items-center gap-3 p-3 bg-muted/10 hover:bg-muted/20 rounded-xl border border-border/30 hover:border-border/60 transition-all group cursor-pointer">
-                                                <div className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot} animate-pulse`} />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm font-semibold text-foreground truncate">{lead.name}</p>
-                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tempColor}`}>{lead.intentLabel}</span>
-                                                    </div>
-                                                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                                                        {fmtHours(lead.hours_idle)} sem contato · Score {lead.score}
-                                                    </p>
-                                                </div>
-                                                <div className="text-right shrink-0">
-                                                    <p className="text-xs font-bold text-foreground">{fmt(lead.value)}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => navigate('/crm')}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                                                >
-                                                    <ArrowRight size={14} className="text-primary" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-border/40">
-                                <button
-                                    onClick={() => navigate('/crm')}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    <BarChart3 size={13} /> Ver Pipeline
-                                </button>
-                                <button
-                                    onClick={() => setUrgencyTab('now')}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-orange-500/20"
-                                >
-                                    <Flame size={13} /> Agir Agora
-                                </button>
-                                <button
-                                    onClick={() => setUrgencyTab('today')}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-xs font-bold transition-all"
-                                >
-                                    <AlertTriangle size={13} /> Agir Hoje
-                                </button>
-                            </div>
+                        <div className="flex gap-2 mt-4 pt-4 border-t border-border/40">
+                            <button
+                                onClick={() => navigate('/crm')}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl text-xs font-bold transition-all"
+                            >
+                                <BarChart3 size={13} /> Ver Pipeline
+                            </button>
+                            <button
+                                onClick={() => setUrgencyTab('now')}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-orange-500/20"
+                            >
+                                <Flame size={13} /> Agir Agora
+                            </button>
+                            <button
+                                onClick={() => setUrgencyTab('today')}
+                                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-xs font-bold transition-all"
+                            >
+                                <AlertTriangle size={13} /> Agir Hoje
+                            </button>
                         </div>
                     </div>
                 </section>
