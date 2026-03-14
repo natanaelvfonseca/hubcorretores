@@ -427,6 +427,14 @@ export function Products() {
       showToast(isNew ? "Produto criado!" : "Produto atualizado!");
       if (isNew) {
         setIsNew(false);
+        setSelected(null);
+        setShowModal(false);
+        setForm({ ...EMPTY_PRODUCT });
+        setNewImageUrl("");
+        setNewImageCaption("");
+        setNewImageType("image");
+        setNewImageFile(null);
+      } else {
         setSelected(data);
       }
       fetchProducts();
