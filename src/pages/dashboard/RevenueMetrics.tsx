@@ -265,6 +265,41 @@ export function RevenueMetrics() {
                     </div>
                 </section>
 
+                {/* IA Diretor de Vendas (entre Revenue e Saúde do Funil) */}
+                <div className="bg-surface border border-border/50 rounded-2xl p-5 shadow-xl relative overflow-hidden mb-6">
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2 mb-2">
+                            <BrainCircuit size={18} className="text-purple-400" />
+                            <div>
+                                <h3 className="text-sm font-bold text-foreground">IA Diretor de Vendas</h3>
+                                <p className="text-xs text-muted-foreground">Insights rápidos sobre leads quentes que precisam de ação imediata.</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {recommendations.length > 0 ? recommendations.map(r => {
+                                const rc = recColors[r.type];
+                                return (
+                                    <div key={r.id} className={`relative p-3.5 border rounded-xl ${rc.bg}`}>
+                                        <p className="text-[11px] text-muted-foreground mb-2">{r.title}</p>
+                                        <p className="text-[12px] text-foreground leading-relaxed">{r.desc}</p>
+                                        <button
+                                            onClick={() => setDismissedRecs(prev => [...prev, r.id])}
+                                            className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                );
+                            }) : (
+                                <div className="col-span-full px-2 py-5 rounded-xl border border-border/40 text-center text-xs text-muted-foreground">
+                                    O Diretor de Vendas está em dia — nenhuma ação urgente agora.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* ══ SECTION 2 — PIPELINE HEALTH ══════════════════════════════ */}
                 <section>
                     <SectionHeader
@@ -494,40 +529,7 @@ export function RevenueMetrics() {
                         subtitle="Leads que precisam de ação agora e insights gerados pela IA"
                         color="text-orange-400"
                     />
-                    <div className="space-y-6">
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="bg-background border border-border rounded-2xl p-5">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <BrainCircuit size={16} className="text-indigo-500" />
-                                    <h3 className="text-sm font-semibold text-foreground">IA Diretor de Vendas</h3>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-4">Leads que precisam de ação agora com insights práticos da IA.</p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {recommendations.map(r => {
-                                        const rc = recColors[r.type];
-                                        return (
-                                            <div key={r.id} className={`relative p-3.5 border rounded-xl ${rc.bg}`}>
-                                                <button
-                                                    onClick={() => setDismissedRecs(prev => [...prev, r.id])}
-                                                    className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                                                >
-                                                    <X size={12} />
-                                                </button>
-                                                <div className="flex items-start gap-2 pr-4">
-                                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${rc.dot}`} />
-                                                    <div>
-                                                        <p className="text-xs font-bold text-foreground">{r.title}</p>
-                                                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">{r.desc}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-background border border-border rounded-2xl p-5">
+                    <div className="bg-background border border-border rounded-2xl p-5">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <Flame size={15} className="text-orange-400" />
