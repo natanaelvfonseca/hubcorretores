@@ -11,7 +11,6 @@ import {
   X,
   Edit2,
   Trash2,
-  Tag,
   DollarSign,
   Image as ImageIcon,
   ChevronDown,
@@ -74,7 +73,7 @@ const TRIGGER_TYPES = [
     color: "bg-teal-500/15 text-teal-400",
   },
 ];
-const TABS = ["Informacoes", "Imagens", "Ofertas", "FAQ"];
+const TABS = ["Informações", "Imagens", "Ofertas", "FAQ"];
 
 function StatusPill({ status }: { status: string }) {
   return (
@@ -219,7 +218,7 @@ export function Products() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState("Informacoes");
+  const [activeTab, setActiveTab] = useState("Informações");
   const [showModal, setShowModal] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -283,7 +282,7 @@ export function Products() {
     setNewImageType("image");
     setNewImageFile(null);
     setIsNew(false);
-    setActiveTab("Informacoes");
+    setActiveTab("Informações");
     setShowModal(true);
   };
 
@@ -295,7 +294,7 @@ export function Products() {
     setNewImageType("image");
     setNewImageFile(null);
     setIsNew(true);
-    setActiveTab("Informacoes");
+    setActiveTab("Informações");
     setShowModal(true);
   };
 
@@ -709,13 +708,13 @@ export function Products() {
                   </div>
                   <div className="min-w-0 pt-1">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                      Catalogo inteligente
+                      Catálogo inteligente
                     </p>
                     <h2 className="mt-2 text-2xl font-display font-bold tracking-tight text-foreground sm:text-[30px]">
                       {isNew ? "Novo Produto" : form.nome || "Produto"}
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                      Cadastre um produto que sua IA podera vender
+                      Cadastre um produto que sua IA poderá vender
                       automaticamente.
                     </p>
                     {!isNew && (
@@ -770,12 +769,11 @@ export function Products() {
               </div>
             </div>
             <div className="relative min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-              {activeTab === "Informacoes" && (
+              {activeTab === "Informações" && (
                 <div className="space-y-5">
                   <ModalSection
                     eyebrow="Bloco 1"
-                    title="Informacoes basicas"
-                    description="Defina os dados centrais do produto para cadastro e precificacao."
+                    title="Informações básicas"
                   >
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="md:col-span-2">
@@ -807,7 +805,7 @@ export function Products() {
                         />
                       </div>
                       <div>
-                        <FieldLabel label="Preco base (R$)" />
+                        <FieldLabel label="Preço base (R$)" />
                         <div className="relative">
                           <DollarSign className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <input
@@ -828,198 +826,68 @@ export function Products() {
                   </ModalSection>
                   <ModalSection
                     eyebrow="Bloco 2"
-                    title="Descricao"
-                    description="Organize o resumo mostrado na interface e o contexto completo usado pela IA."
+                    title="Descrição do Produto"
                   >
                     <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <FieldLabel label="Descricao curta" />
-                        <input
-                          value={form.descricao_curta || ""}
+                        <FieldLabel label="Descrição do Produto" />
+                        <textarea
+                          value={form.descricao_detalhada || form.descricao_curta || ""}
                           onChange={(e) =>
                             setForm((f: any) => ({
                               ...f,
                               descricao_curta: e.target.value,
-                            }))
-                          }
-                          className={inputClass}
-                          placeholder="Resumo de 1 linha enviado pela IA no WhatsApp"
-                        />
-                      </div>
-                      <div>
-                        <FieldLabel label="Descricao detalhada" />
-                        <textarea
-                          value={form.descricao_detalhada || ""}
-                          onChange={(e) =>
-                            setForm((f: any) => ({
-                              ...f,
                               descricao_detalhada: e.target.value,
                             }))
                           }
                           rows={5}
                           className={textareaClass}
-                          placeholder="Descricao completa para contexto da IA"
+                          placeholder="Descreva o produto para a IA e para a apresentação no WhatsApp"
                         />
                       </div>
                     </div>
                   </ModalSection>
                   <ModalSection
                     eyebrow="Bloco 3"
-                    title="Valor percebido"
-                    description="Liste os beneficios que aumentam a clareza da oferta."
+                    title="Status do produto"
                   >
-                    <div className="space-y-3">
-                      <FieldLabel label="Beneficios principais" />
-                      {(form.beneficios || [""]).map(
-                        (beneficio: string, i: number) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <input
-                              value={beneficio}
-                              onChange={(e) => {
-                                const arr = [...form.beneficios];
-                                arr[i] = e.target.value;
-                                setForm((f: any) => ({
-                                  ...f,
-                                  beneficios: arr,
-                                }));
-                              }}
-                              className={inputClass}
-                              placeholder={`Beneficio ${i + 1}`}
-                            />
-                            {form.beneficios.length > 1 && (
-                              <button
-                                onClick={() =>
-                                  setForm((f: any) => ({
-                                    ...f,
-                                    beneficios: f.beneficios.filter(
-                                      (_: string, idx: number) => idx !== i,
-                                    ),
-                                  }))
-                                }
-                                className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-white text-muted-foreground transition-colors hover:text-red-500 dark:border-white/[0.08] dark:bg-white/[0.04]"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            )}
-                          </div>
-                        ),
+                    <div
+                      className={cn(
+                        subtlePanel,
+                        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
                       )}
-                      <button
-                        onClick={() =>
-                          setForm((f: any) => ({
-                            ...f,
-                            beneficios: [...f.beneficios, ""],
-                          }))
-                        }
-                        className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Adicionar beneficio
-                      </button>
-                    </div>
-                  </ModalSection>
-                  <ModalSection
-                    eyebrow="Bloco 4"
-                    title="Contexto para IA"
-                    description="Essas tags ajudam a IA a identificar quando este produto deve ser oferecido."
-                  >
-                    <div className="space-y-5">
-                      <div>
-                        <FieldLabel label="Tags" />
-                        <div className="rounded-[24px] border border-black/[0.08] bg-white p-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none">
-                          <div className="flex flex-wrap gap-2">
-                            {(form.tags || [])
-                              .filter(Boolean)
-                              .map((tag: string, i: number) => (
-                                <span
-                                  key={i}
-                                  className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary"
-                                >
-                                  <Tag className="h-3 w-3" />
-                                  {tag}
-                                  <button
-                                    onClick={() =>
-                                      setForm((f: any) => ({
-                                        ...f,
-                                        tags: f.tags.filter(
-                                          (_: any, idx: number) => idx !== i,
-                                        ),
-                                      }))
-                                    }
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              ))}
-                            <input
-                              className="min-w-[140px] flex-1 bg-transparent px-1 py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
-                              placeholder="Adicionar tag..."
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === ",") {
-                                  e.preventDefault();
-                                  const val = (
-                                    e.target as HTMLInputElement
-                                  ).value.trim();
-                                  if (val) {
-                                    setForm((f: any) => ({
-                                      ...f,
-                                      tags: [...(f.tags || []), val],
-                                    }));
-                                    (e.target as HTMLInputElement).value = "";
-                                  }
-                                }
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        className={cn(
-                          subtlePanel,
-                          "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+                    >
+                      <div className="flex items-center gap-3">
+                        {form.status === "ativo" && (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-500">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            Ativo
+                          </span>
                         )}
-                      >
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            Status do produto
-                          </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Controle se a IA pode oferecer este produto
-                            automaticamente.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {form.status === "ativo" && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-500">
-                              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                              Ativo
-                            </span>
+                        <button
+                          onClick={() =>
+                            setForm((f: any) => ({
+                              ...f,
+                              status:
+                                f.status === "ativo" ? "inativo" : "ativo",
+                            }))
+                          }
+                          className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                        >
+                          {form.status === "ativo" ? (
+                            <>
+                              <ToggleRight className="h-5 w-5 text-primary" />
+                              <span className="text-primary">Ativo</span>
+                            </>
+                          ) : (
+                            <>
+                              <ToggleLeft className="h-5 w-5 text-muted-foreground" />
+                              <span className="text-muted-foreground">
+                                Inativo
+                              </span>
+                            </>
                           )}
-                          <button
-                            onClick={() =>
-                              setForm((f: any) => ({
-                                ...f,
-                                status:
-                                  f.status === "ativo" ? "inativo" : "ativo",
-                              }))
-                            }
-                            className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 dark:border-white/[0.08] dark:bg-white/[0.04]"
-                          >
-                            {form.status === "ativo" ? (
-                              <>
-                                <ToggleRight className="h-5 w-5 text-primary" />
-                                <span className="text-primary">Ativo</span>
-                              </>
-                            ) : (
-                              <>
-                                <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-                                <span className="text-muted-foreground">
-                                  Inativo
-                                </span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        </button>
                       </div>
                     </div>
                   </ModalSection>
@@ -1028,8 +896,8 @@ export function Products() {
               {activeTab === "Imagens" && (
                 <div className="space-y-5">
                   <ModalSection
-                    eyebrow="Midia"
-                    title="Imagens, videos e PDF"
+                    eyebrow="Mídia"
+                    title="Imagens, vídeos e PDF"
                     description="Organize os ativos visuais do produto mantendo o mesmo fluxo atual."
                   >
                     <div className="space-y-4">
@@ -1061,7 +929,7 @@ export function Products() {
                               : "Selecionar imagem para upload"}
                           </span>
                           <span className="mt-1 text-xs text-muted-foreground">
-                            PNG, JPG ou WEBP com ate 10MB
+                            PNG, JPG ou WEBP com até 10MB
                           </span>
                           <input
                             type="file"
@@ -1085,7 +953,7 @@ export function Products() {
                           if (e.target.value) setNewImageFile(null);
                         }}
                         className={inputClass}
-                        placeholder="URL da imagem, video ou PDF..."
+                        placeholder="URL da imagem, vídeo ou PDF..."
                       />
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
                         <input
@@ -1100,7 +968,7 @@ export function Products() {
                           className={inputClass}
                         >
                           <option value="image">Imagem</option>
-                          <option value="video">Video</option>
+                          <option value="video">Vídeo</option>
                           <option value="pdf">PDF</option>
                         </select>
                         <button
@@ -1126,7 +994,7 @@ export function Products() {
                     {(selected?.images || []).length === 0 ? (
                       <div className="py-12 text-center text-sm text-muted-foreground">
                         <ImageIcon className="mx-auto mb-3 h-9 w-9 opacity-20" />
-                        Nenhuma midia adicionada.
+                        Nenhuma mídia adicionada.
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1179,7 +1047,7 @@ export function Products() {
                   <ModalSection
                     eyebrow="Oferta"
                     title={editingOffer ? "Editar oferta" : "Nova oferta"}
-                    description="Cadastre ofertas dinamicas sem alterar o comportamento atual da IA."
+                    description="Cadastre ofertas dinâmicas sem alterar o comportamento atual da IA."
                   >
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="md:col-span-2">
@@ -1197,7 +1065,7 @@ export function Products() {
                         />
                       </div>
                       <div>
-                        <FieldLabel label="Preco" />
+                        <FieldLabel label="Preço" />
                         <input
                           type="number"
                           value={offerForm.preco}
@@ -1208,7 +1076,7 @@ export function Products() {
                             }))
                           }
                           className={inputClass}
-                          placeholder="Preco (R$)"
+                          placeholder="Preço (R$)"
                         />
                       </div>
                       <div className={subtlePanel}>
@@ -1235,7 +1103,7 @@ export function Products() {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <FieldLabel label="Descricao" />
+                        <FieldLabel label="Descrição" />
                         <textarea
                           value={offerForm.descricao}
                           onChange={(e) =>
@@ -1245,7 +1113,7 @@ export function Products() {
                             }))
                           }
                           rows={3}
-                          placeholder="Descricao da oferta"
+                          placeholder="Descrição da oferta"
                           className={textareaClass}
                         />
                       </div>
@@ -1284,7 +1152,7 @@ export function Products() {
                           }}
                           className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] px-5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:hover:text-white"
                         >
-                          Cancelar edicao
+                          Cancelar edição
                         </button>
                       )}
                     </div>
@@ -1407,7 +1275,7 @@ export function Products() {
                   <ModalSection
                     eyebrow="FAQ"
                     title="Perguntas frequentes"
-                    description="Cadastre respostas que ajudam a IA a lidar melhor com objecoes e duvidas comuns."
+                    description="Cadastre respostas que ajudam a IA a lidar melhor com objeções e dúvidas comuns."
                   >
                     <div className="space-y-4">
                       <div>
@@ -1494,7 +1362,7 @@ export function Products() {
               >
                 Cancelar
               </button>
-              {(activeTab === "Informacoes" || activeTab === "FAQ") && (
+              {(activeTab === "Informações" || activeTab === "FAQ") && (
                 <button
                   onClick={saveProduct}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)] transition-all hover:-translate-y-0.5 sm:min-w-[180px]"
