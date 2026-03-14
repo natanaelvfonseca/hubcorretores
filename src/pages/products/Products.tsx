@@ -26,9 +26,13 @@ import {
 import { cn } from "../../utils/cn";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const CATALOG_API_BASE = `${API_BASE}/catalog`;
 const authHeader = () => ({
   Authorization: `Bearer ${localStorage.getItem("kogna_token")}`,
   "Content-Type": "application/json",
+});
+const authUploadHeader = () => ({
+  Authorization: `Bearer ${localStorage.getItem("kogna_token")}`,
 });
 const TRIGGER_TYPES = [
   {
@@ -204,6 +208,8 @@ export function Products() {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [newImageCaption, setNewImageCaption] = useState("");
   const [newImageType, setNewImageType] = useState("image");
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [offerForm, setOfferForm] = useState<any>(EMPTY_OFFER);
   const [editingOffer, setEditingOffer] = useState<string | null>(null);
   const [expandedOffer, setExpandedOffer] = useState<string | null>(null);
@@ -222,7 +228,7 @@ export function Products() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/products`, {
+      const res = await fetch(`${CATALOG_API_BASE}/products`, {
         headers: authHeader(),
       });
       if (res.ok) setProducts(await res.json());
@@ -235,7 +241,7 @@ export function Products() {
   }, [fetchProducts]);
 
   const openProduct = async (p: any) => {
-    const res = await fetch(`${API_BASE}/products/${p.id}`, {
+    const res = await fetch(`${CATALOG_API_BASE}/products/${p.id}`, {
       headers: authHeader(),
     });
     if (res.ok) {
@@ -249,6 +255,10 @@ export function Products() {
         preco_base: data.preco_base?.toString() || "",
       });
     }
+    setNewImageUrl("");
+    setNewImageCaption("");
+    setNewImageType("image");
+    setNewImageFile(null);
     setIsNew(false);
     setActiveTab("Informações");
     setShowModal(true);
@@ -257,6 +267,10 @@ export function Products() {
   const openNew = () => {
     setSelected(null);
     setForm({ ...EMPTY_PRODUCT });
+    setNewImageUrl("");
+    setNewImageCaption("");
+    setNewImageType("image");
+    setNewImageFile(null);
     setIsNew(true);
     setActiveTab("Informações");
     setShowModal(true);
@@ -270,8 +284,8 @@ export function Products() {
       preco_base: parseFloat(form.preco_base) || null,
     };
     const url = isNew
-      ? `${API_BASE}/products`
-      : `${API_BASE}/products/${selected?.id}`;
+      ? `${CATALOG_API_BASE}/products`
+      : `${CATALOG_API_BASE}/products/${selected?.id}`;
     const method = isNew ? "POST" : "PUT";
     const res = await fetch(url, {
       method,
@@ -286,12 +300,15 @@ export function Products() {
         setSelected(data);
       }
       fetchProducts();
-    } else showToast("Erro ao salvar produto.", "error");
+    } else {
+      const error = await res.json().catch(() => null);
+      showToast(error?.error || "Erro ao salvar produto.", "error");
+    }
   };
 
   const deleteProduct = async (id: string) => {
     if (!confirm("Inativar este produto?")) return;
-    await fetch(`${API_BASE}/products/${id}`, {
+    await fetch(`${CATALOG_API_BASE}/products/${id}`, {
       method: "DELETE",
       headers: authHeader(),
     });
@@ -300,25 +317,50 @@ export function Products() {
     fetchProducts();
   };
   const addImage = async () => {
-    if (!newImageUrl || !selected?.id) return;
-    const res = await fetch(`${API_BASE}/products/${selected.id}/images`, {
-      method: "POST",
-      headers: authHeader(),
-      body: JSON.stringify({
-        url: newImageUrl,
-        tipo: newImageType,
-        caption: newImageCaption,
-      }),
-    });
-    if (res.ok) {
-      showToast("Mídia adicionada!");
-      setNewImageUrl("");
-      setNewImageCaption("");
-      openProduct(selected);
+    if ((!newImageUrl && !newImageFile) || !selected?.id) return;
+    setUploadingImage(true);
+    try {
+      let res: Response;
+      if (newImageFile) {
+        const formData = new FormData();
+        formData.append("file", newImageFile);
+        formData.append("caption", newImageCaption);
+        res = await fetch(
+          `${CATALOG_API_BASE}/products/${selected.id}/images/upload`,
+          {
+            method: "POST",
+            headers: authUploadHeader(),
+            body: formData,
+          },
+        );
+      } else {
+        res = await fetch(`${CATALOG_API_BASE}/products/${selected.id}/images`, {
+          method: "POST",
+          headers: authHeader(),
+          body: JSON.stringify({
+            url: newImageUrl,
+            tipo: newImageType,
+            caption: newImageCaption,
+          }),
+        });
+      }
+      if (res.ok) {
+        showToast(newImageFile ? "Imagem enviada!" : "Mídia adicionada!");
+        setNewImageUrl("");
+        setNewImageCaption("");
+        setNewImageType("image");
+        setNewImageFile(null);
+        openProduct(selected);
+      } else {
+        const error = await res.json().catch(() => null);
+        showToast(error?.error || "Erro ao adicionar mídia.", "error");
+      }
+    } finally {
+      setUploadingImage(false);
     }
   };
   const removeImage = async (imgId: string) => {
-    await fetch(`${API_BASE}/products/${selected.id}/images/${imgId}`, {
+    await fetch(`${CATALOG_API_BASE}/products/${selected.id}/images/${imgId}`, {
       method: "DELETE",
       headers: authHeader(),
     });
@@ -811,9 +853,57 @@ export function Products() {
                     description="Organize os ativos visuais do produto mantendo o mesmo fluxo atual."
                   >
                     <div className="space-y-4">
+                      <div className={subtlePanel}>
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              Upload de imagem do produto
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              A imagem enviada aqui fica pronta para a Evolution encaminhar no WhatsApp quando a IA apresentar o produto.
+                            </p>
+                          </div>
+                          {newImageFile && (
+                            <button
+                              type="button"
+                              onClick={() => setNewImageFile(null)}
+                              className="inline-flex h-10 items-center justify-center rounded-2xl border border-black/[0.08] px-4 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:hover:text-white"
+                            >
+                              Remover arquivo
+                            </button>
+                          )}
+                        </div>
+                        <label className="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-[24px] border border-dashed border-primary/25 bg-primary/5 px-4 py-8 text-center transition-colors hover:border-primary/40 hover:bg-primary/10">
+                          <ImageIcon className="mb-3 h-8 w-8 text-primary" />
+                          <span className="text-sm font-semibold text-foreground">
+                            {newImageFile
+                              ? newImageFile.name
+                              : "Selecionar imagem para upload"}
+                          </span>
+                          <span className="mt-1 text-xs text-muted-foreground">
+                            PNG, JPG ou WEBP com atÃ© 10MB
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              setNewImageFile(file);
+                              if (file) {
+                                setNewImageType("image");
+                                setNewImageUrl("");
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
                       <input
                         value={newImageUrl}
-                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        onChange={(e) => {
+                          setNewImageUrl(e.target.value);
+                          if (e.target.value) setNewImageFile(null);
+                        }}
                         className={inputClass}
                         placeholder="URL da imagem, vídeo ou PDF..."
                       />
@@ -835,11 +925,15 @@ export function Products() {
                         </select>
                         <button
                           onClick={addImage}
-                          disabled={!newImageUrl || !selected?.id}
+                          disabled={(!newImageUrl && !newImageFile) || !selected?.id || uploadingImage}
                           className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_14px_32px_rgba(245,121,59,0.25)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Plus className="h-4 w-4" />
-                          Adicionar
+                          {uploadingImage
+                            ? "Enviando..."
+                            : newImageFile
+                              ? "Enviar imagem"
+                              : "Adicionar"}
                         </button>
                       </div>
                     </div>

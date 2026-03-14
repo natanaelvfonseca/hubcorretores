@@ -2743,6 +2743,30 @@ async function selectBestOffer(orgId, leadStage, userIntent = '') {
   }
 }
 
+function buildProductMediaFileName(productName = "produto", mediaUrl = "") {
+  const safeBase = (productName || "produto")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "produto";
+
+  if (typeof mediaUrl === "string" && mediaUrl.startsWith("data:")) {
+    const mimeMatch = mediaUrl.match(/^data:([^;]+);base64,/i);
+    const ext =
+      mimeMatch?.[1]?.split("/")[1]?.split("+")[0]?.toLowerCase() || "jpg";
+    return `${safeBase}.${ext}`;
+  }
+
+  try {
+    const parsed = new URL(mediaUrl);
+    const lastSegment = parsed.pathname.split("/").pop();
+    if (lastSegment && lastSegment.includes(".")) return lastSegment;
+  } catch {}
+
+  return `${safeBase}.jpg`;
+}
+
 /**
  * Records an offer presentation event for CIL telemetry.
  */
@@ -2789,6 +2813,7 @@ async function sendProductToLead(orgId, instanceName, remoteJid, leadStage, user
           number: remoteJid,
           mediatype: 'image',
           media: img.url,
+          fileName: buildProductMediaFileName(product.nome, img.url),
           caption: img.caption || product.nome,
         }),
       });
@@ -15981,6 +16006,270 @@ app.post('/api/offers/:id/triggers', verifyJWT, async (req, res) => {
 });
 
 // DELETE /api/offer-triggers/:id — remove trigger
+// PRODUCT CATALOG API — isolated namespace for the org catalog UI
+app.get('/api/catalog/products', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const result = await pool.query(
+      `SELECT p.*, COUNT(DISTINCT pi.id) AS image_count, COUNT(DISTINCT o.id) AS offer_count
+       FROM products p
+       LEFT JOIN product_images pi ON pi.product_id = p.id
+       LEFT JOIN offers o ON o.product_id = p.id
+       WHERE p.organization_id = $1
+       GROUP BY p.id ORDER BY p.created_at DESC`,
+      [user.organization_id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    log('GET /api/catalog/products error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/catalog/products', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const {
+      nome,
+      categoria,
+      descricao_curta,
+      descricao_detalhada,
+      beneficios,
+      preco_base,
+      faq,
+      tags,
+      status,
+    } = req.body;
+
+    if (!nome?.trim()) {
+      return res.status(400).json({ error: 'Nome do produto é obrigatório' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO products (organization_id, nome, categoria, descricao_curta, descricao_detalhada, beneficios, preco_base, faq, tags, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+       RETURNING *`,
+      [
+        user.organization_id,
+        nome.trim(),
+        categoria || null,
+        descricao_curta || null,
+        descricao_detalhada || null,
+        beneficios || [],
+        preco_base || null,
+        JSON.stringify(faq || []),
+        tags || [],
+        status || 'ativo',
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/catalog/products error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/api/catalog/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const [pRes, imgRes, offRes] = await Promise.all([
+      pool.query(
+        `SELECT * FROM products WHERE id = $1 AND organization_id = $2`,
+        [req.params.id, user.organization_id]
+      ),
+      pool.query(
+        `SELECT * FROM product_images WHERE product_id = $1 ORDER BY ordem, created_at ASC`,
+        [req.params.id]
+      ),
+      pool.query(
+        `SELECT o.*, ARRAY_AGG(ot.trigger_type) FILTER (WHERE ot.trigger_type IS NOT NULL) AS triggers
+         FROM offers o
+         LEFT JOIN offer_triggers ot ON ot.offer_id = o.id
+         WHERE o.product_id = $1 AND o.organization_id = $2
+         GROUP BY o.id ORDER BY o.prioridade DESC`,
+        [req.params.id, user.organization_id]
+      ),
+    ]);
+
+    if (!pRes.rows[0]) return res.status(404).json({ error: 'Product not found' });
+
+    res.json({ ...pRes.rows[0], images: imgRes.rows, offers: offRes.rows });
+  } catch (err) {
+    log('GET /api/catalog/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/api/catalog/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const {
+      nome,
+      categoria,
+      descricao_curta,
+      descricao_detalhada,
+      beneficios,
+      preco_base,
+      faq,
+      tags,
+      status,
+    } = req.body;
+
+    if (!nome?.trim()) {
+      return res.status(400).json({ error: 'Nome do produto é obrigatório' });
+    }
+
+    const result = await pool.query(
+      `UPDATE products SET nome=$1, categoria=$2, descricao_curta=$3, descricao_detalhada=$4,
+       beneficios=$5, preco_base=$6, faq=$7, tags=$8, status=$9, updated_at=NOW()
+       WHERE id=$10 AND organization_id=$11
+       RETURNING *`,
+      [
+        nome.trim(),
+        categoria || null,
+        descricao_curta || null,
+        descricao_detalhada || null,
+        beneficios || [],
+        preco_base || null,
+        JSON.stringify(faq || []),
+        tags || [],
+        status || 'ativo',
+        req.params.id,
+        user.organization_id,
+      ]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    log('PUT /api/catalog/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/catalog/products/:id', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    await pool.query(
+      `UPDATE products SET status='inativo', updated_at=NOW() WHERE id=$1 AND organization_id=$2`,
+      [req.params.id, user.organization_id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/catalog/products/:id error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/catalog/products/:id/images', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const productCheck = await pool.query(
+      `SELECT id FROM products WHERE id = $1 AND organization_id = $2`,
+      [req.params.id, user.organization_id]
+    );
+    if (!productCheck.rows[0]) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const { url, tipo, caption, ordem } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+
+    const result = await pool.query(
+      `INSERT INTO product_images (product_id, organization_id, url, tipo, caption, ordem)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING *`,
+      [req.params.id, user.organization_id, url, tipo || 'image', caption || null, ordem || 0]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/catalog/products/:id/images error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/catalog/products/:id/images/upload', verifyJWT, upload.single('file'), async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const productCheck = await pool.query(
+      `SELECT id, nome FROM products WHERE id = $1 AND organization_id = $2`,
+      [req.params.id, user.organization_id]
+    );
+    if (!productCheck.rows[0]) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const file = req.file;
+    if (!file?.buffer) {
+      return res.status(400).json({ error: 'Arquivo de imagem é obrigatório' });
+    }
+
+    if (!file.mimetype?.startsWith('image/')) {
+      return res.status(400).json({ error: 'Apenas imagens são aceitas neste upload' });
+    }
+
+    const base64 = file.buffer.toString('base64');
+    const dataUrl = `data:${file.mimetype};base64,${base64}`;
+    const caption = req.body.caption || productCheck.rows[0].nome || null;
+    const ordem = Number.parseInt(req.body.ordem, 10);
+
+    const result = await pool.query(
+      `INSERT INTO product_images (product_id, organization_id, url, tipo, caption, ordem)
+       VALUES ($1,$2,$3,'image',$4,$5)
+       RETURNING *`,
+      [
+        req.params.id,
+        user.organization_id,
+        dataUrl,
+        caption,
+        Number.isFinite(ordem) ? ordem : 0,
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    log('POST /api/catalog/products/:id/images/upload error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/api/catalog/products/:productId/images/:imgId', verifyJWT, async (req, res) => {
+  try {
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    await pool.query(
+      `DELETE FROM product_images
+       WHERE id=$1 AND product_id=$2 AND organization_id=$3`,
+      [req.params.imgId, req.params.productId, user.organization_id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    log('DELETE /api/catalog/products/:productId/images/:imgId error: ' + err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.delete('/api/offer-triggers/:id', verifyJWT, async (req, res) => {
   try {
     await pool.query(`DELETE FROM offer_triggers WHERE id=$1`, [req.params.id]);
