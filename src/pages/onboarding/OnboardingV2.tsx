@@ -7,6 +7,7 @@ import {
     Rocket, Trophy, MessageSquare, GitBranch, X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { BrandLogo } from '../../components/branding/BrandLogo';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FormData {
@@ -358,11 +359,13 @@ export function OnboardingV2() {
             <div className="flex-1 flex flex-col items-center justify-start py-10 px-4 relative z-10 overflow-y-auto">
                 <div className="w-full max-w-lg">
                     {/* Mobile Logo */}
-                    <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] rounded-lg flex items-center justify-center shadow-lg">
-                            <Zap className="w-4 h-4 text-white fill-white" />
-                        </div>
-                        <span className="font-bold text-gray-900 text-xl">Kogna</span>
+                    <div className="lg:hidden flex justify-center mb-6">
+                        <BrandLogo
+                            className="text-gray-900"
+                            markWidth={26}
+                            markHeight={34}
+                            wordSize={29}
+                        />
                     </div>
                     <MobileProgress step={step} />
                     {error && <ErrorBanner msg={error} />}

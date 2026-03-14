@@ -20,6 +20,7 @@ import {
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { BrandLogo } from '../branding/BrandLogo';
 
 const menuItems = [
     { icon: BarChart2, label: 'Métricas de Receita', path: '/dashboard/revenue-metrics' },
@@ -78,12 +79,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         <aside className={`h-screen bg-sidebar border-r border-border/20 transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} flex flex-col fixed left-0 top-0 z-50 shadow-2xl overflow-hidden`}>
             <div className="h-16 flex items-center justify-between px-6 border-b border-border/10 bg-sidebar transition-colors duration-300">
                 {!collapsed && (
-                    <div className="flex items-center gap-3 animate-fade-in">
-                        <div className="w-8 h-8 bg-gradient-to-br from-primary via-primary-light to-primary-dark rounded-lg flex items-center justify-center shadow-glow-primary">
-                            <span className="text-white font-bold text-lg">K</span>
-                        </div>
-                        <span className="font-display font-bold text-xl tracking-tight text-text-primary">Kogna<span className="text-primary">.</span></span>
-                    </div>
+                    <BrandLogo
+                        className="animate-fade-in text-text-primary"
+                        markWidth={26}
+                        markHeight={34}
+                        wordSize={31}
+                    />
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}

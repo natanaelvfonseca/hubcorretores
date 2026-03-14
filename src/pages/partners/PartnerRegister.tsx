@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API_URL } from '../../config/api';
 import { ArrowRight, CheckCircle2, DollarSign, TrendingUp, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { BrandLogo } from '../../components/branding/BrandLogo';
 
 export const PartnerRegister = () => {
     const [name, setName] = useState('');
@@ -49,10 +50,13 @@ export const PartnerRegister = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent"></div>
                 <div className="relative z-10 max-w-lg mx-auto md:mx-0">
                     <div className="flex items-center gap-3 mb-8">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary-light to-primary-dark rounded-xl flex items-center justify-center shadow-glow-primary">
-                            <span className="text-white font-bold text-xl">K</span>
-                        </div>
-                        <span className="font-display font-bold text-2xl text-white tracking-tight">Kogna<span className="text-primary">.</span> Partners</span>
+                        <BrandLogo
+                            className="text-white"
+                            markWidth={27}
+                            markHeight={36}
+                            wordSize={31}
+                            trailing={<span className="text-2xl font-semibold tracking-tight text-white/92">Partners</span>}
+                        />
                     </div>
 
                     <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">

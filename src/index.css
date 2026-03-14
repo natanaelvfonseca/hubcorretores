@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=swap');
 @import '@fontsource/exo-2/400.css';
 @import '@fontsource/exo-2/500.css';
 @import '@fontsource/exo-2/600.css';
@@ -68,6 +69,37 @@
 }
 
 @layer components {
+  .brand-logo {
+    @apply inline-flex items-center;
+    gap: 0.72rem;
+  }
+
+  .brand-mark {
+    display: inline-block;
+    width: var(--brand-mark-width, 31px);
+    height: var(--brand-mark-height, 42px);
+    flex: none;
+    background: linear-gradient(180deg, #f97316 0%, #fb923c 52%, #facc15 100%);
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M13 2 5 13h5l-1 9 10-13h-5l-1-7Z' fill='black'/></svg>");
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M13 2 5 13h5l-1 9 10-13h-5l-1-7Z' fill='black'/></svg>");
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    filter: drop-shadow(0 10px 20px rgba(249, 115, 22, 0.24));
+  }
+
+  .brand-word {
+    font-family: 'Space Grotesk', 'Exo 2', sans-serif;
+    font-size: var(--brand-word-size, 34px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    color: currentColor;
+  }
+
   .btn-primary {
     @apply w-full bg-primary text-white font-bold rounded-xl shadow-[0_4px_0_rgb(194,65,12)] active:shadow-none active:translate-y-[4px] transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:translate-y-0 flex items-center justify-center;
   }

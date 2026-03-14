@@ -2,6 +2,7 @@ import { ArrowRight, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useState } from 'react';
+import { BrandLogo } from '../../components/branding/BrandLogo';
 
 export function Register() {
     const { register } = useAuth();
@@ -44,12 +45,7 @@ export function Register() {
 
             <div className="w-full max-w-md relative z-10">
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 mb-4">
-                        <div className="w-10 h-10 bg-gradient-to-br from-primary via-primary-light to-primary-dark rounded-tr-xl rounded-bl-xl flex items-center justify-center shadow-glow-primary">
-                            <span className="text-white font-bold text-xl">K</span>
-                        </div>
-                        <span className="font-display font-bold text-3xl tracking-tight text-text-primary">Kogna<span className="text-primary">.</span></span>
-                    </div>
+                    <BrandLogo className="mb-4 text-text-primary" />
                     <h2 className="text-xl text-text-secondary">Crie sua conta e comece a vender mais</h2>
                 </div>
 
