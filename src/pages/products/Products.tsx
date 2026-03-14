@@ -1,4 +1,4 @@
-import {
+﻿import {
   useState,
   useEffect,
   useCallback,
@@ -22,6 +22,9 @@ import {
   AlertCircle,
   ToggleLeft,
   ToggleRight,
+  Search,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 
@@ -42,22 +45,22 @@ const TRIGGER_TYPES = [
   },
   {
     value: "pergunta_preco",
-    label: "Pergunta de Preço",
+    label: "Pergunta de PreÃ§o",
     color: "bg-yellow-500/15 text-yellow-400",
   },
   {
     value: "comparacao",
-    label: "Comparação",
+    label: "ComparaÃ§Ã£o",
     color: "bg-purple-500/15 text-purple-400",
   },
   {
     value: "objecao_preco",
-    label: "Objeção de Preço",
+    label: "ObjeÃ§Ã£o de PreÃ§o",
     color: "bg-red-500/15 text-red-400",
   },
   {
     value: "indecisao",
-    label: "Indecisão",
+    label: "IndecisÃ£o",
     color: "bg-orange-500/15 text-orange-400",
   },
   {
@@ -71,7 +74,7 @@ const TRIGGER_TYPES = [
     color: "bg-teal-500/15 text-teal-400",
   },
 ];
-const TABS = ["Informações", "Imagens", "Ofertas", "FAQ"];
+const TABS = ["InformaÃ§Ãµes", "Imagens", "Ofertas", "FAQ"];
 
 function StatusPill({ status }: { status: string }) {
   return (
@@ -173,6 +176,25 @@ function FieldLabel({
   );
 }
 
+function HeaderStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-[22px] border border-black/[0.06] bg-white/70 px-4 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)] dark:border-white/[0.08] dark:bg-white/[0.04] dark:shadow-none">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-3 text-3xl font-display font-bold tracking-tight text-foreground">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 const EMPTY_PRODUCT = {
   nome: "",
   categoria: "",
@@ -197,9 +219,10 @@ export function Products() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState("Informações");
+  const [activeTab, setActiveTab] = useState("InformaÃ§Ãµes");
   const [showModal, setShowModal] = useState(false);
   const [isNew, setIsNew] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -260,7 +283,7 @@ export function Products() {
     setNewImageType("image");
     setNewImageFile(null);
     setIsNew(false);
-    setActiveTab("Informações");
+    setActiveTab("InformaÃ§Ãµes");
     setShowModal(true);
   };
 
@@ -272,7 +295,7 @@ export function Products() {
     setNewImageType("image");
     setNewImageFile(null);
     setIsNew(true);
-    setActiveTab("Informações");
+    setActiveTab("InformaÃ§Ãµes");
     setShowModal(true);
   };
 
@@ -345,7 +368,7 @@ export function Products() {
         });
       }
       if (res.ok) {
-        showToast(newImageFile ? "Imagem enviada!" : "Mídia adicionada!");
+        showToast(newImageFile ? "Imagem enviada!" : "MÃ­dia adicionada!");
         setNewImageUrl("");
         setNewImageCaption("");
         setNewImageType("image");
@@ -353,7 +376,7 @@ export function Products() {
         openProduct(selected);
       } else {
         const error = await res.json().catch(() => null);
-        showToast(error?.error || "Erro ao adicionar mídia.", "error");
+        showToast(error?.error || "Erro ao adicionar mÃ­dia.", "error");
       }
     } finally {
       setUploadingImage(false);
@@ -414,106 +437,263 @@ export function Products() {
       faq: f.faq.filter((_: any, idx: number) => idx !== i),
     }));
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const filteredProducts = products.filter((product) => {
+    if (!normalizedQuery) return true;
+    const haystack = [
+      product.nome,
+      product.categoria,
+      product.descricao_curta,
+      ...(product.tags || []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+  const activeProducts = products.filter((product) => product.status === "ativo")
+    .length;
+  const connectedCatalog = products.filter((product) => Number(product.image_count) > 0)
+    .length;
+  const productsWithOffers = products.filter((product) => Number(product.offer_count) > 0)
+    .length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Package className="w-6 h-6 text-primary" />
-            Produtos
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Catálogo de produtos e motor de ofertas dinâmicas da IA.
-          </p>
-        </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Novo Produto
-        </button>
+    <div className="relative space-y-8 pb-2">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 overflow-hidden">
+        <div className="absolute left-[10%] top-0 h-64 w-64 rounded-full bg-orange-200/25 blur-3xl dark:bg-orange-500/10" />
+        <div className="absolute right-[4%] top-6 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl dark:bg-orange-400/10" />
       </div>
 
+      <section className="relative overflow-hidden rounded-[32px] border border-black/[0.06] bg-white/[0.85] p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.13),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.05),_transparent_34%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.18),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.05),_transparent_32%)]" />
+
+        <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary dark:border-primary/20 dark:bg-primary/[0.12]">
+              <Sparkles size={14} />
+              Catalogo inteligente
+            </div>
+
+            <h1 className="mt-4 text-4xl font-display font-bold tracking-[-0.04em] text-text-primary sm:text-5xl">
+              Produtos
+            </h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
+              Organize o catalogo, prepare ofertas dinamicas e deixe sua operacao no WhatsApp mais clara para vender com contexto.
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <HeaderStat label="Total de produtos" value={products.length} />
+              <HeaderStat label="Catalogo ativo" value={activeProducts} />
+              <HeaderStat label="Prontos para envio" value={connectedCatalog} />
+            </div>
+          </div>
+
+          <div className="w-full max-w-xl">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <div className="relative flex-1">
+                <Search
+                  size={18}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted"
+                />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Buscar por nome, categoria ou tag"
+                  className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white/80 pl-11 pr-4 text-sm text-text-primary shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition-all duration-300 placeholder:text-text-muted focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-white/[0.04] dark:focus:border-primary/40 dark:focus:ring-primary/10"
+                />
+              </div>
+
+              <button
+                onClick={openNew}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)] active:translate-y-0"
+              >
+                <Plus size={18} />
+                Novo Produto
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-text-secondary">
+              <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                {activeProducts} ativos
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                <ImageIcon size={14} className="text-primary" />
+                {connectedCatalog} com imagem pronta
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                <Zap size={14} className="text-primary" />
+                {productsWithOffers} com ofertas
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="bg-card border border-border rounded-xl p-5 animate-pulse"
+              className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/[0.85] p-6 shadow-[0_16px_45px_rgba(15,23,42,0.07)] dark:border-white/[0.08] dark:bg-[#101010]"
             >
-              <div className="h-32 bg-muted rounded-lg mb-4" />
-              <div className="h-4 bg-muted rounded w-3/4 mb-2" />
-              <div className="h-3 bg-muted rounded w-1/2" />
+              <div className="mb-5 h-16 w-16 animate-pulse rounded-[22px] bg-muted/60" />
+              <div className="h-3 w-24 animate-pulse rounded-full bg-muted/50" />
+              <div className="mt-4 h-7 w-40 animate-pulse rounded-full bg-muted/60" />
+              <div className="mt-4 flex gap-2">
+                <div className="h-7 w-20 animate-pulse rounded-full bg-muted/50" />
+                <div className="h-7 w-24 animate-pulse rounded-full bg-muted/50" />
+              </div>
+              <div className="mt-6 h-28 animate-pulse rounded-[24px] bg-muted/50" />
+              <div className="mt-6 h-20 animate-pulse rounded-[20px] bg-muted/40" />
             </div>
           ))}
         </div>
       ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground gap-4">
-          <Package className="w-12 h-12 opacity-20" />
-          <p className="text-sm">Nenhum produto cadastrado.</p>
+        <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-12">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+            <Package size={34} />
+          </div>
+          <h3 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
+            Seu catalogo comeca aqui
+          </h3>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-text-secondary sm:text-base">
+            Crie seu primeiro produto para organizar materiais, imagens e ofertas em uma experiencia mais premium e pronta para escalar vendas no WhatsApp.
+          </p>
           <button
             onClick={openNew}
-            className="text-xs text-primary hover:underline"
+            className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
           >
-            Criar primeiro produto →
+            <Plus size={18} />
+            Criar primeiro produto
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {products.map((p) => (
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filteredProducts.length === 0 ? (
+            <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] md:col-span-2 xl:col-span-3 sm:p-12">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-primary/10 text-primary dark:bg-primary/[0.12]">
+                <Search size={28} />
+              </div>
+              <h3 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
+                Nenhum produto encontrado
+              </h3>
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-text-secondary sm:text-base">
+                Ajuste a busca para localizar produtos por nome, categoria ou tags usadas pela IA.
+              </p>
+            </div>
+          ) : (
+          filteredProducts.map((p) => (
             <button
               key={p.id}
               onClick={() => openProduct(p)}
-              className="text-left bg-card border border-border rounded-xl overflow-hidden hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all group"
+              className="group relative overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/[0.92] p-6 text-left shadow-[0_16px_45px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
             >
-              <div className="h-36 bg-muted/50 relative flex items-center justify-center border-b border-border">
-                <Package className="w-10 h-10 text-muted-foreground/30" />
-                <div className="absolute top-3 right-3 flex gap-1.5">
-                  <StatusPill status={p.status} />
-                </div>
-                {p.image_count > 0 && (
-                  <div className="absolute bottom-3 left-3 flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <ImageIcon className="w-3 h-3" /> {p.image_count} foto
-                    {p.image_count > 1 ? "s" : ""}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
+              <div className="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-primary/[0.12] blur-3xl dark:bg-primary/10" />
+              <div className="relative mb-6 flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                    <Package size={28} />
                   </div>
-                )}
-              </div>
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-muted">
+                      {p.categoria || "Catalogo"}
+                    </p>
+                    <h3 className="mt-2 truncate text-2xl font-display font-bold tracking-tight text-text-primary">
                       {p.nome}
                     </h3>
-                    {p.categoria && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {p.categoria}
-                      </p>
-                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {p.categoria && (
+                        <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                          {p.categoria}
+                        </span>
+                      )}
+                      <span className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
+                        p.status === "ativo"
+                          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-300",
+                      )}>
+                        <span className={cn("h-2 w-2 rounded-full", p.status === "ativo" ? "bg-emerald-500" : "bg-slate-400")} />
+                        {p.status === "ativo" ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
                   </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
                   {p.preco_base && (
-                    <span className="text-sm font-bold text-primary shrink-0">
+                    <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-bold text-primary">
                       R${" "}
                       {parseFloat(p.preco_base).toLocaleString("pt-BR", {
                         minimumFractionDigits: 0,
                       })}
                     </span>
                   )}
-                </div>
-                {p.descricao_curta && (
-                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                    {p.descricao_curta}
-                  </p>
-                )}
-                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> {p.offer_count} oferta
-                    {p.offer_count !== 1 ? "s" : ""}
-                  </span>
+                  <div className="flex gap-1.5">
+                    {p.status && (
+                      <span className="sr-only">{p.status}</span>
+                    )}
+                  </div>
                 </div>
               </div>
+              <div className="rounded-[24px] border border-black/[0.05] bg-background/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-black/[0.05] bg-white/80 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">
+                      Midias
+                    </p>
+                    <p className="mt-2 text-lg font-display font-bold text-text-primary">
+                      {Number(p.image_count) || 0}
+                    </p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {Number(p.image_count) > 0 ? "Prontas para WhatsApp" : "Nenhuma imagem ainda"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/[0.05] bg-white/80 px-4 py-3 dark:border-white/[0.06] dark:bg-white/[0.04]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">
+                      Ofertas
+                    </p>
+                    <p className="mt-2 text-lg font-display font-bold text-text-primary">
+                      {Number(p.offer_count) || 0}
+                    </p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      Motor de conversao ativo
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5">
+                {p.descricao_curta ? (
+                  <p className="text-sm leading-7 text-text-secondary">
+                    {p.descricao_curta}
+                  </p>
+                ) : (
+                  <p className="text-sm leading-7 text-text-secondary">
+                    Cadastre uma descricao curta para a IA apresentar esse produto com mais clareza no WhatsApp.
+                  </p>
+                )}
+              </div>
+              <div className="mt-6 flex items-center justify-between gap-3 border-t border-black/[0.06] pt-5 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 text-sm text-text-secondary">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <Zap size={15} />
+                  </span>
+                  <span className="max-w-[180px] leading-5">
+                    {Number(p.image_count) > 0
+                      ? "Pronto para apresentar com apoio visual."
+                      : "Adicione imagem e oferta para aumentar a percepcao de valor."}
+                  </span>
+                </div>
+                <span className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-primary/30 group-hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:group-hover:border-primary/30 dark:group-hover:text-primary-light">
+                  Configurar
+                  <ArrowRight size={15} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+                </span>
+              </div>
             </button>
-          ))}
+          ))
+          )}
         </div>
       )}
 
@@ -529,13 +709,13 @@ export function Products() {
                   </div>
                   <div className="min-w-0 pt-1">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                      Catálogo inteligente
+                      CatÃ¡logo inteligente
                     </p>
                     <h2 className="mt-2 text-2xl font-display font-bold tracking-tight text-foreground sm:text-[30px]">
                       {isNew ? "Novo Produto" : form.nome || "Produto"}
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                      Cadastre um produto que sua IA poderá vender
+                      Cadastre um produto que sua IA poderÃ¡ vender
                       automaticamente.
                     </p>
                     {!isNew && (
@@ -590,12 +770,12 @@ export function Products() {
               </div>
             </div>
             <div className="relative min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
-              {activeTab === "Informações" && (
+              {activeTab === "InformaÃ§Ãµes" && (
                 <div className="space-y-5">
                   <ModalSection
                     eyebrow="Bloco 1"
-                    title="Informações básicas"
-                    description="Defina os dados centrais do produto para cadastro e precificação."
+                    title="InformaÃ§Ãµes bÃ¡sicas"
+                    description="Defina os dados centrais do produto para cadastro e precificaÃ§Ã£o."
                   >
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="md:col-span-2">
@@ -627,7 +807,7 @@ export function Products() {
                         />
                       </div>
                       <div>
-                        <FieldLabel label="Preço base (R$)" />
+                        <FieldLabel label="PreÃ§o base (R$)" />
                         <div className="relative">
                           <DollarSign className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <input
@@ -648,12 +828,12 @@ export function Products() {
                   </ModalSection>
                   <ModalSection
                     eyebrow="Bloco 2"
-                    title="Descrição"
+                    title="DescriÃ§Ã£o"
                     description="Organize o resumo mostrado na interface e o contexto completo usado pela IA."
                   >
                     <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <FieldLabel label="Descrição curta" />
+                        <FieldLabel label="DescriÃ§Ã£o curta" />
                         <input
                           value={form.descricao_curta || ""}
                           onChange={(e) =>
@@ -667,7 +847,7 @@ export function Products() {
                         />
                       </div>
                       <div>
-                        <FieldLabel label="Descrição detalhada" />
+                        <FieldLabel label="DescriÃ§Ã£o detalhada" />
                         <textarea
                           value={form.descricao_detalhada || ""}
                           onChange={(e) =>
@@ -678,7 +858,7 @@ export function Products() {
                           }
                           rows={5}
                           className={textareaClass}
-                          placeholder="Descrição completa para contexto da IA"
+                          placeholder="DescriÃ§Ã£o completa para contexto da IA"
                         />
                       </div>
                     </div>
@@ -686,10 +866,10 @@ export function Products() {
                   <ModalSection
                     eyebrow="Bloco 3"
                     title="Valor percebido"
-                    description="Liste os benefícios que aumentam a clareza da oferta."
+                    description="Liste os benefÃ­cios que aumentam a clareza da oferta."
                   >
                     <div className="space-y-3">
-                      <FieldLabel label="Benefícios principais" />
+                      <FieldLabel label="BenefÃ­cios principais" />
                       {(form.beneficios || [""]).map(
                         (beneficio: string, i: number) => (
                           <div key={i} className="flex items-center gap-2">
@@ -704,7 +884,7 @@ export function Products() {
                                 }));
                               }}
                               className={inputClass}
-                              placeholder={`Benefício ${i + 1}`}
+                              placeholder={`BenefÃ­cio ${i + 1}`}
                             />
                             {form.beneficios.length > 1 && (
                               <button
@@ -734,7 +914,7 @@ export function Products() {
                         className="inline-flex items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
                       >
                         <Plus className="h-4 w-4" />
-                        Adicionar benefício
+                        Adicionar benefÃ­cio
                       </button>
                     </div>
                   </ModalSection>
@@ -848,8 +1028,8 @@ export function Products() {
               {activeTab === "Imagens" && (
                 <div className="space-y-5">
                   <ModalSection
-                    eyebrow="Mídia"
-                    title="Imagens, vídeos e PDF"
+                    eyebrow="MÃ­dia"
+                    title="Imagens, vÃ­deos e PDF"
                     description="Organize os ativos visuais do produto mantendo o mesmo fluxo atual."
                   >
                     <div className="space-y-4">
@@ -881,7 +1061,7 @@ export function Products() {
                               : "Selecionar imagem para upload"}
                           </span>
                           <span className="mt-1 text-xs text-muted-foreground">
-                            PNG, JPG ou WEBP com atÃ© 10MB
+                            PNG, JPG ou WEBP com atÃƒÂ© 10MB
                           </span>
                           <input
                             type="file"
@@ -905,7 +1085,7 @@ export function Products() {
                           if (e.target.value) setNewImageFile(null);
                         }}
                         className={inputClass}
-                        placeholder="URL da imagem, vídeo ou PDF..."
+                        placeholder="URL da imagem, vÃ­deo ou PDF..."
                       />
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
                         <input
@@ -920,7 +1100,7 @@ export function Products() {
                           className={inputClass}
                         >
                           <option value="image">Imagem</option>
-                          <option value="video">Vídeo</option>
+                          <option value="video">VÃ­deo</option>
                           <option value="pdf">PDF</option>
                         </select>
                         <button
@@ -946,7 +1126,7 @@ export function Products() {
                     {(selected?.images || []).length === 0 ? (
                       <div className="py-12 text-center text-sm text-muted-foreground">
                         <ImageIcon className="mx-auto mb-3 h-9 w-9 opacity-20" />
-                        Nenhuma mídia adicionada.
+                        Nenhuma mÃ­dia adicionada.
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -999,7 +1179,7 @@ export function Products() {
                   <ModalSection
                     eyebrow="Oferta"
                     title={editingOffer ? "Editar oferta" : "Nova oferta"}
-                    description="Cadastre ofertas dinâmicas sem alterar o comportamento atual da IA."
+                    description="Cadastre ofertas dinÃ¢micas sem alterar o comportamento atual da IA."
                   >
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="md:col-span-2">
@@ -1017,7 +1197,7 @@ export function Products() {
                         />
                       </div>
                       <div>
-                        <FieldLabel label="Preço" />
+                        <FieldLabel label="PreÃ§o" />
                         <input
                           type="number"
                           value={offerForm.preco}
@@ -1028,7 +1208,7 @@ export function Products() {
                             }))
                           }
                           className={inputClass}
-                          placeholder="Preço (R$)"
+                          placeholder="PreÃ§o (R$)"
                         />
                       </div>
                       <div className={subtlePanel}>
@@ -1055,7 +1235,7 @@ export function Products() {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <FieldLabel label="Descrição" />
+                        <FieldLabel label="DescriÃ§Ã£o" />
                         <textarea
                           value={offerForm.descricao}
                           onChange={(e) =>
@@ -1065,7 +1245,7 @@ export function Products() {
                             }))
                           }
                           rows={3}
-                          placeholder="Descrição da oferta"
+                          placeholder="DescriÃ§Ã£o da oferta"
                           className={textareaClass}
                         />
                       </div>
@@ -1104,7 +1284,7 @@ export function Products() {
                           }}
                           className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] px-5 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:hover:text-white"
                         >
-                          Cancelar edição
+                          Cancelar ediÃ§Ã£o
                         </button>
                       )}
                     </div>
@@ -1227,7 +1407,7 @@ export function Products() {
                   <ModalSection
                     eyebrow="FAQ"
                     title="Perguntas frequentes"
-                    description="Cadastre respostas que ajudam a IA a lidar melhor com objeções e dúvidas comuns."
+                    description="Cadastre respostas que ajudam a IA a lidar melhor com objeÃ§Ãµes e dÃºvidas comuns."
                   >
                     <div className="space-y-4">
                       <div>
@@ -1314,7 +1494,7 @@ export function Products() {
               >
                 Cancelar
               </button>
-              {(activeTab === "Informações" || activeTab === "FAQ") && (
+              {(activeTab === "InformaÃ§Ãµes" || activeTab === "FAQ") && (
                 <button
                   onClick={saveProduct}
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)] transition-all hover:-translate-y-0.5 sm:min-w-[180px]"
@@ -1332,3 +1512,5 @@ export function Products() {
     </div>
   );
 }
+
+
