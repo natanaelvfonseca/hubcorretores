@@ -414,8 +414,7 @@ Seja sempre proativo, orientado a resultados, e conduza o cliente em direcao ao 
                             Minhas IAs
                         </h1>
                         <p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
-                            Gerencie os agentes inteligentes da sua organizacao com uma experiencia mais clara,
-                            elegante e pronta para escalar a operacao no WhatsApp.
+                            Gerencie os agentes inteligentes da sua organizacao e escale a operacao no WhatsApp.
                         </p>
 
                         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
