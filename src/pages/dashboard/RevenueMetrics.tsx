@@ -41,6 +41,7 @@ interface RevenueIntelligenceData {
 const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v);
 const fmtHours = (h: number) => h >= 24 ? `${Math.round(h / 24)}d` : h >= 1 ? `${Math.round(h)}h` : `${Math.round(h * 60)}min`;
 const pct = (a: number, total: number) => total === 0 ? 0 : Math.round((a / total) * 100);
+const MIN_CHART_BASELINE = 0.3;
 
 const TEMP_COLORS = { quente: '#f97316', morno: '#eab308', frio: '#3b82f6' };
 const URGENCY_CONFIG = {
@@ -48,6 +49,34 @@ const URGENCY_CONFIG = {
     today: { label: 'Agir Hoje', icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-500', glow: 'shadow-yellow-500/20' },
     at_risk: { label: 'Em Risco', icon: Timer, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-500', glow: 'shadow-red-500/20' },
 };
+
+function formatChartLabel(date: Date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+}
+
+function buildAIChartData(rawChart: Array<{ name: string; volume: number }>, days: number) {
+    const volumeByLabel = rawChart.reduce<Record<string, number>>((acc, point) => {
+        acc[point.name] = point.volume;
+        return acc;
+    }, {});
+
+    return Array.from({ length: days }, (_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (days - index - 1));
+
+        const name = formatChartLabel(date);
+        const real = volumeByLabel[name] ?? 0;
+
+        return {
+            name,
+            real,
+            volume: real > 0 ? real : MIN_CHART_BASELINE,
+        };
+    });
+}
 
 const useAPI = <T,>(url: string, token: string | null, deps: unknown[] = []) => {
     const [data, setData] = useState<T | null>(null);
@@ -125,12 +154,13 @@ function KPICard({
     );
 }
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number; payload?: { real?: number } }>; label?: string }) => {
     if (!active || !payload?.length) return null;
+    const realValue = payload[0]?.payload?.real ?? payload[0]?.value ?? 0;
     return (
         <div className="bg-background border border-border rounded-xl px-3 py-2 shadow-2xl text-xs">
             <p className="font-semibold text-foreground">{label}</p>
-            <p className="text-muted-foreground">{payload[0].value} atendimentos</p>
+            <p className="text-muted-foreground">{realValue} atendimentos</p>
         </div>
     );
 };
@@ -157,9 +187,9 @@ export function RevenueMetrics() {
     const urgencyLeads = urgency ? urgency[urgencyTab] : [];
     const urgencyCounts = urgency ? { now: urgency.now.length, today: urgency.today.length, at_risk: urgency.at_risk.length } : { now: 0, today: 0, at_risk: 0 };
 
-    const chartData = (metrics?.ai.chart ?? []).map(d => ({
-        name: d.name, volume: d.volume > 0 ? d.volume : 0.1,
-    }));
+    const rawChart = metrics?.ai.chart ?? [];
+    const chartData = buildAIChartData(rawChart, selectedDays);
+    const hasChartData = rawChart.some(d => d.volume > 0);
 
     const tempData = ['quente', 'morno', 'frio'].map(t => ({
         name: t === 'quente' ? 'Quente' : t === 'morno' ? 'Morno' : 'Frio',
@@ -481,7 +511,7 @@ export function RevenueMetrics() {
                                 </div>
                                 <span className="text-xs text-muted-foreground">Últimos {selectedDays} dias</span>
                             </div>
-                            {metricsLoading ? <Skeleton className="h-52" /> : chartData.length === 0 ? (
+                            {metricsLoading ? <Skeleton className="h-52" /> : !hasChartData ? (
                                 <div className="h-52 flex items-center justify-center text-xs text-muted-foreground">Sem dados ainda</div>
                             ) : (
                                 <ResponsiveContainer width="100%" height={200}>
