@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Search, Paperclip, CheckCheck, X, Play, Pause, UserCheck, BrainCircuit, Lightbulb, Target } from 'lucide-react';
+import { Send, Search, Paperclip, CheckCheck, X, Play, Pause, UserCheck, BrainCircuit, Lightbulb, Target, MessageSquare, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { cn } from '../../utils/cn';
 
 
 interface Chat {
@@ -770,9 +771,17 @@ export function LiveChat() {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const getTemperatureBadgeClass = (temperature?: string) => {
+        if (!temperature) return 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-300';
+        if (temperature.includes('Quente')) return 'border-red-200 bg-red-50 text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300';
+        if (temperature.includes('Morno')) return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300';
+        return 'border-sky-200 bg-sky-50 text-sky-600 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300';
+    };
 
 
-    const renderMessageContent = (msg: Message) => {
+
+
+    const renderMessageContent = (msg: Message, isMe = false) => {
         // Debug: Log the entire message structure
 
 
@@ -804,12 +813,12 @@ export function LiveChat() {
 
 
             return (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-3">
                     {imageUrl ? (
                         <img
                             src={imageUrl}
                             alt="Imagem"
-                            className="max-w-[300px] max-h-[400px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            className="max-h-[360px] w-full max-w-full rounded-[20px] object-cover transition-opacity hover:opacity-90"
                             onClick={() => window.open(imageUrl, '_blank')}
                             onError={() => console.error('Image load error. URL:', imageUrl, 'Full data:', msg.message.imageMessage)}
                         />
@@ -838,9 +847,9 @@ export function LiveChat() {
 
 
             return (
-                <div className="flex flex-col gap-2">
+                <div className="flex min-w-[220px] max-w-full flex-col gap-3">
                     {audioUrl ? (
-                        <audio controls className="max-w-[300px]">
+                        <audio controls className="max-w-full rounded-2xl">
                             <source src={audioUrl} type="audio/ogg" />
                             <source src={audioUrl} type="audio/mpeg" />
                             <source src={audioUrl} type="audio/mp4" />
@@ -859,9 +868,9 @@ export function LiveChat() {
                 (msg.message.videoMessage.base64 ? `data:video/mp4;base64,${msg.message.videoMessage.base64}` : null);
 
             return (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-3">
                     {videoUrl ? (
-                        <video controls className="max-w-[300px] max-h-[400px] rounded-lg">
+                        <video controls className="max-h-[360px] max-w-full rounded-[20px]">
                             <source src={videoUrl} type="video/mp4" />
                             Seu navegador não suporta vídeo.
                         </video>
@@ -882,7 +891,7 @@ export function LiveChat() {
             const fileName = msg.message.documentMessage.fileName || 'Documento';
 
             return (
-                <div className="flex items-center gap-3 p-2 bg-white/10 rounded-lg">
+                <div className={cn('flex items-center gap-3 rounded-[20px] border p-3', isMe ? 'border-white/15 bg-black/10' : 'border-black/[0.06] bg-black/[0.03] dark:border-white/[0.08] dark:bg-white/[0.04]')}>
                     <div className="text-2xl">📄</div>
                     <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{fileName}</div>
@@ -902,7 +911,7 @@ export function LiveChat() {
         }
 
         // Default: render text
-        return <div>{textContent || '...'}</div>;
+        return <div className="whitespace-pre-wrap break-words">{textContent || '...'}</div>;
     };
 
     const getDisplayName = (chat: Chat) => {
@@ -933,71 +942,125 @@ export function LiveChat() {
         return number;
     };
 
+    const filteredChats = chats.filter((chat) =>
+        getDisplayName(chat).toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const activeChatKey = activeChat?.remoteJid || activeChat?.id || null;
+
     if (!instanceName) {
         if (noInstance) {
             return (
-                <div className="flex h-screen flex-col items-center justify-center bg-gray-50 dark:bg-[#0C0C0C] text-gray-900 dark:text-white gap-4 relative">
-                    <div className="text-xl font-medium">Nenhuma conexão de WhatsApp encontrada.</div>
-                    <p className="text-gray-500">Conecte seu WhatsApp para usar o chat ao vivo.</p>
-                    <a href="/whatsapp" className="px-4 py-2 bg-[#FF4C00] text-white rounded-lg hover:bg-[#ff6a2b] transition-colors">
-                        Conectar WhatsApp
-                    </a>
+                <div className="flex h-full min-h-[70vh] items-center justify-center px-4 py-8">
+                    <div className="w-full max-w-xl overflow-hidden rounded-[32px] border border-black/[0.06] bg-white/[0.9] p-8 text-center shadow-[0_24px_70px_rgba(15,23,42,0.10)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                            <MessageSquare size={34} />
+                        </div>
+                        <h2 className="mt-6 text-3xl font-display font-bold tracking-tight text-gray-900 dark:text-white">
+                            Nenhuma conexao encontrada
+                        </h2>
+                        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-gray-500 dark:text-gray-400">
+                            Conecte seu WhatsApp para acompanhar conversas em tempo real e operar o atendimento em uma interface mais clara.
+                        </p>
+                        <a
+                            href="/whatsapp"
+                            className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
+                        >
+                            <Sparkles size={16} />
+                            Conectar WhatsApp
+                        </a>
+                    </div>
                 </div>
             );
         }
         return (
-            <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-[#0C0C0C] text-gray-900 dark:text-white relative">
-                Carregando instância...
+            <div className="flex h-full min-h-[70vh] items-center justify-center px-4 py-8">
+                <div className="flex w-full max-w-sm flex-col items-center rounded-[28px] border border-black/[0.06] bg-white/80 px-6 py-10 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                        <Loader2 size={28} className="animate-spin" />
+                    </div>
+                    <h2 className="mt-6 text-2xl font-display font-bold tracking-tight text-gray-900 dark:text-white">
+                        Carregando chat
+                    </h2>
+                    <p className="mt-2 text-sm leading-7 text-gray-500 dark:text-gray-400">
+                        Estamos preparando sua conexao e buscando as conversas mais recentes.
+                    </p>
+                </div>
             </div>
         );
     }
 
     return (
         <>
-            <div className="relative w-full h-full flex overflow-hidden bg-gray-50 dark:bg-[#0C0C0C] rounded-xl border border-gray-200 dark:border-[#2A2A2A] shadow-sm">
+            <div className="relative flex h-full min-h-[calc(100vh-128px)] w-full overflow-hidden rounded-[30px] border border-black/[0.06] bg-white/[0.92] shadow-[0_24px_80px_rgba(15,23,42,0.10)] dark:border-white/[0.08] dark:bg-[#0F0F10] dark:shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.10),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.06),_transparent_32%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_28%)]" />
 
-
-                <div className="flex-none w-[350px] min-w-[350px] bg-white dark:bg-[#121212] border-r border-gray-200 dark:border-[#2A2A2A] flex flex-col h-full z-10">
-
-                    <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-[#2A2A2A]">
-                        <h2 className="text-gray-900 dark:text-white font-medium pl-1">Conversas</h2>
+                <div className="relative z-10 flex h-full min-w-[350px] w-[350px] flex-none flex-col border-r border-black/[0.06] bg-white/[0.94] dark:border-white/[0.08] dark:bg-[#121212] xl:min-w-[380px] xl:w-[380px]">
+                    <div className="border-b border-black/[0.06] px-5 pb-4 pt-5 dark:border-white/[0.08]">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary dark:border-primary/20 dark:bg-primary/[0.12]">
+                            <Sparkles size={13} />
+                            Atendimento ao vivo
+                        </div>
+                        <div className="mt-4 flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-2xl font-display font-bold tracking-tight text-gray-900 dark:text-white">Conversas</h2>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    Monitore conversas e responda com mais contexto.
+                                </p>
+                            </div>
+                            <div className="rounded-2xl border border-black/[0.06] bg-white/80 px-3 py-2 text-right dark:border-white/[0.08] dark:bg-white/[0.04]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Ativas</p>
+                                <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">{filteredChats.length}</p>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="flex-none p-3 bg-white dark:bg-[#121212]">
-                        <div className="bg-gray-100 dark:bg-[#1F1F1F] rounded-lg flex items-center px-3 py-1.5 h-9">
-                            <Search size={18} className="text-gray-500 dark:text-gray-400 mr-3" />
+                    <div className="flex-none px-4 py-4">
+                        <div className="flex h-11 items-center rounded-2xl border border-black/[0.06] bg-gray-50/80 px-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] dark:border-white/[0.08] dark:bg-[#1B1B1D]">
+                            <Search size={18} className="mr-3 text-gray-500 dark:text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Pesquisar..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="bg-transparent border-none outline-none text-gray-900 dark:text-white text-sm w-full placeholder-gray-500"
+                                className="w-full border-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white"
                             />
                             {searchQuery && (
                                 <X
                                     size={16}
-                                    className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200 ml-2"
+                                    className="ml-2 cursor-pointer text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                     onClick={() => setSearchQuery('')}
                                 />
                             )}
                         </div>
                     </div>
 
-                    {/* Chat List */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="flex-1 space-y-2 overflow-y-auto px-3 pb-3 custom-scrollbar">
                         {isLoadingChats && chats.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500 text-sm">Carregando conversas...</div>
+                            <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">Carregando conversas...</div>
+                        ) : filteredChats.length === 0 ? (
+                            <div className="rounded-[24px] border border-dashed border-black/[0.08] bg-white/70 px-4 py-10 text-center text-sm text-gray-500 dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-gray-400">
+                                Nenhuma conversa encontrada para essa busca.
+                            </div>
                         ) : (
-                            chats.filter(chat =>
-                                getDisplayName(chat).toLowerCase().includes(searchQuery.toLowerCase())
-                            ).map((chat) => (
-                                <div
+                            filteredChats.map((chat) => {
+                                const chatKey = chat.remoteJid || chat.id;
+                                const temperature = chatTemperatures[chatKey]?.temperature;
+                                const isActive = activeChatKey === chatKey;
+
+                                return (
+                                <button
                                     key={chat.id || chat.remoteJid}
                                     onClick={() => setActiveChat(chat)}
-                                    className={`flex items-center p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-[#1F1F1F] transition-colors border-b border-gray-100 dark:border-[#1F1F1F] ${activeChat?.id === chat.id ? 'bg-gray-200 dark:bg-[#2A2A2A]' : ''}`}
+                                    className={cn(
+                                        'w-full rounded-[24px] border p-3 text-left transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)]',
+                                        isActive
+                                            ? 'border-primary/20 bg-primary/[0.08] shadow-[0_14px_34px_rgba(245,121,59,0.12)] dark:border-primary/30 dark:bg-primary/[0.10]'
+                                            : 'border-transparent bg-transparent hover:border-black/[0.06] hover:bg-white dark:hover:border-white/[0.08] dark:hover:bg-white/[0.04]'
+                                    )}
                                 >
-                                    <div className="w-12 h-12 rounded-full bg-gray-700 mr-3 flex-shrink-0 overflow-hidden">
+                                    <div className="flex items-start gap-3">
+                                    <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-700 shadow-[0_8px_18px_rgba(15,23,42,0.08)]">
                                         {(chat.picture) ? (
                                             <img src={chat.picture} alt={chat.name} className="w-full h-full object-cover" />
                                         ) : (
@@ -1006,62 +1069,78 @@ export function LiveChat() {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                                                <h3 className="text-gray-900 dark:text-white text-[16px] font-medium truncate font-display">{getDisplayName(chat)}</h3>
-                                                {chatTemperatures[chat.remoteJid || chat.id]?.temperature && (
-                                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0 ${chatTemperatures[chat.remoteJid || chat.id].temperature.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                            chatTemperatures[chat.remoteJid || chat.id].temperature.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
-                                                                'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                        }`}>
-                                                        {chatTemperatures[chat.remoteJid || chat.id].temperature}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="mb-1 flex items-start justify-between gap-3">
+                                            <div className="min-w-0 pr-2">
+                                                <h3 className="truncate text-[16px] font-medium text-gray-900 dark:text-white font-display">{getDisplayName(chat)}</h3>
+                                                {temperature && (
+                                                    <span className={cn('mt-2 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]', getTemperatureBadgeClass(temperature))}>
+                                                        {temperature}
                                                     </span>
                                                 )}
                                             </div>
-                                            <span className="text-xs text-gray-500 whitespace-nowrap">{chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}</span>
+                                            <span className="whitespace-nowrap pt-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                                                {chat.lastMessage?.timestamp ? formatTime(chat.lastMessage.timestamp) : ''}
+                                            </span>
                                         </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate font-body">
+                                        <p className="truncate text-sm leading-6 text-gray-500 dark:text-gray-400 font-body">
                                             {chat.lastMessage?.content || '...'}
                                         </p>
+                                        {chat.unreadCount ? (
+                                            <div className="mt-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(245,121,59,0.24)]">
+                                                {chat.unreadCount}
+                                            </div>
+                                        ) : null}
                                     </div>
-                                </div>
-                            ))
+                                    </div>
+                                </button>
+                            )})
                         )}
                     </div>
                 </div>
 
-                {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-[#0C0C0C] relative h-full">
+                <div className="relative z-10 flex min-w-0 flex-1 flex-col bg-[#F7F7F8] dark:bg-[#0D0D0F]">
                     {activeChat ? (
                         <>
                             {/* Chat Header */}
-                            <div className="flex-none h-[70px] px-4 flex items-center justify-between border-b border-gray-200 dark:border-[#2A2A2A] bg-gray-100 dark:bg-[#1F1F1F] z-10 shadow-sm">
-                                <div className="flex items-center gap-4">
-
-                                    <div>
-                                        <h2 className="text-gray-900 dark:text-white font-medium font-display">{getDisplayName(activeChat)}</h2>
-                                        {activeLeadTemp && (
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${activeLeadTemp.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                                    activeLeadTemp.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
-                                                        'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                                    }`}>
+                            <div className="flex-none border-b border-black/[0.06] bg-white/[0.8] px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] backdrop-blur dark:border-white/[0.08] dark:bg-[#161618]/90">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <h2 className="truncate text-xl font-display font-bold tracking-tight text-gray-900 dark:text-white">
+                                                {getDisplayName(activeChat)}
+                                            </h2>
+                                            {activeLeadTemp && (
+                                                <span className={cn(
+                                                    'inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]',
+                                                    getTemperatureBadgeClass(activeLeadTemp)
+                                                )}>
                                                     {activeLeadTemp} {activeLeadScore > 0 ? `(${activeLeadScore}%)` : ''}
                                                 </span>
-                                            </div>
-                                        )}
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">online</span>
+                                            )}
+                                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                online
+                                            </span>
+                                            {isChatPaused && (
+                                                <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                                                    IA pausada
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-2 truncate text-sm text-gray-500 dark:text-gray-400">
+                                            {activeChat.remoteJid || activeChat.id}
+                                        </p>
                                     </div>
-                                </div>
-                                <div className="flex gap-4 text-gray-500 dark:text-gray-400 items-center">
+
+                                <div className="flex flex-wrap gap-3 text-gray-500 dark:text-gray-400 items-center">
                                     {/* Pause Button */}
                                     {currentAgentId && (
                                         <button
                                             onClick={handleToggleChatPause}
-                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isChatPaused
-                                                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 dark:bg-[#2A2A2A] dark:border-[#333] dark:text-gray-300 dark:hover:bg-[#333]'
+                                            className={`inline-flex h-11 items-center gap-2 rounded-2xl px-4 text-sm font-semibold transition-all duration-300 ${isChatPaused
+                                                ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200'
+                                                : 'border border-black/[0.06] bg-white text-gray-700 hover:border-primary/25 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300'
                                                 }`}
                                             title={isChatPaused ? "IA Pausada nesta conversa" : "Pausar IA nesta conversa"}
                                         >
@@ -1073,23 +1152,27 @@ export function LiveChat() {
                                     {/* Takeover Button */}
                                     <button
                                         onClick={() => setShowTakeoverModal(true)}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 transition-colors"
+                                        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-primary/20 bg-primary/10 px-4 text-sm font-semibold text-primary transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary/15"
                                         title="Assumir conversa e atribuir vendedor"
                                     >
                                         <UserCheck size={16} />
                                         Assumir
                                     </button>
 
-                                    <Search size={20} className="cursor-pointer hover:text-gray-900 dark:hover:text-white" />
-
+                                    <button className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/[0.06] bg-white text-gray-500 transition-colors hover:text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:text-white">
+                                        <Search size={18} />
+                                    </button>
+                                </div>
                                 </div>
                             </div>
 
                             {/* Messages Area */}
-                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#0C0C0C] relative scroll-smooth">
+                            <div ref={messagesContainerRef} className="relative flex-1 overflow-y-auto scroll-smooth bg-[#F7F7F8] px-5 py-5 dark:bg-[#0D0D0F]">
+                                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.08),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.06),_transparent_26%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_24%)]" />
+                                <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-5 pb-4">
 
                                 {activeLeadSummary?.text && (
-                                    <div className="rounded-2xl border border-amber-500/20 bg-white dark:bg-[#171717] p-4 shadow-sm">
+                                    <div className="rounded-[24px] border border-amber-500/20 bg-white/90 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)] dark:bg-[#171717]">
                                         <div className="flex items-start gap-3">
                                             <div className="mt-0.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-2 text-amber-400">
                                                 <BrainCircuit size={18} />
@@ -1098,13 +1181,13 @@ export function LiveChat() {
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <p className="text-sm font-semibold text-gray-900 dark:text-white">Resumo da IA</p>
                                                     {activeLeadSummary.stage && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-500">
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-500">
                                                             <Target size={11} />
                                                             {activeLeadSummary.stage}
                                                         </span>
                                                     )}
                                                     {activeLeadSummary.intent && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-500">
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-purple-500">
                                                             <Lightbulb size={11} />
                                                             {activeLeadSummary.intent}
                                                         </span>
@@ -1130,18 +1213,18 @@ export function LiveChat() {
 
                                 {/* Handoff Banner — shown when AI is paused (may be auto-handoff or manual) */}
                                 {isChatPaused && (
-                                    <div className="flex items-start gap-3 p-4 mb-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                                    <div className="mb-2 flex items-start gap-3 rounded-[24px] border border-amber-500/30 bg-amber-500/10 p-4 shadow-[0_12px_26px_rgba(245,158,11,0.10)]">
                                         <span className="text-2xl flex-shrink-0">🤝</span>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-bold text-amber-500">Handoff Humano Ativo</p>
-                                            <p className="text-xs text-amber-400/80 mt-0.5 leading-relaxed">
+                                            <p className="mt-0.5 text-xs leading-relaxed text-amber-400/80">
                                                 A IA foi pausada automaticamente pelo Revenue OS — este lead atingiu alta intenção de compra.
                                                 Uma notificação foi enviada com o brief completo. Assuma a conversa agora.
                                             </p>
                                         </div>
                                         <button
                                             onClick={handleToggleChatPause}
-                                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold transition-colors"
+                                            className="inline-flex h-10 flex-shrink-0 items-center gap-1.5 rounded-2xl bg-amber-500 px-4 text-xs font-bold text-white transition-colors hover:bg-amber-400"
                                         >
                                             <Play size={12} /> Retomar IA
                                         </button>
@@ -1149,19 +1232,19 @@ export function LiveChat() {
                                 )}
 
                                 {fetchError && (
-                                    <div className="p-2 bg-red-100 text-red-700 text-xs text-center border-b border-red-200">
+                                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-xs text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
                                         Falha ao carregar: {fetchError}
                                     </div>
                                 )}
 
                                 {messages.length === 0 && !fetchError && (
-                                    <div className="p-4 text-center text-gray-400 text-sm mt-10">
+                                    <div className="rounded-[28px] border border-dashed border-black/[0.08] bg-white/70 px-6 py-12 text-center text-sm text-gray-400 dark:border-white/[0.10] dark:bg-white/[0.03]">
                                         Nenhuma mensagem encontrada.
                                         <br /><span className="text-xs text-gray-300">Envie uma mensagem para iniciar.</span>
                                     </div>
                                 )}
 
-                                <div className="relative z-10 flex flex-col space-y-2 w-full pb-2">
+                                <div className="flex w-full flex-col gap-4 pb-2">
                                     {messages.map((msg, index) => {
                                         // 1. Logic Defense from Senior Engineer: Guard against malformed objects
                                         if (!msg || !msg.key) {
@@ -1183,65 +1266,61 @@ export function LiveChat() {
                                         const messageKey = `${msg.key.id || 'msg'}-${msg.messageTimestamp || Date.now()}-${index}`;
 
                                         return (
-                                            <div key={messageKey} className={`flex ${isMe ? 'justify-end' : 'justify-start'} gap-2`}>
-                                                {/* Avatar for incoming messages */}
-                                                {!isMe && (
-                                                    <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 overflow-hidden self-end mb-1">
-                                                        {msg.profilePicUrl ? (
-                                                            <img src={msg.profilePicUrl} alt={msg.pushName || 'User'} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold bg-[#555]">
-                                                                {(msg.pushName || 'U')[0].toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <div className="flex flex-col">
-                                                    {/* Sender name for incoming messages */}
-                                                    {!isMe && msg.pushName && (
-                                                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 ml-2 font-medium">
-                                                            {msg.pushName}
+                                            <div key={messageKey} className={cn('flex w-full', isMe ? 'justify-end' : 'justify-start')}>
+                                                <div className={cn('flex max-w-[min(84%,760px)] items-end gap-3', isMe ? 'flex-row-reverse' : 'flex-row')}>
+                                                    {!isMe && (
+                                                        <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gray-700 shadow-[0_8px_18px_rgba(15,23,42,0.08)]">
+                                                            {msg.profilePicUrl ? (
+                                                                <img src={msg.profilePicUrl} alt={msg.pushName || 'Contato'} className="h-full w-full object-cover" />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center bg-[#555] text-xs font-bold text-white">
+                                                                    {(msg.pushName || 'U')[0].toUpperCase()}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
 
-                                                    <div className={`
-                                                    max-w-[85%] sm:max-w-[70%] rounded-lg px-3 py-1.5 shadow-md relative text-sm
-                                                    ${isMe
-                                                            ? 'bg-[#F5793B] text-white rounded-tr-none'
-                                                            : 'bg-white dark:bg-[#252525] text-gray-900 dark:text-white rounded-tl-none'}
-                                                `}>
-                                                        <div className="font-body text-[15px] leading-relaxed break-words pb-4 min-w-[80px]">
-                                                            {renderMessageContent(msg)}
-                                                        </div>
-                                                        <div className={`
-                                                        absolute bottom-1 right-2 text-[10px] flex items-center gap-1
-                                                        ${isMe ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}
-                                                    `}>
-                                                            {formatTime(msg.messageTimestamp)}
-                                                            {isMe && (
-                                                                <span className={msg.status === 'READ' ? 'text-blue-200' : ''}>
-                                                                    <CheckCheck size={14} />
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                    <div className={cn('flex min-w-0 flex-col', isMe ? 'items-end' : 'items-start')}>
+                                                        {!isMe && msg.pushName && (
+                                                            <div className="mb-1.5 ml-1 text-xs font-medium text-gray-600 dark:text-gray-400">
+                                                                {msg.pushName}
+                                                            </div>
+                                                        )}
 
-                                                        {/* Triangle for bubble tail */}
-                                                        <div className={`absolute top-0 w-0 h-0 border-[6px] border-transparent 
-                                                        ${isMe
-                                                                ? 'right-[-6px] border-t-[#F5793B] border-l-[#F5793B]'
-                                                                : 'left-[-6px] border-t-white dark:border-t-[#252525] border-r-white dark:border-r-[#252525]'}
-                                                    `}></div>
+                                                        <div
+                                                            className={cn(
+                                                                'min-w-[96px] rounded-[26px] px-4 py-3 text-sm shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-300',
+                                                                isMe
+                                                                    ? 'rounded-br-md bg-gradient-to-br from-[#FF8A4C] via-[#F5793B] to-[#EF6C2F] text-white'
+                                                                    : 'rounded-bl-md border border-black/[0.06] bg-white text-gray-900 dark:border-white/[0.08] dark:bg-[#1E1E21] dark:text-white'
+                                                            )}
+                                                        >
+                                                            <div className="font-body text-[15px] leading-7 break-words">
+                                                                {renderMessageContent(msg, isMe)}
+                                                            </div>
+                                                            <div className={cn(
+                                                                'mt-3 flex items-center justify-end gap-1 text-[11px]',
+                                                                isMe ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'
+                                                            )}>
+                                                                {formatTime(msg.messageTimestamp)}
+                                                                {isMe && (
+                                                                    <span className={msg.status === 'READ' ? 'text-blue-200' : ''}>
+                                                                        <CheckCheck size={14} />
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         );
                                     })}
                                 </div>
+                                </div>
                             </div>
 
                             {/* Input Area */}
-                            <div className="flex-none min-h-[80px] bg-gray-100 dark:bg-[#1F1F1F] px-4 py-3 flex items-center gap-4 z-20 border-t border-gray-200 dark:border-[#2A2A2A] w-full">
+                            <div className="flex-none border-t border-black/[0.06] bg-white/[0.86] px-5 py-4 backdrop-blur dark:border-white/[0.08] dark:bg-[#151517]/92">
                                 {/* Hidden file inputs */}
                                 <input
                                     ref={imageInputRef}
@@ -1257,25 +1336,25 @@ export function LiveChat() {
                                     className="hidden"
                                 />
 
-                                <div className="flex gap-4 text-gray-500 dark:text-gray-400">
-
-                                    <Paperclip
-                                        size={24}
-                                        className={`cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                <div className="mx-auto flex w-full max-w-5xl items-center gap-4">
+                                    <button
+                                        className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-black/[0.06] bg-white text-gray-500 transition-colors hover:text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:text-white ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         onClick={() => !isUploadingFile && fileInputRef.current?.click()}
-                                    />
-                                </div>
-                                <div className="flex-1 bg-white dark:bg-[#2A2A2A] rounded-lg flex items-center px-4 py-2 border border-gray-200 dark:border-none shadow-sm dark:shadow-none">
+                                        type="button"
+                                    >
+                                        <Paperclip size={20} />
+                                    </button>
+                                <div className="flex h-14 flex-1 items-center rounded-[22px] border border-black/[0.06] bg-white px-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-[#1E1E21]">
                                     {isUploadingFile ? (
-                                        <div className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-2">
-                                            <div className="animate-spin h-4 w-4 border-2 border-[#F5793B] border-t-transparent rounded-full"></div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#F5793B] border-t-transparent"></div>
                                             Enviando arquivo...
                                         </div>
                                     ) : (
                                         <input
                                             type="text"
                                             placeholder="Digite uma mensagem"
-                                            className="bg-transparent border-none outline-none text-gray-900 dark:text-white w-full placeholder-gray-500 font-body text-sm"
+                                            className="w-full border-none bg-transparent font-body text-sm text-gray-900 outline-none placeholder:text-gray-500 dark:text-white"
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -1285,26 +1364,27 @@ export function LiveChat() {
                                 <button
                                     onClick={handleSendMessage}
                                     disabled={isUploadingFile}
-                                    className={`p-2 rounded-full bg-[#F5793B] text-white hover:bg-[#e06225] transition-colors shadow-lg active:scale-95 ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)] active:scale-95 ${isUploadingFile ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <Send size={20} />
                                 </button>
+                                </div>
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50 dark:bg-[#0C0C0C] border-b-[6px] border-[#F5793B]">
+                        <div className="flex flex-1 flex-col items-center justify-center px-8 py-12 text-center">
                             <div className="w-64 h-64 mb-8 opacity-20">
                                 {/* Placeholder Illustration */}
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="w-full h-full text-gray-400 dark:text-gray-500">
                                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                                 </svg>
                             </div>
-                            <h1 className="text-3xl font-display font-light text-gray-900 dark:text-white mb-4">Kogna Live Chat</h1>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-md leading-relaxed">
+                            <h1 className="mb-4 text-3xl font-display font-bold tracking-tight text-gray-900 dark:text-white">Kogna Live Chat</h1>
+                            <p className="max-w-md text-sm leading-7 text-gray-500 dark:text-gray-400">
                                 Envie e receba mensagens sem precisar manter seu celular conectado à internet.<br />
                                 Use o Kogna em até 4 aparelhos e 1 celular ao mesmo tempo.
                             </p>
-                            <div className="mt-8 flex items-center gap-2 text-xs text-gray-500">
+                            <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-white/70 px-3 py-1.5 text-xs text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.04]">
                                 <LockIcon size={12} />
                                 Protegido com criptografia de ponta a ponta
                             </div>
@@ -1342,11 +1422,14 @@ function TakeoverModal({ vendedores, selectedId, onSelect, onConfirm, onClose }:
     onClose: () => void;
 }) {
     return (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl shadow-2xl p-6 w-[360px]">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-white font-semibold text-base">Assumir Conversa</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={18} /></button>
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-[28px] border border-black/[0.06] bg-white p-6 shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-white/[0.08] dark:bg-[#171717] dark:shadow-[0_24px_90px_rgba(0,0,0,0.55)]">
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Takeover</p>
+                        <h3 className="mt-2 text-xl font-display font-bold tracking-tight text-gray-900 dark:text-white">Assumir conversa</h3>
+                    </div>
+                    <button onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-gray-500 transition-colors hover:text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:text-white"><X size={18} /></button>
                 </div>
                 <p className="text-gray-400 text-sm mb-4">A IA será pausada e o lead atribuído ao vendedor selecionado no CRM.</p>
                 <div className="space-y-2 mb-6">
@@ -1355,9 +1438,9 @@ function TakeoverModal({ vendedores, selectedId, onSelect, onConfirm, onClose }:
                         <button
                             key={v.id}
                             onClick={() => onSelect(v.id)}
-                            className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${selectedId === v.id
-                                ? 'bg-primary/20 border-primary/40 text-primary'
-                                : 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                            className={`w-full rounded-2xl border px-4 py-3 text-left text-sm font-medium transition-all duration-300 ${selectedId === v.id
+                                ? 'border-primary/30 bg-primary/10 text-primary shadow-[0_12px_26px_rgba(245,121,59,0.14)]'
+                                : 'border-black/[0.06] bg-white/80 text-gray-800 hover:border-primary/20 hover:bg-primary/[0.04] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white'
                                 }`}
                         >
                             {v.nome}
@@ -1365,8 +1448,8 @@ function TakeoverModal({ vendedores, selectedId, onSelect, onConfirm, onClose }:
                     ))}
                 </div>
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 text-sm">Cancelar</button>
-                    <button onClick={onConfirm} className="flex-1 py-2 rounded-xl bg-primary hover:bg-primary/80 text-white text-sm font-semibold transition-colors">Confirmar</button>
+                    <button onClick={onClose} className="flex-1 rounded-2xl border border-black/[0.07] py-3 text-sm font-semibold text-gray-500 transition-colors hover:bg-black/[0.03] hover:text-gray-900 dark:border-white/[0.08] dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-white">Cancelar</button>
+                    <button onClick={onConfirm} className="flex-1 rounded-2xl bg-gradient-primary py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.30)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.36)]">Confirmar</button>
                 </div>
             </div>
         </div>
