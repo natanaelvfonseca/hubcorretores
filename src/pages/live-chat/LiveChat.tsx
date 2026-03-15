@@ -1118,10 +1118,6 @@ export function LiveChat() {
                                                     {activeLeadTemp} {activeLeadScore > 0 ? `(${activeLeadScore}%)` : ''}
                                                 </span>
                                             )}
-                                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                                online
-                                            </span>
                                             {isChatPaused && (
                                                 <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                                                     IA pausada
