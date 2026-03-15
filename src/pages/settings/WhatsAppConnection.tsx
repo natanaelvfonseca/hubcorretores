@@ -29,6 +29,8 @@ interface WhatsAppInstance {
     instance_name: string;
     status: string;
     created_at: string;
+    connected_agent_id?: string | null;
+    connected_agent_name?: string | null;
 }
 
 function isInstanceConnected(status?: string) {
@@ -342,6 +344,7 @@ export function WhatsAppConnection() {
         const searchBase = [
             getInstanceLabel(instance.instance_name),
             instance.instance_name,
+            instance.connected_agent_name || '',
             isInstanceConnected(instance.status) ? 'online conectado whatsapp' : 'offline desconectado reconectar',
         ]
             .join(' ')
@@ -487,6 +490,7 @@ export function WhatsAppConnection() {
                             {filteredInstances.map((instance) => {
                                 const connected = isInstanceConnected(instance.status);
                                 const label = getInstanceLabel(instance.instance_name);
+                                const connectedAgentName = instance.connected_agent_name?.trim();
 
                                 return (
                                     <article
@@ -539,6 +543,19 @@ export function WhatsAppConnection() {
                                                             {formatConnectionDate(instance.created_at)}
                                                         </p>
                                                     </div>
+                                                </div>
+                                                <div className="mt-3 rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
+                                                        IA conectada
+                                                    </p>
+                                                    <p className="mt-2 text-sm font-semibold text-text-primary">
+                                                        {connectedAgentName || 'Nenhuma IA vinculada'}
+                                                    </p>
+                                                    <p className="mt-1 text-xs leading-5 text-text-secondary">
+                                                        {connectedAgentName
+                                                            ? 'Esse numero ja esta roteando conversas para esta IA.'
+                                                            : 'Conecte esta linha em Minhas IAs para comecar a operar com um agente.'}
+                                                    </p>
                                                 </div>
                                                 <p className="mt-4 text-sm leading-7 text-text-secondary">
                                                     {connected

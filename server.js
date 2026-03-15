@@ -8596,6 +8596,12 @@ app.get("/api/instances", verifyJWT, async (req, res) => {
   try {
     const userId = req.userId;
 
+    const selectInstancesWithAgent = `
+      SELECT wi.*, a.id AS connected_agent_id, a.name AS connected_agent_name
+      FROM whatsapp_instances wi
+      LEFT JOIN agents a ON a.whatsapp_instance_id = wi.id
+    `;
+
     const orgRes = await pool.query(
       "SELECT organization_id FROM users WHERE id = $1",
       [userId],
@@ -8604,14 +8610,14 @@ app.get("/api/instances", verifyJWT, async (req, res) => {
 
     if (!orgId) {
       const fallback = await pool.query(
-        "SELECT * FROM whatsapp_instances WHERE user_id = $1 ORDER BY created_at DESC",
+        `${selectInstancesWithAgent} WHERE wi.user_id = $1 ORDER BY wi.created_at DESC`,
         [userId],
       );
       return res.json(fallback.rows);
     }
 
     const instancesQuery =
-      "SELECT * FROM whatsapp_instances WHERE organization_id = $1 ORDER BY created_at DESC";
+      `${selectInstancesWithAgent} WHERE wi.organization_id = $1 ORDER BY wi.created_at DESC`;
     let result = await pool.query(instancesQuery, [orgId]);
 
     if (result.rows.length === 0) {
@@ -8626,7 +8632,7 @@ app.get("/api/instances", verifyJWT, async (req, res) => {
           [orgId, userId],
         );
         result = await pool.query(
-          "SELECT * FROM whatsapp_instances WHERE organization_id = $1 ORDER BY created_at DESC",
+          `${selectInstancesWithAgent} WHERE wi.organization_id = $1 ORDER BY wi.created_at DESC`,
           [orgId],
         );
       }
