@@ -445,14 +445,69 @@ export function Products() {
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm("Inativar este produto?")) return;
-    await fetch(`${CATALOG_API_BASE}/products/${id}`, {
+    const productName =
+      selected?.id === id ? form.nome : products.find((product) => product.id === id)?.nome;
+    if (
+      !confirm(
+        `Excluir ${productName ? `"${productName}" ` : ""}permanentemente? Isso também removerá imagens e promoções relacionadas.`,
+      )
+    )
+      return;
+    const res = await fetch(`${CATALOG_API_BASE}/products/${id}`, {
       method: "DELETE",
       headers: authHeader(),
     });
-    showToast("Produto inativado.");
-    setShowModal(false);
-    fetchProducts();
+    if (res.ok) {
+      showToast("Produto excluído.");
+      if (selected?.id === id) {
+        setShowModal(false);
+        setSelected(null);
+        setForm({ ...EMPTY_PRODUCT });
+      }
+      fetchProducts();
+      fetchPromotions();
+    } else {
+      const error = await res.json().catch(() => null);
+      showToast(error?.error || "Erro ao excluir produto.", "error");
+    }
+  };
+  const toggleProductStatus = async (product: {
+    id: string;
+    nome?: string;
+    status?: string;
+  }) => {
+    const nextStatus = product.status === "inativo" ? "ativo" : "inativo";
+    const actionLabel = nextStatus === "inativo" ? "inativar" : "reativar";
+    if (
+      !confirm(
+        `${nextStatus === "inativo" ? "Inativar" : "Reativar"} ${product.nome ? `"${product.nome}"` : "este produto"}?`,
+      )
+    )
+      return;
+
+    const res = await fetch(`${CATALOG_API_BASE}/products/${product.id}/status`, {
+      method: "PATCH",
+      headers: authHeader(),
+      body: JSON.stringify({ status: nextStatus }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      showToast(
+        nextStatus === "inativo" ? "Produto inativado." : "Produto reativado!",
+      );
+      if (selected?.id === product.id) {
+        setSelected(data);
+        setForm((current: any) => ({
+          ...current,
+          status: data.status,
+        }));
+      }
+      fetchProducts();
+    } else {
+      const error = await res.json().catch(() => null);
+      showToast(error?.error || `Erro ao ${actionLabel} produto.`, "error");
+    }
   };
   const addImage = async () => {
     if (!newImageUrl && !newImageFile) return;
@@ -756,10 +811,32 @@ export function Products() {
                       })}
                     </span>
                   )}
-                  <div className="flex gap-1.5">
-                    {p.status && (
-                      <span className="sr-only">{p.status}</span>
-                    )}
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleProductStatus({
+                          id: p.id,
+                          nome: p.nome,
+                          status: p.status,
+                        })
+                      }
+                      className={cn(
+                        "inline-flex h-9 items-center justify-center rounded-2xl border px-3 text-xs font-semibold transition-colors",
+                        p.status === "ativo"
+                          ? "border-amber-500/20 bg-amber-500/10 text-amber-600 hover:bg-amber-500/15 dark:text-amber-400"
+                          : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400",
+                      )}
+                    >
+                      {p.status === "ativo" ? "Inativar" : "Ativar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteProduct(p.id)}
+                      className="inline-flex h-9 items-center justify-center rounded-2xl border border-red-500/15 bg-red-500/10 px-3 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500/15"
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
               </div>
@@ -800,18 +877,18 @@ export function Products() {
                   </p>
                 )}
               </div>
-              <div className="mt-6 flex items-center justify-between gap-3 border-t border-black/[0.06] pt-5 dark:border-white/[0.06]">
+              <div className="mt-6 border-t border-black/[0.06] pt-5 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2 text-sm text-text-secondary">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Zap size={15} />
                   </span>
-                  <span className="max-w-[180px] leading-5">
+                  <span className="max-w-[320px] leading-5">
                     {Number(p.image_count) > 0
                       ? "Pronto para apresentar com apoio visual."
                       : "Adicione imagem e promoção para aumentar a percepção de valor."}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
                     onClick={() => openPromotionCreator(p)}
@@ -1032,12 +1109,31 @@ export function Products() {
                 </div>
                 <div className="flex items-center gap-2">
                   {!isNew && (
-                    <button
-                      onClick={() => deleteProduct(selected?.id)}
-                      className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent text-red-500 transition-colors hover:border-red-500/20 hover:bg-red-500/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() =>
+                          toggleProductStatus({
+                            id: selected?.id,
+                            nome: form.nome,
+                            status: form.status,
+                          })
+                        }
+                        className={cn(
+                          "inline-flex h-10 items-center justify-center rounded-2xl border px-4 text-sm font-semibold transition-colors",
+                          form.status === "ativo"
+                            ? "border-amber-500/20 bg-amber-500/10 text-amber-600 hover:bg-amber-500/15 dark:text-amber-400"
+                            : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400",
+                        )}
+                      >
+                        {form.status === "ativo" ? "Inativar" : "Ativar"}
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(selected?.id)}
+                        className="inline-flex h-10 items-center justify-center rounded-2xl border border-red-500/15 bg-red-500/10 px-4 text-sm font-semibold text-red-500 transition-colors hover:bg-red-500/15"
+                      >
+                        Excluir
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => setShowModal(false)}
@@ -1150,50 +1246,6 @@ export function Products() {
                           className={textareaClass}
                           placeholder="Descreva o produto para a IA e para a apresentação no WhatsApp"
                         />
-                      </div>
-                    </div>
-                  </ModalSection>
-                  <ModalSection
-                    eyebrow="Bloco 3"
-                    title="Status do produto"
-                  >
-                    <div
-                      className={cn(
-                        subtlePanel,
-                        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        {form.status === "ativo" && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                            Ativo
-                          </span>
-                        )}
-                        <button
-                          onClick={() =>
-                            setForm((f: any) => ({
-                              ...f,
-                              status:
-                                f.status === "ativo" ? "inativo" : "ativo",
-                            }))
-                          }
-                          className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 dark:border-white/[0.08] dark:bg-white/[0.04]"
-                        >
-                          {form.status === "ativo" ? (
-                            <>
-                              <ToggleRight className="h-5 w-5 text-primary" />
-                              <span className="text-primary">Ativo</span>
-                            </>
-                          ) : (
-                            <>
-                              <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-                              <span className="text-muted-foreground">
-                                Inativo
-                              </span>
-                            </>
-                          )}
-                        </button>
                       </div>
                     </div>
                   </ModalSection>

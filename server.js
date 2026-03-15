@@ -16341,21 +16341,98 @@ app.put('/api/catalog/products/:id', verifyJWT, async (req, res) => {
   }
 });
 
+app.patch('/api/catalog/products/:id/status', verifyJWT, async (req, res) => {
+  try {
+    await ensureProductEngineTablesReady();
+    const user = await getUserById(req.userId);
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+
+    const { status } = req.body;
+    if (!['ativo', 'inativo'].includes(status)) {
+      return res.status(400).json({ error: 'Status inválido' });
+    }
+
+    const result = await pool.query(
+      `UPDATE products
+       SET status=$1,
+           active=CASE WHEN $1 = 'inativo' THEN false ELSE true END,
+           updated_at=NOW()
+       WHERE id=$2 AND organization_id=$3
+       RETURNING *`,
+      [status, req.params.id, user.organization_id]
+    );
+
+    if (!result.rows[0]) return res.status(404).json({ error: 'Product not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    log('PATCH /api/catalog/products/:id/status error: ' + (err.stack || err.message));
+    res.status(500).json({ error: 'Erro ao atualizar status', details: err.message });
+  }
+});
+
 app.delete('/api/catalog/products/:id', verifyJWT, async (req, res) => {
   try {
     await ensureProductEngineTablesReady();
     const user = await getUserById(req.userId);
     if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
-    await pool.query(
-      `UPDATE products SET status='inativo', updated_at=NOW() WHERE id=$1 AND organization_id=$2`,
-      [req.params.id, user.organization_id]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    res.json({ success: true });
+      const productRes = await client.query(
+        `SELECT id FROM products WHERE id=$1 AND organization_id=$2`,
+        [req.params.id, user.organization_id]
+      );
+      if (!productRes.rows[0]) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      await client.query(
+        `DELETE FROM product_images
+         WHERE product_id=$1 AND organization_id=$2`,
+        [req.params.id, user.organization_id]
+      );
+
+      const deletedOffers = await client.query(
+        `DELETE FROM offers
+         WHERE product_id=$1 AND organization_id=$2
+         RETURNING id`,
+        [req.params.id, user.organization_id]
+      );
+
+      const deletedOfferIds = deletedOffers.rows.map((row) => row.id);
+      if (deletedOfferIds.length > 0) {
+        await client.query(
+          `DELETE FROM offer_events
+           WHERE organization_id=$1 AND (product_id=$2 OR offer_id = ANY($3::uuid[]))`,
+          [user.organization_id, req.params.id, deletedOfferIds]
+        );
+      } else {
+        await client.query(
+          `DELETE FROM offer_events
+           WHERE organization_id=$1 AND product_id=$2`,
+          [user.organization_id, req.params.id]
+        );
+      }
+
+      await client.query(
+        `DELETE FROM products WHERE id=$1 AND organization_id=$2`,
+        [req.params.id, user.organization_id]
+      );
+
+      await client.query('COMMIT');
+      res.json({ success: true });
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
-    log('DELETE /api/catalog/products/:id error: ' + err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    log('DELETE /api/catalog/products/:id error: ' + (err.stack || err.message));
+    res.status(500).json({ error: 'Erro ao excluir produto', details: err.message });
   }
 });
 
