@@ -1166,7 +1166,7 @@ export function LiveChat() {
 
     return (
         <>
-            <div className="relative flex h-full min-h-[calc(100vh-128px)] w-full overflow-hidden rounded-[30px] border border-black/[0.06] bg-white/[0.92] shadow-[0_24px_80px_rgba(15,23,42,0.10)] dark:border-white/[0.08] dark:bg-[#0F0F10] dark:shadow-[0_28px_90px_rgba(0,0,0,0.42)]">
+            <div className="relative flex h-full min-h-[calc(100vh-128px)] w-full overflow-hidden rounded-[30px] border border-black/[0.06] bg-white/[0.92] shadow-[0_24px_80px_rgba(15,23,42,0.10)] dark:border-white/[0.08] dark:bg-[#0F0F10] dark:shadow-[0_28px_90px_rgba(0,0,0,0.42)]" data-tour-id="tour-live-chat-layout">
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.10),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.06),_transparent_32%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_28%)]" />
 
                 <div className="relative z-10 flex h-full min-w-[350px] w-[350px] flex-none flex-col border-r border-black/[0.06] bg-white/[0.94] dark:border-white/[0.08] dark:bg-[#121212] xl:min-w-[380px] xl:w-[380px]">

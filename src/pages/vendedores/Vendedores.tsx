@@ -224,7 +224,7 @@ export function Vendedores() {
     const selectedVendedor = vendedores.find(v => v.id === selectedId);
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-5 overflow-y-auto">
+        <div className="h-full flex flex-col p-6 space-y-5 overflow-y-auto" data-tour-id="tour-vendedores-main">
 
             {/* Header */}
             <div className="flex items-center justify-between">

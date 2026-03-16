@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { User, Building, Mail, Phone, Lock, Save, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { useGuidedTour } from '../../components/guided-tour/GuidedTourProvider';
 
 export function ProfileSettings() {
     const { user, token, refreshUser } = useAuth();
     const { showToast } = useNotifications();
+    const { startManualTour } = useGuidedTour();
     const [isSaving, setIsSaving] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -261,6 +263,29 @@ export function ProfileSettings() {
                         Alterar Senha
                     </button>
                 </form>
+            </section>
+
+            <section className="bg-surface border border-border/50 rounded-2xl overflow-hidden shadow-sm" data-tour-id="tour-settings-profile">
+                <div className="p-6 border-b border-border/50 bg-surface/50">
+                    <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                        <User size={20} className="text-primary" />
+                        Tour da Plataforma
+                    </h3>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <p className="text-sm leading-7 text-text-secondary">
+                        Refaca o guia da Kogna para revisar como cada area da plataforma ajuda a transformar o WhatsApp em um canal previsivel de vendas.
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={startManualTour}
+                        className="bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                    >
+                        Rever tour da plataforma
+                    </button>
+                </div>
             </section>
         </div>
     );

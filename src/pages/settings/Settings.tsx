@@ -44,7 +44,7 @@ export function Settings() {
     ];
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-6">
+        <div className="h-full flex flex-col p-6 space-y-6" data-tour-id="tour-settings-main">
             <div>
                 <h1 className="text-2xl font-bold text-text-primary">Configurações</h1>
                 <p className="text-text-secondary text-sm">Gerencie sua conta e preferências do sistema</p>

@@ -79,7 +79,7 @@ export function CRM() {
 
     return (
         <div className="h-full flex flex-col p-2 space-y-1">
-            <div className="flex justify-between items-center px-2 py-1">
+            <div className="flex justify-between items-center px-2 py-1" data-tour-id="tour-crm-header">
                 <div>
                     <h1 className="text-xl font-bold text-text-primary">Funil de Vendas</h1>
                     <p className="text-text-secondary text-[11px]">Gerencie seus leads e oportunidades</p>
@@ -95,7 +95,7 @@ export function CRM() {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative" data-tour-id="tour-crm-board">
                 <ErrorBoundary fallback={<div className="text-text-primary p-4">Erro ao carregar o Kanban. Verifique a conexão.</div>}>
                     <KanbanBoard
                         refreshTrigger={refreshTrigger}

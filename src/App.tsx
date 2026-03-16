@@ -34,6 +34,7 @@ import { KognaIntelligencePanel } from './pages/admin/KognaIntelligencePanel';
 import { AdminAutomations } from './pages/admin/AdminAutomations';
 
 import { ReferralRedirect } from './pages/partners/ReferralRedirect';
+import { GuidedTourProvider } from './components/guided-tour/GuidedTourProvider';
 
 function App() {
     return (
@@ -53,7 +54,9 @@ function App() {
                             <Route path="/" element={
                                 <ProtectedRoute>
                                     <OnboardingGuard>
-                                        <AppShell />
+                                        <GuidedTourProvider>
+                                            <AppShell />
+                                        </GuidedTourProvider>
                                     </OnboardingGuard>
                                 </ProtectedRoute>
                             }>

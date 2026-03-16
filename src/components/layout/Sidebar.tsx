@@ -21,6 +21,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { BrandLogo } from '../branding/BrandLogo';
+import { useGuidedTour } from '../guided-tour/GuidedTourProvider';
 
 const menuItems = [
     { icon: BarChart2, label: 'Métricas de Receita', path: '/dashboard/revenue-metrics' },
@@ -46,6 +47,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     const location = useLocation();
     const { user, logout } = useAuth();
+    const { isSidebarLocked } = useGuidedTour();
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +78,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         : user?.email?.slice(0, 2).toUpperCase() || 'U';
 
     return (
-        <aside className={`h-screen bg-sidebar border-r border-border/20 transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} flex flex-col fixed left-0 top-0 z-50 shadow-2xl overflow-hidden`}>
+        <aside className={`h-screen bg-sidebar border-r border-border/20 transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} flex flex-col fixed left-0 top-0 z-50 shadow-2xl overflow-hidden`} data-tour-id="tour-sidebar-shell">
             <div className="h-16 flex items-center justify-between px-6 border-b border-border/10 bg-sidebar transition-colors duration-300">
                 {!collapsed && (
                     <BrandLogo
@@ -87,14 +89,19 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                     />
                 )}
                 <button
-                    onClick={() => setCollapsed(!collapsed)}
-                    className="p-2 rounded-lg hover:bg-surfaceHover text-text-secondary hover:text-primary transition-all ml-auto hover:shadow-lg hover:shadow-primary/5 active:scale-95"
+                    onClick={() => {
+                        if (!isSidebarLocked) {
+                            setCollapsed(!collapsed);
+                        }
+                    }}
+                    className="p-2 rounded-lg hover:bg-surfaceHover text-text-secondary hover:text-primary transition-all ml-auto hover:shadow-lg hover:shadow-primary/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSidebarLocked}
                 >
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                 </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-1.5 scrollbar-hide">
+            <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-1.5 scrollbar-hide" data-tour-id="tour-sidebar">
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (

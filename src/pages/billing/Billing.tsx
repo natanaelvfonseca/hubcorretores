@@ -265,7 +265,7 @@ export function Billing() {
     ];
 
     return (
-        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-fade-in pb-24">
+        <div className="p-8 max-w-7xl mx-auto space-y-12 animate-fade-in pb-24" data-tour-id="tour-billing-main">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500 mb-2">

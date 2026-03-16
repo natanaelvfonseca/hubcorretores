@@ -248,7 +248,7 @@ export function RevenueMetrics() {
             <div className="max-w-screen-2xl mx-auto px-6 py-8 space-y-10">
 
                 {/* ══ HEADER ═══════════════════════════════════════════════════ */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" data-tour-id="tour-revenue-header">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
@@ -308,7 +308,7 @@ export function RevenueMetrics() {
                 </section>
 
                 {/* IA Diretor de Vendas (entre Revenue e Saúde do Funil) */}
-                <div className="bg-surface border border-border/50 rounded-2xl p-5 shadow-xl relative overflow-hidden mb-6">
+                <div className="bg-surface border border-border/50 rounded-2xl p-5 shadow-xl relative overflow-hidden mb-6" data-tour-id="tour-revenue-urgency">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2 mb-2">

@@ -67,6 +67,8 @@ app.use("/api/login", authLimiter);
 app.use("/api/register", authLimiter);
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const GUIDED_TOUR_VERSION = "platform-v1";
+const GUIDED_TOUR_ROLLOUT_AT = "2026-03-16T00:00:00.000Z";
 if (!JWT_SECRET) {
   log("CRITICAL WARNING: JWT_SECRET not found in environment variables. All authentication will fail!");
 }
@@ -3170,6 +3172,27 @@ const ensureOnboardingSessionsTable = async () => {
 };
 // â”€â”€ END ONBOARDING V2 SESSION TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+const ensureGuidedTourColumns = async () => {
+  try {
+    log("[SYSTEM] Ensuring guided tour columns...");
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS guided_tour_seen_version TEXT`).catch(() => { });
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS guided_tour_seen_at TIMESTAMPTZ`).catch(() => { });
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS guided_tour_last_status TEXT`).catch(() => { });
+    await pool.query(
+      `UPDATE users
+          SET guided_tour_seen_version = $1,
+              guided_tour_seen_at = COALESCE(guided_tour_seen_at, NOW()),
+              guided_tour_last_status = COALESCE(guided_tour_last_status, 'completed')
+        WHERE created_at < $2::timestamptz
+          AND guided_tour_seen_version IS NULL`,
+      [GUIDED_TOUR_VERSION, GUIDED_TOUR_ROLLOUT_AT],
+    ).catch(() => { });
+    log("[SYSTEM] Guided tour columns verified.");
+  } catch (err) {
+    log("[ERROR] ensureGuidedTourColumns: " + err.message);
+  }
+};
+
 // Inicia as conexÃµes e migraÃ§Ãµes em segundo plano para nÃ£o travar o boot da Vercel
 initPool().then(() => {
   ensureLeadsColumns();
@@ -3183,6 +3206,7 @@ initPool().then(() => {
   setTimeout(ensureConversationStateTables, 16000); // CSE: Conversation State Engine tables
   setTimeout(ensureProductEngineTables, 18000);      // Product & Dynamic Offer Engine tables
   setTimeout(ensureOnboardingSessionsTable, 20000);   // Onboarding V2 test sessions table
+  setTimeout(ensureGuidedTourColumns, 22000);         // Guided tour rollout + persistence columns
 
   // Start Follow-up Engine cron jobs (fire after tables are ready)
   setTimeout(() => {
@@ -6771,6 +6795,75 @@ app.get("/api/me", verifyJWT, async (req, res) => {
     res.json({ user });
   } catch (err) {
     log(`Error fetching current user: ${err.message} `);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/guided-tour/status", verifyJWT, async (req, res) => {
+  try {
+    await ensureGuidedTourColumns();
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const result = await pool.query(
+      `SELECT onboarding_completed, guided_tour_seen_version, guided_tour_last_status, created_at
+         FROM users
+        WHERE id = $1`,
+      [userId],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const row = result.rows[0];
+    const createdAt = row.created_at ? new Date(row.created_at).getTime() : 0;
+    const rolloutAt = new Date(GUIDED_TOUR_ROLLOUT_AT).getTime();
+    const isEligibleUser = createdAt >= rolloutAt;
+    const shouldStart =
+      Boolean(row.onboarding_completed) &&
+      isEligibleUser &&
+      row.guided_tour_seen_version !== GUIDED_TOUR_VERSION;
+
+    res.json({
+      shouldStart,
+      currentVersion: GUIDED_TOUR_VERSION,
+      seenVersion: row.guided_tour_seen_version || null,
+      seenStatus: row.guided_tour_last_status || null,
+    });
+  } catch (err) {
+    log("GET /api/guided-tour/status error: " + err.toString());
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/guided-tour/state", verifyJWT, async (req, res) => {
+  try {
+    await ensureGuidedTourColumns();
+    const userId = req.userId;
+    const status = req.body?.status;
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    if (!["completed", "skipped"].includes(status)) {
+      return res.status(400).json({ error: "Status invalido" });
+    }
+
+    await pool.query(
+      `UPDATE users
+          SET guided_tour_seen_version = $1,
+              guided_tour_seen_at = NOW(),
+              guided_tour_last_status = $2
+        WHERE id = $3`,
+      [GUIDED_TOUR_VERSION, status, userId],
+    );
+
+    res.json({
+      ok: true,
+      currentVersion: GUIDED_TOUR_VERSION,
+      seenStatus: status,
+    });
+  } catch (err) {
+    log("POST /api/guided-tour/state error: " + err.toString());
     res.status(500).json({ error: "Internal server error" });
   }
 });

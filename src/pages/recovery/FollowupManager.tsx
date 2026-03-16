@@ -564,7 +564,7 @@ export function FollowupManager() {
     return (
         <div className="min-h-screen">
             <div className="mx-auto flex max-w-screen-2xl flex-col gap-8 px-6 py-8">
-                <Surface className="overflow-hidden">
+                <Surface className="overflow-hidden" data-tour-id="tour-recovery-main">
                     <div className="rounded-[32px] bg-[radial-gradient(circle_at_top_right,rgba(255,120,51,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,120,51,0.08),transparent_28%)] p-8 sm:p-10">
                         <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
                             <div className="max-w-3xl">

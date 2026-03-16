@@ -37,7 +37,7 @@ export function Topbar() {
     }, [token]);
 
     return (
-        <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-40 px-6 flex items-center justify-between transition-colors duration-300">
+        <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-40 px-6 flex items-center justify-between transition-colors duration-300" data-tour-id="tour-topbar">
             <div className="flex items-center gap-4 flex-1">
                 {/* Search removed as requested */}
             </div>

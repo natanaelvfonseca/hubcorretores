@@ -120,7 +120,7 @@ export function Agenda() {
     };
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-5">
+        <div className="h-full flex flex-col p-6 space-y-5" data-tour-id="tour-agenda-main">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>

@@ -149,7 +149,7 @@ export function Clients() {
         : 0;
 
     return (
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-6" data-tour-id="tour-clients-main">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-text-primary">Clientes</h1>
