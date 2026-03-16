@@ -486,7 +486,7 @@ export function WhatsAppConnection() {
                             </p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
                             {filteredInstances.map((instance) => {
                                 const connected = isInstanceConnected(instance.status);
                                 const label = getInstanceLabel(instance.instance_name);
@@ -495,14 +495,14 @@ export function WhatsAppConnection() {
                                 return (
                                     <article
                                         key={instance.id}
-                                        className="group relative overflow-hidden rounded-[30px] border border-black/[0.06] bg-white/[0.9] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.12)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_22px_70px_rgba(0,0,0,0.38)]"
+                                        className="group relative overflow-hidden rounded-[26px] border border-black/[0.06] bg-white/[0.9] p-4 shadow-[0_16px_42px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.12)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_20px_60px_rgba(0,0,0,0.38)]"
                                     >
                                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.10),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.08),_transparent_28%)] opacity-80 dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.14),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.10),_transparent_30%)]" />
 
-                                        <div className="relative flex h-full flex-col gap-6">
+                                        <div className="relative flex h-full flex-col gap-4">
                                             <div className="flex items-start justify-between gap-4">
-                                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-gradient-to-br from-[#25D366] via-[#1DB954] to-[#0EA75A] text-white shadow-[0_18px_40px_rgba(37,211,102,0.26)]">
-                                                    <Smartphone size={28} />
+                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#25D366] via-[#1DB954] to-[#0EA75A] text-white shadow-[0_14px_30px_rgba(37,211,102,0.22)]">
+                                                    <Smartphone size={22} />
                                                 </div>
                                                 <StatusBadge connected={connected} />
                                             </div>
@@ -511,44 +511,44 @@ export function WhatsAppConnection() {
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-text-muted">
                                                     Canal do WhatsApp
                                                 </p>
-                                                <h3 className="mt-2 truncate text-2xl font-display font-bold tracking-tight text-text-primary">
+                                                <h3 className="mt-2 truncate text-xl font-display font-bold tracking-tight text-text-primary">
                                                     {label}
                                                 </h3>
                                                 <p
-                                                    className="mt-2 truncate font-mono text-xs text-text-muted"
+                                                    className="mt-1.5 truncate font-mono text-[11px] text-text-muted"
                                                     title={instance.instance_name}
                                                 >
                                                     ID tecnico: {instance.instance_name}
                                                 </p>
                                             </div>
 
-                                            <div className="rounded-[24px] border border-black/[0.06] bg-white/70 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                            <div className="rounded-[22px] border border-black/[0.06] bg-white/70 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">
                                                     Operacao
                                                 </p>
-                                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
                                                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                             Status da linha
                                                         </p>
-                                                        <p className="mt-2 text-sm font-semibold text-text-primary">
+                                                        <p className="mt-1.5 text-sm font-semibold text-text-primary">
                                                             {connected ? 'Conectada e pronta' : 'Precisa reconectar'}
                                                         </p>
                                                     </div>
-                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
                                                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                             Criada em
                                                         </p>
-                                                        <p className="mt-2 text-sm font-semibold text-text-primary">
+                                                        <p className="mt-1.5 text-sm font-semibold text-text-primary">
                                                             {formatConnectionDate(instance.created_at)}
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="mt-3 rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                <div className="mt-2 rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
                                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                         IA conectada
                                                     </p>
-                                                    <p className="mt-2 text-sm font-semibold text-text-primary">
+                                                    <p className="mt-1.5 text-sm font-semibold text-text-primary">
                                                         {connectedAgentName || 'Nenhuma IA vinculada'}
                                                     </p>
                                                     <p className="mt-1 text-xs leading-5 text-text-secondary">
@@ -557,14 +557,9 @@ export function WhatsAppConnection() {
                                                             : 'Conecte esta linha em Minhas IAs para comecar a operar com um agente.'}
                                                     </p>
                                                 </div>
-                                                <p className="mt-4 text-sm leading-7 text-text-secondary">
-                                                    {connected
-                                                        ? 'Linha pronta para receber agentes, roteamentos e operacoes no WhatsApp com mais estabilidade.'
-                                                        : 'Reconecte esta linha para voltar a operar com agentes e manter suas automacoes funcionando.'}
-                                                </p>
                                             </div>
 
-                                            <div className="space-y-3">
+                                            <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-sm text-text-secondary">
                                                     {connected ? (
                                                         <Wifi size={16} className="text-emerald-500" />
@@ -579,7 +574,7 @@ export function WhatsAppConnection() {
                                                 <div className="flex flex-col gap-2 sm:flex-row">
                                                     <button
                                                         onClick={() => (connected ? navigate('/brain') : handleReconnect(instance.instance_name))}
-                                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(245,121,59,0.34)]"
+                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(245,121,59,0.34)]"
                                                     >
                                                         {connected ? <ArrowRight size={16} /> : <QrCode size={16} />}
                                                         {connected ? 'Usar nas IAs' : 'Gerar novo QR'}
@@ -587,7 +582,7 @@ export function WhatsAppConnection() {
 
                                                     <button
                                                         onClick={() => handleCopyId(instance)}
-                                                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
+                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                                     >
                                                         <Copy size={16} />
                                                         {copiedInstanceId === instance.id ? 'ID copiado' : 'Copiar ID'}
@@ -596,7 +591,7 @@ export function WhatsAppConnection() {
 
                                                 <button
                                                     onClick={() => handleDelete(instance.id, label)}
-                                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-red-200/80 bg-red-50 px-4 text-sm font-semibold text-red-600 transition-all duration-300 hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 dark:hover:border-red-500/30"
+                                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-red-200/80 bg-red-50 px-4 text-sm font-semibold text-red-600 transition-all duration-300 hover:-translate-y-0.5 hover:border-red-300 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300 dark:hover:border-red-500/30"
                                                 >
                                                     <Trash2 size={16} />
                                                     Desconectar
