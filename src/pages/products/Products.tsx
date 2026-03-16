@@ -785,11 +785,6 @@ export function Products() {
                       {p.nome}
                     </h3>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {p.categoria && (
-                        <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                          {p.categoria}
-                        </span>
-                      )}
                       <span className={cn(
                         "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
                         p.status === "ativo"
@@ -811,7 +806,7 @@ export function Products() {
                       })}
                     </span>
                   )}
-                  <div className="flex flex-wrap justify-end gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() =>
@@ -865,17 +860,6 @@ export function Products() {
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="mt-5">
-                {p.descricao_curta ? (
-                  <p className="text-sm leading-7 text-text-secondary">
-                    {p.descricao_curta}
-                  </p>
-                ) : (
-                  <p className="text-sm leading-7 text-text-secondary">
-                    Cadastre uma descricao curta para a IA apresentar esse produto com mais clareza no WhatsApp.
-                  </p>
-                )}
               </div>
               <div className="mt-6 border-t border-black/[0.06] pt-5 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2 text-sm text-text-secondary">
