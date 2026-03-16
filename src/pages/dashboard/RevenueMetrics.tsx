@@ -1,7 +1,7 @@
 import {
     DollarSign, CheckCircle, Target, Flame, AlertTriangle, Timer,
     ArrowRight, TrendingUp, Zap, Clock, MessageSquare, BarChart3,
-    Activity, BrainCircuit, X
+    Activity, BrainCircuit, X, ArrowUpRight
 } from 'lucide-react';
 import {
     AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -34,6 +34,17 @@ interface RevenueIntelligenceData {
     temperatures: { name: string; value: number }[];
     distribution: { range: string; count: number }[];
     conversion_rates: { range: string; rate: number }[];
+}
+
+interface FollowupDashboardData {
+    kpis: {
+        recovered: number;
+        responseRate: number;
+        avgReplyMinutes: number;
+        conversions: number;
+        activeQueue?: number;
+        activeSequences?: number;
+    };
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -183,6 +194,7 @@ export function RevenueMetrics() {
     const { data: revIntel, loading: revIntelLoading } = useAPI<RevenueIntelligenceData>(
         `/api/dashboard/revenue-intelligence?days=${selectedDays}`, token, [selectedDays]
     );
+    const { data: followupDashboard, loading: followupDashboardLoading } = useAPI<FollowupDashboardData>('/api/followup/dashboard', token);
 
     const urgencyLeads = urgency ? urgency[urgencyTab] : [];
     const urgencyCounts = urgency ? { now: urgency.now.length, today: urgency.today.length, at_risk: urgency.at_risk.length } : { now: 0, today: 0, at_risk: 0 };
@@ -326,6 +338,47 @@ export function RevenueMetrics() {
                                     O Diretor de Vendas está em dia — nenhuma ação urgente agora.
                                 </div>
                             )}
+                        </div>
+                        <div className="rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-4">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Recovery OS</p>
+                                    <h4 className="mt-2 text-base font-bold text-foreground">Recuperacao alinhada ao faturamento</h4>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Transforme conversas mornas em oportunidades ativas e mantenha previsibilidade na receita do WhatsApp.
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 lg:min-w-[340px]">
+                                    <div className="rounded-xl border border-border/50 bg-background px-4 py-3">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Fila ativa</p>
+                                        <p className="mt-2 text-lg font-bold text-foreground">
+                                            {followupDashboardLoading ? '--' : followupDashboard?.kpis.activeQueue || 0}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-xl border border-border/50 bg-background px-4 py-3">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Taxa de resposta</p>
+                                        <p className="mt-2 text-lg font-bold text-foreground">
+                                            {followupDashboardLoading ? '--' : `${Math.round((followupDashboard?.kpis.responseRate || 0) * 100)}%`}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-3">
+                                <button
+                                    onClick={() => navigate('/recovery')}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+                                >
+                                    <ArrowUpRight size={14} />
+                                    Operar recovery
+                                </button>
+                                <button
+                                    onClick={() => navigate('/live-chat')}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                                >
+                                    <MessageSquare size={14} />
+                                    Abrir conversas
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

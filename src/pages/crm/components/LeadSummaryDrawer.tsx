@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrainCircuit, Building2, DollarSign, Globe, Lightbulb, Mail, Phone, Target, Trash2, User, UserCheck, X } from 'lucide-react';
+import { Bell, BrainCircuit, Building2, Clock3, DollarSign, Globe, Lightbulb, Mail, Phone, Sparkles, Target, Trash2, User, UserCheck, X } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { Lead } from '../types';
 
@@ -38,6 +38,26 @@ interface LeadSummaryResponse {
         intent?: string | null;
     } | null;
 }
+
+interface FollowupStatusResponse {
+    status: string;
+    current_step?: number;
+    total_steps?: number;
+    scheduled_at?: string | null;
+    conversation_temperature?: string | null;
+    pipeline_stage?: string | null;
+    sequence_name?: string | null;
+    next_recommendation?: string | null;
+    assigned_vendor_name?: string | null;
+    followup_trigger_reason?: string | null;
+}
+
+const FOLLOWUP_STATUS_LABELS: Record<string, { label: string; className: string }> = {
+    pending: { label: 'Agendado', className: 'border-orange-500/20 bg-orange-500/10 text-orange-500' },
+    sent: { label: 'Enviado', className: 'border-sky-500/20 bg-sky-500/10 text-sky-500' },
+    replied: { label: 'Reativado', className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500' },
+    cancelled: { label: 'Cancelado', className: 'border-slate-500/20 bg-slate-500/10 text-slate-500' },
+};
 
 const formatIntent = (intent?: string | null) => {
     const labels: Record<string, string> = {
@@ -84,6 +104,7 @@ export function LeadSummaryDrawer({
 }) {
     const { token } = useAuth();
     const [data, setData] = useState<LeadSummaryResponse | null>(null);
+    const [followupData, setFollowupData] = useState<FollowupStatusResponse | null>(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -118,6 +139,38 @@ export function LeadSummaryDrawer({
     }, [isOpen, lead?.id, token]);
 
     useEffect(() => {
+        if (!isOpen || !lead?.phone || !token) {
+            setFollowupData(null);
+            return;
+        }
+
+        let cancelled = false;
+        const jid = encodeURIComponent(lead.phone.replace(/\D/g, '') + '@s.whatsapp.net');
+
+        fetch(`${apiBase}/api/followup/status/${jid}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then(async (response) => (response.ok ? response.json() : null))
+            .then((payload) => {
+                if (cancelled) return;
+                if (payload && payload.status !== 'none') {
+                    setFollowupData(payload);
+                    return;
+                }
+                setFollowupData(null);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setFollowupData(null);
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, lead?.phone, token]);
+
+    useEffect(() => {
         if (!isOpen) return;
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') onClose();
@@ -133,12 +186,19 @@ export function LeadSummaryDrawer({
     const stage = data?.summary?.stage || data?.state?.lead_stage || lead.status;
     const intent = data?.summary?.intent || data?.memory?.last_intent || null;
     const canConvertToClient = lead.status !== 'Cliente';
+    const followupBadge = followupData ? FOLLOWUP_STATUS_LABELS[followupData.status] || FOLLOWUP_STATUS_LABELS.pending : null;
     const lastContactLabel = lead.lastContact
         ? new Intl.DateTimeFormat('pt-BR', {
             dateStyle: 'short',
             timeStyle: 'short',
         }).format(new Date(lead.lastContact))
         : 'Nao registrado';
+    const followupScheduleLabel = followupData?.scheduled_at
+        ? new Intl.DateTimeFormat('pt-BR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+        }).format(new Date(followupData.scheduled_at))
+        : 'Sem envio agendado';
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
@@ -298,6 +358,67 @@ export function LeadSummaryDrawer({
                             <h3 className="text-sm font-semibold text-foreground">Resumo da IA</h3>
                         </div>
                         <p className="text-sm leading-7 text-foreground/90">{summaryText}</p>
+                    </section>
+
+                    <section className="rounded-3xl border border-border bg-surface p-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <div className="rounded-2xl border border-primary/15 bg-primary/10 p-2 text-primary">
+                                    <Bell size={17} />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-foreground">Recuperacao automatica</h3>
+                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                        Contexto do follow-up que o Revenue OS esta preparando para este lead.
+                                    </p>
+                                </div>
+                            </div>
+                            {followupBadge && (
+                                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${followupBadge.className}`}>
+                                    {followupBadge.label}
+                                </span>
+                            )}
+                        </div>
+
+                        {followupData ? (
+                            <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                <div className="rounded-2xl border border-border/70 bg-background px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Sequencia</p>
+                                    <p className="mt-2 text-foreground">
+                                        {followupData.sequence_name || 'Sequencia automatica'}
+                                        {followupData.current_step ? ` · passo ${followupData.current_step}/${followupData.total_steps || followupData.current_step}` : ''}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 bg-background px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Proximo envio</p>
+                                    <p className="mt-2 flex items-center gap-2 text-foreground">
+                                        <Clock3 size={14} className="text-muted-foreground" />
+                                        {followupScheduleLabel}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 bg-background px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Temperatura</p>
+                                    <p className="mt-2 text-foreground">{followupData.conversation_temperature || lead.temperature || 'Sem leitura'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 bg-background px-4 py-3">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Vendedor responsavel</p>
+                                    <p className="mt-2 text-foreground">{followupData.assigned_vendor_name || 'Nao atribuido ainda'}</p>
+                                </div>
+                                <div className="rounded-2xl border border-border/70 bg-background px-4 py-3 md:col-span-2">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Motivo e proxima acao</p>
+                                    <div className="mt-2 flex items-start gap-2">
+                                        <Sparkles size={14} className="mt-0.5 text-primary" />
+                                        <p className="text-foreground">
+                                            {followupData.next_recommendation || followupData.followup_trigger_reason || 'Seguir com o proximo contato recomendado pela IA.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mt-4 rounded-2xl border border-dashed border-border/80 bg-background px-4 py-4 text-sm text-muted-foreground">
+                                Este lead ainda nao entrou em uma sequencia ativa de recuperacao.
+                            </div>
+                        )}
                     </section>
 
                     <section className="grid gap-4 md:grid-cols-2">

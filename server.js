@@ -738,10 +738,183 @@ async function ensureFollowupEngineTables() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE followup_sequences_v2 ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'native'`);
+    await pool.query(`ALTER TABLE followup_sequences_v2 ADD COLUMN IF NOT EXISTS legacy_user_id TEXT`);
+    await pool.query(`ALTER TABLE followup_sequences_v2 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
+    await pool.query(`ALTER TABLE followup_steps ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fseq_legacy_user ON followup_sequences_v2(organization_id, legacy_user_id) WHERE legacy_user_id IS NOT NULL`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fstep_sequence_step ON followup_steps(sequence_id, step_number)`);
     log('[FOLLOWUP] Follow-up Engine tables verified.');
   } catch (err) {
     log(`[FOLLOWUP] ensureFollowupEngineTables error: ${err.message}`);
   }
+}
+
+let followupEngineReadyPromise = null;
+
+function legacyDelayDaysToMinutes(delayDays) {
+  const numeric = Number(delayDays);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 60;
+  return Math.max(1, Math.round(numeric * 24 * 60));
+}
+
+function minutesToLegacyDelayDays(minutes) {
+  const numeric = Number(minutes);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 1;
+  return Math.max(1, Math.round(numeric / 1440));
+}
+
+async function getOrganizationIdForUser(userId) {
+  const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [userId]);
+  return orgRes.rows[0]?.organization_id || null;
+}
+
+async function syncLegacyRecoverySequencesToV2() {
+  try {
+    const tableCheck = await pool.query(`SELECT to_regclass('public.followup_sequences') AS table_name`);
+    if (!tableCheck.rows[0]?.table_name) return;
+
+    const legacyRes = await pool.query(`
+      SELECT
+        fs.*,
+        u.organization_id,
+        COALESCE(NULLIF(TRIM(u.name), ''), NULLIF(TRIM(u.email), ''), 'Operacao') AS owner_label
+      FROM followup_sequences fs
+      JOIN users u ON u.id = fs.user_id
+      WHERE u.organization_id IS NOT NULL
+      ORDER BY fs.user_id ASC, fs.delay_days ASC, fs.created_at ASC NULLS LAST, fs.id ASC
+    `);
+
+    const rows = legacyRes.rows;
+    const grouped = new Map();
+
+    for (const row of rows) {
+      const groupKey = `${row.organization_id}:${row.user_id}`;
+      if (!grouped.has(groupKey)) {
+        grouped.set(groupKey, {
+          organizationId: row.organization_id,
+          legacyUserId: row.user_id,
+          ownerLabel: row.owner_label,
+          rows: [],
+        });
+      }
+      grouped.get(groupKey).rows.push(row);
+    }
+
+    const legacyKeys = Array.from(grouped.keys());
+    const existingLegacyRes = await pool.query(`
+      SELECT id, organization_id, legacy_user_id
+      FROM followup_sequences_v2
+      WHERE legacy_user_id IS NOT NULL
+    `);
+
+    for (const existing of existingLegacyRes.rows) {
+      const key = `${existing.organization_id}:${existing.legacy_user_id}`;
+      if (!legacyKeys.includes(key)) {
+        await pool.query(`DELETE FROM followup_sequences_v2 WHERE id = $1`, [existing.id]);
+      }
+    }
+
+    for (const group of grouped.values()) {
+      const sequenceName = `Recuperacao migrada - ${group.ownerLabel}`;
+      const sequenceActive = group.rows.some((row) => row.active !== false);
+
+      const seqRes = await pool.query(`
+        INSERT INTO followup_sequences_v2 (
+          organization_id,
+          name,
+          pipeline_stage,
+          active,
+          ai_mode,
+          source,
+          legacy_user_id,
+          updated_at
+        )
+        VALUES ($1, $2, NULL, $3, FALSE, 'legacy_sync', $4, NOW())
+        ON CONFLICT (organization_id, legacy_user_id)
+        DO UPDATE SET
+          name = EXCLUDED.name,
+          active = EXCLUDED.active,
+          source = EXCLUDED.source,
+          updated_at = NOW()
+        RETURNING id
+      `, [group.organizationId, sequenceName, sequenceActive, group.legacyUserId]);
+
+      const sequenceId = seqRes.rows[0]?.id;
+      if (!sequenceId) continue;
+
+      for (let index = 0; index < group.rows.length; index += 1) {
+        const row = group.rows[index];
+        const stepNumber = index + 1;
+        await pool.query(`
+          INSERT INTO followup_steps (
+            sequence_id,
+            step_number,
+            delay_minutes,
+            message_template,
+            media_url,
+            followup_type,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, 'legacy_sync', NOW())
+          ON CONFLICT (sequence_id, step_number)
+          DO UPDATE SET
+            delay_minutes = EXCLUDED.delay_minutes,
+            message_template = EXCLUDED.message_template,
+            media_url = EXCLUDED.media_url,
+            followup_type = EXCLUDED.followup_type,
+            updated_at = NOW()
+        `, [
+          sequenceId,
+          stepNumber,
+          legacyDelayDaysToMinutes(row.delay_days),
+          row.message,
+          row.image_url || null,
+        ]);
+      }
+
+      await pool.query(`DELETE FROM followup_steps WHERE sequence_id = $1 AND step_number > $2`, [sequenceId, group.rows.length]);
+    }
+
+    if (rows.length > 0) {
+      log(`[FOLLOWUP] Legacy recovery sequences synchronized: ${rows.length} legacy rows`);
+    }
+  } catch (err) {
+    log(`[FOLLOWUP] syncLegacyRecoverySequencesToV2 error: ${err.message}`);
+  }
+}
+
+async function ensureFollowupEngineReady() {
+  if (!followupEngineReadyPromise) {
+    followupEngineReadyPromise = (async () => {
+      await ensureFollowupEngineTables();
+      await syncLegacyRecoverySequencesToV2();
+    })().catch((err) => {
+      followupEngineReadyPromise = null;
+      throw err;
+    });
+  }
+
+  return followupEngineReadyPromise;
+}
+
+async function getFollowupSequenceForOrg(sequenceId, organizationId) {
+  const result = await pool.query(
+    `SELECT * FROM followup_sequences_v2 WHERE id = $1 AND organization_id = $2 LIMIT 1`,
+    [sequenceId, organizationId]
+  );
+  return result.rows[0] || null;
+}
+
+async function getFollowupStepForOrg(stepId, organizationId) {
+  const result = await pool.query(`
+    SELECT st.*, fs.organization_id, fs.name AS sequence_name
+    FROM followup_steps st
+    JOIN followup_sequences_v2 fs ON fs.id = st.sequence_id
+    WHERE st.id = $1 AND fs.organization_id = $2
+    LIMIT 1
+  `, [stepId, organizationId]);
+  return result.rows[0] || null;
 }
 
 /**
@@ -771,6 +944,7 @@ async function getFollowupSettings(orgId) {
  */
 async function scheduleFollowupEvent(orgId, remoteJid, instanceName) {
   try {
+    await ensureFollowupEngineReady();
     const settings = await getFollowupSettings(orgId);
     if (!settings.enabled) return;
 
@@ -1003,6 +1177,7 @@ async function sendFollowupWhatsApp(instanceName, remoteJid, message, mediaUrl) 
  */
 async function processFollowupQueue() {
   try {
+    await ensureFollowupEngineReady();
     const pendingRes = await pool.query(`
       SELECT fq.*, fs.ai_mode AS sequence_ai_mode
       FROM followup_queue fq
@@ -1088,6 +1263,7 @@ async function processFollowupQueue() {
  */
 async function cancelFollowupOnReply(orgId, remoteJid, replyTimestamp) {
   try {
+    await ensureFollowupEngineReady();
     const result = await pool.query(`
       UPDATE followup_queue
       SET status = 'replied', updated_at = NOW()
@@ -3002,7 +3178,7 @@ initPool().then(() => {
   setTimeout(ensureCoachingTables, 7000); // Revenue OS Coaching: insights table
   setTimeout(ensureConversationIntelligenceTables, 9000); // CIL: Conversation Intelligence tables
   setTimeout(ensureOpportunityScoresTable, 10000); // OSE: Opportunity Scores table
-  setTimeout(ensureFollowupEngineTables, 12000); // AI Follow-up Engine tables
+  setTimeout(ensureFollowupEngineReady, 12000); // AI Follow-up Engine tables + legacy sync
   setTimeout(ensureIndustryProfileTables, 14000); // Industry Accelerator Layer tables
   setTimeout(ensureConversationStateTables, 16000); // CSE: Conversation State Engine tables
   setTimeout(ensureProductEngineTables, 18000);      // Product & Dynamic Offer Engine tables
@@ -13927,6 +14103,7 @@ async function processAIResponse(
  */
 app.get("/api/recovery/sequences", verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -13994,11 +14171,13 @@ app.post(
         imageUrl = `data:${imageFile.mimetype};base64,${base64}`;
       }
 
-      const newSeq = await pool.query(
+    const newSeq = await pool.query(
         `INSERT INTO followup_sequences (user_id, delay_days, message, image_url, active)
              VALUES ($1, $2, $3, $4, true) RETURNING *`,
         [userId, delayDays, message, imageUrl],
       );
+
+      await syncLegacyRecoverySequencesToV2();
 
       log(
         `Follow-up sequence created for user ${userId}. ID: ${newSeq.rows[0].id}`,
@@ -14014,6 +14193,7 @@ app.post(
 
 app.delete("/api/recovery/sequences/:id", verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -14022,6 +14202,8 @@ app.delete("/api/recovery/sequences/:id", verifyJWT, async (req, res) => {
       "DELETE FROM followup_sequences WHERE id = $1 AND user_id = $2",
       [id, userId],
     );
+
+    await syncLegacyRecoverySequencesToV2();
 
     res.json({ success: true });
   } catch (err) {
@@ -14036,6 +14218,7 @@ app.put(
   upload.single("image"),
   async (req, res) => {
     try {
+      await ensureFollowupEngineReady();
       const userId = req.userId;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -14068,6 +14251,8 @@ app.put(
         [delayDays, message, imageUrl, id, userId],
       );
 
+      await syncLegacyRecoverySequencesToV2();
+
       log(`Follow-up sequence updated for user ${userId}. ID: ${id}`);
       res.json(updatedSeq.rows[0]);
     } catch (err) {
@@ -14078,8 +14263,11 @@ app.put(
 );
 
 // --- CRON JOB (Every hour) ---
+// Legacy recovery machine disabled: follow-up queue processor is the single active engine now.
+const ENABLE_LEGACY_RECOVERY_MACHINE = false;
 // Using setInterval for simplicity as node-cron might not be installed
 const ONE_HOUR = 60 * 60 * 1000;
+if (ENABLE_LEGACY_RECOVERY_MACHINE) {
 setInterval(async () => {
   log("[Recovery Machine] Running cron job...");
   if (!(await checkDb())) {
@@ -14335,6 +14523,9 @@ setInterval(async () => {
     log(`[Recovery Machine] Error: ${e.message}`);
   }
 }, ONE_HOUR);
+} else {
+  log("[Recovery Machine] Legacy cron disabled in favor of the AI Follow-up Engine.");
+}
 
 // Serve frontend static files (production build)
 const distPath = path.resolve(__dirname, "dist");
@@ -14991,14 +15182,21 @@ app.get("/api/run-migration-temp", async (req, res) => {
 // GET /api/followup/sequences â€” List all sequences for this org
 app.get('/api/followup/sequences', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const result = await pool.query(
-      `SELECT fs.*, COUNT(st.id)::int AS step_count
+      `SELECT
+         fs.*,
+         COUNT(DISTINCT st.id)::int AS step_count,
+         COUNT(DISTINCT fq.id) FILTER (WHERE fq.status = 'pending')::int AS active_queue_count,
+         MAX(fq.scheduled_at) FILTER (WHERE fq.status = 'pending') AS next_scheduled_at
        FROM followup_sequences_v2 fs
        LEFT JOIN followup_steps st ON st.sequence_id = fs.id
+       LEFT JOIN followup_queue fq
+         ON fq.sequence_id = fs.id
+        AND fq.organization_id = fs.organization_id
        WHERE fs.organization_id = $1
        GROUP BY fs.id
        ORDER BY fs.created_at DESC`,
@@ -15014,15 +15212,16 @@ app.get('/api/followup/sequences', verifyJWT, async (req, res) => {
 // POST /api/followup/sequences â€” Create a new sequence
 app.post('/api/followup/sequences', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const { name, pipeline_stage, ai_mode } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
 
     const result = await pool.query(
-      `INSERT INTO followup_sequences_v2 (organization_id, name, pipeline_stage, ai_mode) VALUES ($1,$2,$3,$4) RETURNING *`,
+      `INSERT INTO followup_sequences_v2 (organization_id, name, pipeline_stage, ai_mode, source, updated_at)
+       VALUES ($1,$2,$3,$4,'native',NOW()) RETURNING *`,
       [orgId, name, pipeline_stage || null, ai_mode || false]
     );
     res.status(201).json(result.rows[0]);
@@ -15035,13 +15234,33 @@ app.post('/api/followup/sequences', verifyJWT, async (req, res) => {
 // PUT /api/followup/sequences/:id â€” Update a sequence
 app.put('/api/followup/sequences/:id', verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
     const { id } = req.params;
     const { name, pipeline_stage, active, ai_mode } = req.body;
+    const existing = await getFollowupSequenceForOrg(id, orgId);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
     const result = await pool.query(
-      `UPDATE followup_sequences_v2 SET name = COALESCE($1, name), pipeline_stage = $2, active = COALESCE($3, active), ai_mode = COALESCE($4, ai_mode) WHERE id = $5 RETURNING *`,
-      [name, pipeline_stage || null, active, ai_mode, id]
+      `UPDATE followup_sequences_v2
+       SET name = $1,
+           pipeline_stage = $2,
+           active = $3,
+           ai_mode = $4,
+           updated_at = NOW()
+       WHERE id = $5 AND organization_id = $6
+       RETURNING *`,
+      [
+        name ?? existing.name,
+        Object.prototype.hasOwnProperty.call(req.body, 'pipeline_stage') ? (pipeline_stage || null) : existing.pipeline_stage,
+        active ?? existing.active,
+        ai_mode ?? existing.ai_mode,
+        id,
+        orgId,
+      ]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
     log('PUT /api/followup/sequences error: ' + err.message);
@@ -15052,7 +15271,14 @@ app.put('/api/followup/sequences/:id', verifyJWT, async (req, res) => {
 // DELETE /api/followup/sequences/:id â€” Delete a sequence (cascades to steps)
 app.delete('/api/followup/sequences/:id', verifyJWT, async (req, res) => {
   try {
-    await pool.query('DELETE FROM followup_sequences_v2 WHERE id = $1', [req.params.id]);
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const existing = await getFollowupSequenceForOrg(req.params.id, orgId);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
+    await pool.query('DELETE FROM followup_sequences_v2 WHERE id = $1 AND organization_id = $2', [req.params.id, orgId]);
     res.json({ success: true });
   } catch (err) {
     log('DELETE /api/followup/sequences error: ' + err.message);
@@ -15063,9 +15289,16 @@ app.delete('/api/followup/sequences/:id', verifyJWT, async (req, res) => {
 // GET /api/followup/sequences/:id/steps â€” List steps for a sequence
 app.get('/api/followup/sequences/:id/steps', verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const sequence = await getFollowupSequenceForOrg(req.params.id, orgId);
+    if (!sequence) return res.status(404).json({ error: 'Not found' });
+
     const result = await pool.query(
       `SELECT * FROM followup_steps WHERE sequence_id = $1 ORDER BY step_number ASC`,
-      [req.params.id]
+      [sequence.id]
     );
     res.json(result.rows);
   } catch (err) {
@@ -15077,9 +15310,16 @@ app.get('/api/followup/sequences/:id/steps', verifyJWT, async (req, res) => {
 // POST /api/followup/sequences/:id/steps â€” Add a step to a sequence
 app.post('/api/followup/sequences/:id/steps', verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
     const { id: sequenceId } = req.params;
     const { step_number, delay_minutes, message_template, media_url, followup_type } = req.body;
     if (!message_template) return res.status(400).json({ error: 'message_template is required' });
+
+    const sequence = await getFollowupSequenceForOrg(sequenceId, orgId);
+    if (!sequence) return res.status(404).json({ error: 'Not found' });
 
     // Auto-number if not provided
     let stepNum = step_number;
@@ -15089,9 +15329,9 @@ app.post('/api/followup/sequences/:id/steps', verifyJWT, async (req, res) => {
     }
 
     const result = await pool.query(
-      `INSERT INTO followup_steps (sequence_id, step_number, delay_minutes, message_template, media_url, followup_type)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [sequenceId, stepNum, delay_minutes || 60, message_template, media_url || null, followup_type || 'reminder']
+      `INSERT INTO followup_steps (sequence_id, step_number, delay_minutes, message_template, media_url, followup_type, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,NOW()) RETURNING *`,
+      [sequence.id, stepNum, delay_minutes || 60, message_template, media_url || null, followup_type || 'reminder']
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -15103,18 +15343,32 @@ app.post('/api/followup/sequences/:id/steps', verifyJWT, async (req, res) => {
 // PUT /api/followup/steps/:id â€” Update a step
 app.put('/api/followup/steps/:id', verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
     const { delay_minutes, message_template, media_url, followup_type, step_number } = req.body;
+    const existing = await getFollowupStepForOrg(req.params.id, orgId);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
     const result = await pool.query(
       `UPDATE followup_steps SET
-         delay_minutes = COALESCE($1, delay_minutes),
-         message_template = COALESCE($2, message_template),
+         delay_minutes = $1,
+         message_template = $2,
          media_url = $3,
-         followup_type = COALESCE($4, followup_type),
-         step_number = COALESCE($5, step_number)
+         followup_type = $4,
+         step_number = $5,
+         updated_at = NOW()
        WHERE id = $6 RETURNING *`,
-      [delay_minutes, message_template, media_url || null, followup_type, step_number, req.params.id]
+      [
+        delay_minutes ?? existing.delay_minutes,
+        message_template ?? existing.message_template,
+        Object.prototype.hasOwnProperty.call(req.body, 'media_url') ? (media_url || null) : existing.media_url,
+        followup_type ?? existing.followup_type,
+        step_number ?? existing.step_number,
+        req.params.id,
+      ]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
   } catch (err) {
     log('PUT /api/followup/steps error: ' + err.message);
@@ -15125,6 +15379,13 @@ app.put('/api/followup/steps/:id', verifyJWT, async (req, res) => {
 // DELETE /api/followup/steps/:id â€” Delete a step
 app.delete('/api/followup/steps/:id', verifyJWT, async (req, res) => {
   try {
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const existing = await getFollowupStepForOrg(req.params.id, orgId);
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
     await pool.query('DELETE FROM followup_steps WHERE id = $1', [req.params.id]);
     res.json({ success: true });
   } catch (err) {
@@ -15136,8 +15397,8 @@ app.delete('/api/followup/steps/:id', verifyJWT, async (req, res) => {
 // GET /api/followup/settings â€” Get org follow-up settings
 app.get('/api/followup/settings', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const settings = await getFollowupSettings(orgId);
@@ -15151,8 +15412,8 @@ app.get('/api/followup/settings', verifyJWT, async (req, res) => {
 // PUT /api/followup/settings â€” Save org follow-up settings
 app.put('/api/followup/settings', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const { enabled, ai_mode_enabled, max_followups_per_lead, quente_delay_minutes, morno_delay_minutes, frio_delay_minutes } = req.body;
@@ -15182,16 +15443,54 @@ app.put('/api/followup/settings', verifyJWT, async (req, res) => {
 // GET /api/followup/queue â€” View active queue for this org
 app.get('/api/followup/queue', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const result = await pool.query(`
-      SELECT fq.*, l.name AS lead_name,
-             fs.name AS sequence_name
+      SELECT
+        fq.id,
+        fq.remote_jid,
+        fq.instance_name,
+        fq.sequence_id,
+        fq.current_step,
+        fq.total_steps,
+        fq.scheduled_at,
+        fq.status,
+        fq.conversation_temperature,
+        fq.pipeline_stage,
+        fq.last_customer_message_at,
+        fq.followup_trigger_reason,
+        fq.detected_objection,
+        fq.detected_product_interest,
+        fq.intent_score,
+        fq.created_at,
+        fq.updated_at,
+        l.id AS lead_id,
+        l.name AS lead_name,
+        COALESCE(l.score, fq.intent_score, 0)::int AS lead_score,
+        COALESCE(NULLIF(l.last_ia_briefing, ''), NULLIF(lm.lead_summary, ''), fq.detected_product_interest, 'Sem contexto adicional') AS lead_briefing,
+        lm.lead_summary,
+        lm.next_recommendation,
+        v.nome AS assigned_vendor_name,
+        fs.name AS sequence_name,
+        fs.ai_mode AS sequence_ai_mode,
+        last_evt.message_sent_at AS last_event_at,
+        last_evt.final_message_sent AS last_event_message
       FROM followup_queue fq
       LEFT JOIN leads l ON l.id = fq.lead_id
+      LEFT JOIN lead_memory lm
+        ON lm.organization_id = fq.organization_id
+       AND lm.lead_id = fq.lead_id
+      LEFT JOIN vendedores v ON v.id = l.assigned_to
       LEFT JOIN followup_sequences_v2 fs ON fs.id = fq.sequence_id
+      LEFT JOIN LATERAL (
+        SELECT fe.message_sent_at, fe.final_message_sent
+        FROM followup_events fe
+        WHERE fe.followup_queue_id = fq.id
+        ORDER BY fe.message_sent_at DESC
+        LIMIT 1
+      ) last_evt ON TRUE
       WHERE fq.organization_id = $1
         AND fq.status IN ('pending', 'sent', 'replied')
       ORDER BY fq.scheduled_at DESC
@@ -15208,7 +15507,18 @@ app.get('/api/followup/queue', verifyJWT, async (req, res) => {
 // DELETE /api/followup/queue/:id â€” Cancel a queued follow-up
 app.delete('/api/followup/queue/:id', verifyJWT, async (req, res) => {
   try {
-    await pool.query(`UPDATE followup_queue SET status = 'cancelled', updated_at = NOW() WHERE id = $1`, [req.params.id]);
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
+    if (!orgId) return res.status(400).json({ error: 'No organization' });
+
+    const result = await pool.query(
+      `UPDATE followup_queue
+       SET status = 'cancelled', updated_at = NOW()
+       WHERE id = $1 AND organization_id = $2
+       RETURNING id`,
+      [req.params.id, orgId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json({ success: true });
   } catch (err) {
     log('DELETE /api/followup/queue error: ' + err.message);
@@ -15219,11 +15529,21 @@ app.delete('/api/followup/queue/:id', verifyJWT, async (req, res) => {
 // GET /api/followup/dashboard â€” Recovery metrics dashboard
 app.get('/api/followup/dashboard', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
-    const [recoveredRes, responseRateRes, avgTimeRes, conversionRes, byStepRes, trendRes] = await Promise.all([
+    const [
+      recoveredRes,
+      responseRateRes,
+      avgTimeRes,
+      conversionRes,
+      byStepRes,
+      trendRes,
+      queueSummaryRes,
+      temperatureBreakdownRes,
+      sequencePerformanceRes,
+    ] = await Promise.all([
       // Leads recovered (replied after follow-up sent) in last 30d
       pool.query(`
         SELECT COUNT(DISTINCT fq.id) AS count
@@ -15270,18 +15590,58 @@ app.get('/api/followup/dashboard', verifyJWT, async (req, res) => {
           AND message_sent_at >= NOW() - INTERVAL '14 days'
         GROUP BY DATE(message_sent_at)
         ORDER BY day
+      `, [orgId]),
+      pool.query(`
+        SELECT status, COUNT(*)::int AS count
+        FROM followup_queue
+        WHERE organization_id = $1
+        GROUP BY status
+      `, [orgId]),
+      pool.query(`
+        SELECT conversation_temperature AS name, COUNT(*)::int AS value
+        FROM followup_queue
+        WHERE organization_id = $1
+        GROUP BY conversation_temperature
+      `, [orgId]),
+      pool.query(`
+        SELECT
+          COALESCE(fs.name, 'Sem sequencia') AS name,
+          COUNT(DISTINCT fq.id)::int AS queued,
+          COUNT(fe.id) FILTER (WHERE fe.customer_replied)::int AS replied,
+          COUNT(fe.id) FILTER (WHERE fe.converted_to_sale)::int AS conversions
+        FROM followup_sequences_v2 fs
+        LEFT JOIN followup_queue fq
+          ON fq.sequence_id = fs.id
+         AND fq.organization_id = fs.organization_id
+        LEFT JOIN followup_events fe
+          ON fe.sequence_id = fs.id
+         AND fe.organization_id = fs.organization_id
+         AND fe.message_sent_at >= NOW() - INTERVAL '30 days'
+        WHERE fs.organization_id = $1
+        GROUP BY fs.id
+        ORDER BY queued DESC, replied DESC, conversions DESC, name ASC
       `, [orgId])
     ]);
+
+    const queueSummary = queueSummaryRes.rows.reduce((acc, row) => {
+      acc[row.status] = row.count;
+      return acc;
+    }, {});
 
     res.json({
       kpis: {
         recovered: parseInt(recoveredRes.rows[0]?.count || 0),
         responseRate: parseFloat(responseRateRes.rows[0]?.rate || 0),
         avgReplyMinutes: parseInt(avgTimeRes.rows[0]?.avg_minutes || 0),
-        conversions: parseInt(conversionRes.rows[0]?.count || 0)
+        conversions: parseInt(conversionRes.rows[0]?.count || 0),
+        activeQueue: (queueSummary.pending || 0) + (queueSummary.sent || 0),
+        activeSequences: sequencePerformanceRes.rows.length,
       },
       byStep: byStepRes.rows,
-      trend: trendRes.rows
+      trend: trendRes.rows,
+      statusBreakdown: queueSummaryRes.rows,
+      temperatureBreakdown: temperatureBreakdownRes.rows,
+      sequencePerformance: sequencePerformanceRes.rows,
     });
   } catch (err) {
     log('GET /api/followup/dashboard error: ' + err.message);
@@ -15292,16 +15652,40 @@ app.get('/api/followup/dashboard', verifyJWT, async (req, res) => {
 // GET /api/followup/status/:jid â€” Get follow-up status for a specific JID
 app.get('/api/followup/status/:jid', verifyJWT, async (req, res) => {
   try {
-    const orgRes = await pool.query('SELECT organization_id FROM users WHERE id = $1', [req.userId]);
-    const orgId = orgRes.rows[0]?.organization_id;
+    await ensureFollowupEngineReady();
+    const orgId = await getOrganizationIdForUser(req.userId);
     if (!orgId) return res.status(400).json({ error: 'No organization' });
 
     const jid = decodeURIComponent(req.params.jid);
     const result = await pool.query(
-      `SELECT id, status, current_step, total_steps, scheduled_at, conversation_temperature
-       FROM followup_queue
-       WHERE organization_id = $1 AND remote_jid = $2
-       ORDER BY created_at DESC LIMIT 1`,
+      `SELECT
+         fq.id,
+         fq.status,
+         fq.current_step,
+         fq.total_steps,
+         fq.scheduled_at,
+         fq.conversation_temperature,
+         fq.pipeline_stage,
+         fq.followup_trigger_reason,
+         fq.detected_objection,
+         fq.detected_product_interest,
+         COALESCE(l.score, fq.intent_score, 0)::int AS lead_score,
+         l.id AS lead_id,
+         l.name AS lead_name,
+         l.last_ia_briefing AS lead_briefing,
+         lm.lead_summary,
+         lm.next_recommendation,
+         fs.name AS sequence_name,
+         v.nome AS assigned_vendor_name
+       FROM followup_queue fq
+       LEFT JOIN leads l ON l.id = fq.lead_id
+       LEFT JOIN lead_memory lm
+         ON lm.organization_id = fq.organization_id
+        AND lm.lead_id = fq.lead_id
+       LEFT JOIN followup_sequences_v2 fs ON fs.id = fq.sequence_id
+       LEFT JOIN vendedores v ON v.id = l.assigned_to
+       WHERE fq.organization_id = $1 AND fq.remote_jid = $2
+       ORDER BY fq.created_at DESC LIMIT 1`,
       [orgId, jid]
     );
 

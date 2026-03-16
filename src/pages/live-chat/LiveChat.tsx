@@ -50,6 +50,45 @@ interface LeadSummaryData {
     intent?: string | null;
 }
 
+interface FollowupStatusData {
+    status: string;
+    current_step?: number;
+    total_steps?: number;
+    scheduled_at?: string | null;
+    conversation_temperature?: string | null;
+    pipeline_stage?: string | null;
+    followup_trigger_reason?: string | null;
+    detected_objection?: string | null;
+    detected_product_interest?: string | null;
+    lead_score?: number;
+    lead_id?: string | null;
+    lead_name?: string | null;
+    lead_briefing?: string | null;
+    lead_summary?: string | null;
+    next_recommendation?: string | null;
+    sequence_name?: string | null;
+    assigned_vendor_name?: string | null;
+}
+
+const FOLLOWUP_STATUS_META: Record<string, { label: string; badgeClass: string }> = {
+    pending: {
+        label: 'Agendado',
+        badgeClass: 'border-orange-200 bg-orange-50 text-orange-600 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200',
+    },
+    sent: {
+        label: 'Enviado',
+        badgeClass: 'border-sky-200 bg-sky-50 text-sky-600 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200',
+    },
+    replied: {
+        label: 'Reativado',
+        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
+    },
+    cancelled: {
+        label: 'Cancelado',
+        badgeClass: 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-200',
+    },
+};
+
 function formatRelativeMoment(timestamp?: number | string | null) {
     if (!timestamp) return 'Agora';
 
@@ -182,6 +221,7 @@ export function LiveChat() {
     const [showTakeoverModal, setShowTakeoverModal] = useState(false);
     const [selectedVendedorId, setSelectedVendedorId] = useState<string>('');
     const [activeLeadSummary, setActiveLeadSummary] = useState<LeadSummaryData | null>(null);
+    const [activeFollowupStatus, setActiveFollowupStatus] = useState<FollowupStatusData | null>(null);
 
 
 
@@ -247,6 +287,36 @@ export function LiveChat() {
             cancelled = true;
         };
     }, [activeLeadId, token]);
+
+    useEffect(() => {
+        if (!activeChat || !token) {
+            setActiveFollowupStatus(null);
+            return;
+        }
+
+        let cancelled = false;
+        const jid = encodeURIComponent(activeChat.remoteJid || activeChat.id);
+
+        fetch(`/api/followup/status/${jid}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then((response) => response.ok ? response.json() : null)
+            .then((data) => {
+                if (cancelled) return;
+                if (data && data.status !== 'none') {
+                    setActiveFollowupStatus(data);
+                    return;
+                }
+                setActiveFollowupStatus(null);
+            })
+            .catch(() => {
+                if (!cancelled) setActiveFollowupStatus(null);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeChat, token]);
 
     const handleToggleChatPause = async () => {
         if (!currentAgentId || !activeChat) return;
@@ -1274,6 +1344,7 @@ export function LiveChat() {
                                             activeLeadTemp={activeLeadTemp}
                                             activeLeadScore={activeLeadScore}
                                             activeLeadSummary={activeLeadSummary}
+                                            activeFollowupStatus={activeFollowupStatus}
                                             currentAgentId={currentAgentId}
                                             isChatPaused={isChatPaused}
                                             messages={messages}
@@ -1460,6 +1531,7 @@ export function LiveChat() {
                                             activeLeadTemp={activeLeadTemp}
                                             activeLeadScore={activeLeadScore}
                                             activeLeadSummary={activeLeadSummary}
+                                            activeFollowupStatus={activeFollowupStatus}
                                             currentAgentId={currentAgentId}
                                             isChatPaused={isChatPaused}
                                             messages={messages}
@@ -1499,6 +1571,7 @@ function ConversationInsightsPanel({
     activeLeadTemp,
     activeLeadScore,
     activeLeadSummary,
+    activeFollowupStatus,
     currentAgentId,
     isChatPaused,
     messages,
@@ -1507,6 +1580,7 @@ function ConversationInsightsPanel({
     activeLeadTemp: string;
     activeLeadScore: number;
     activeLeadSummary: LeadSummaryData | null;
+    activeFollowupStatus: FollowupStatusData | null;
     currentAgentId: string | null;
     isChatPaused: boolean;
     messages: Message[];
@@ -1517,6 +1591,15 @@ function ConversationInsightsPanel({
     const lastContactLabel = formatRelativeMoment(lastInboundMessage?.messageTimestamp ?? activeChat.lastMessage?.timestamp ?? null);
     const summaryText = activeLeadSummary?.text || 'A IA ainda esta consolidando contexto. Continue a conversa para enriquecer o resumo e a recomendacao operacional.';
     const conversationLabel = activeChat.name || activeChat.pushName || activeChat.remoteJid || activeChat.id;
+    const followupMeta = activeFollowupStatus ? FOLLOWUP_STATUS_META[activeFollowupStatus.status] || FOLLOWUP_STATUS_META.pending : null;
+    const followupScheduleLabel = activeFollowupStatus?.scheduled_at
+        ? new Date(activeFollowupStatus.scheduled_at).toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        })
+        : 'Sem envio agendado';
     const tips = buildRevenueOsTips({
         temperature: activeLeadTemp,
         score: activeLeadScore,
@@ -1628,6 +1711,90 @@ function ConversationInsightsPanel({
                         )}
                     </div>
                 </div>
+            </div>
+
+            <div className="rounded-[28px] border border-black/[0.06] bg-white/[0.94] p-5 shadow-[0_18px_44px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-[#171719]">
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Recovery OS</p>
+                        <h4 className="mt-2 text-lg font-display font-bold tracking-tight text-gray-900 dark:text-white">
+                            Follow-up da conversa
+                        </h4>
+                    </div>
+                    {followupMeta ? (
+                        <span className={cn('inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]', followupMeta.badgeClass)}>
+                            {followupMeta.label}
+                        </span>
+                    ) : (
+                        <span className="inline-flex rounded-full border border-black/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:border-white/[0.08] dark:text-gray-400">
+                            Sem recovery ativo
+                        </span>
+                    )}
+                </div>
+
+                {activeFollowupStatus ? (
+                    <div className="mt-4 space-y-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div className="rounded-[22px] border border-black/[0.06] bg-[#F8F8FA] p-4 dark:border-white/[0.08] dark:bg-[#111214]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                                    Sequencia
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+                                    {activeFollowupStatus.sequence_name || 'Sequencia automatica'}
+                                </p>
+                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                    {activeFollowupStatus.current_step
+                                        ? `Passo ${activeFollowupStatus.current_step}/${activeFollowupStatus.total_steps || activeFollowupStatus.current_step}`
+                                        : 'Passo em definicao'}
+                                </p>
+                            </div>
+                            <div className="rounded-[22px] border border-black/[0.06] bg-[#F8F8FA] p-4 dark:border-white/[0.08] dark:bg-[#111214]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                                    Proximo disparo
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
+                                    {followupScheduleLabel}
+                                </p>
+                                <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                    {activeFollowupStatus.pipeline_stage || 'Sem etapa definida'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-[22px] border border-black/[0.06] bg-[#F8F8FA] p-4 dark:border-white/[0.08] dark:bg-[#111214]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                                Leitura operacional
+                            </p>
+                            <p className="mt-2 text-sm leading-7 text-gray-800 dark:text-gray-200">
+                                {activeFollowupStatus.next_recommendation
+                                    || activeFollowupStatus.followup_trigger_reason
+                                    || activeFollowupStatus.lead_summary
+                                    || 'Revisar a conversa antes do proximo toque para manter o contexto comercial.'}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {activeFollowupStatus.detected_product_interest && (
+                                    <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-600 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200">
+                                        Produto: {activeFollowupStatus.detected_product_interest}
+                                    </span>
+                                )}
+                                {activeFollowupStatus.detected_objection && (
+                                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                                        Objecao: {activeFollowupStatus.detected_objection}
+                                    </span>
+                                )}
+                                {activeFollowupStatus.assigned_vendor_name && (
+                                    <span className="rounded-full border border-black/[0.06] bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:border-white/[0.08] dark:bg-[#151518] dark:text-gray-300">
+                                        Vendedor: {activeFollowupStatus.assigned_vendor_name}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="mt-4 rounded-[22px] border border-dashed border-black/[0.08] bg-[#F8F8FA] px-4 py-4 text-sm text-gray-500 dark:border-white/[0.10] dark:bg-[#111214] dark:text-gray-400">
+                        Esta conversa ainda nao entrou em uma sequencia de recuperacao automatica.
+                    </div>
+                )}
             </div>
 
             <div className="rounded-[28px] border border-black/[0.06] bg-white/[0.94] p-5 shadow-[0_18px_44px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-[#171719]">

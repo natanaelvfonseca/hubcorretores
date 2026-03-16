@@ -1,5 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { Calendar, DollarSign, Trash2, Phone, Mail, Globe, MoreHorizontal, UserCheck, User, Brain, Bell, Lightbulb } from 'lucide-react';
+import { useEffect, useRef, useState, type DragEvent as ReactDragEvent } from 'react';
+import {
+    Bell,
+    Brain,
+    Calendar,
+    DollarSign,
+    Globe,
+    Lightbulb,
+    Mail,
+    MoreHorizontal,
+    Phone,
+    Sparkles,
+    Trash2,
+    User,
+    UserCheck,
+} from 'lucide-react';
 import { Lead } from '../types';
 
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
@@ -8,13 +22,46 @@ const INTENT_CONFIG = {
     HOT: { label: 'QUENTE', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/25', ring: '#fb923c', cardBorder: 'border-orange-500/35' },
     WARM: { label: 'MORNO', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/25', ring: '#facc15', cardBorder: 'border-yellow-500/30' },
     COLD: { label: 'FRIO', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/25', ring: '#60a5fa', cardBorder: 'border-border/50' },
+} as const;
+
+const FOLLOWUP_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
+    pending: {
+        label: 'FOLLOW-UP AGENDADO',
+        className: 'border-orange-500/25 bg-orange-500/10 text-orange-500',
+    },
+    sent: {
+        label: 'FOLLOW-UP ENVIADO',
+        className: 'border-sky-500/25 bg-sky-500/10 text-sky-500',
+    },
+    replied: {
+        label: 'LEAD REATIVADO',
+        className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500',
+    },
+    cancelled: {
+        label: 'FOLLOW-UP CANCELADO',
+        className: 'border-slate-500/25 bg-slate-500/10 text-slate-500',
+    },
 };
 
-interface Vendedor { id: string; nome: string; }
+interface Vendedor {
+    id: string;
+    nome: string;
+}
+
+interface FollowupState {
+    status: string;
+    current_step?: number;
+    total_steps?: number;
+    scheduled_at?: string | null;
+    conversation_temperature?: string | null;
+    sequence_name?: string | null;
+    next_recommendation?: string | null;
+    assigned_vendor_name?: string | null;
+}
 
 interface KanbanCardProps {
     lead: Lead;
-    onDragStart: (e: React.DragEvent<HTMLDivElement>, leadId: string) => void;
+    onDragStart: (e: ReactDragEvent<HTMLDivElement>, leadId: string) => void;
     onDelete?: (leadId: string) => void;
     onOpenDetails?: (lead: Lead) => void;
     onMarkAsClient?: (leadId: string) => void;
@@ -22,43 +69,62 @@ interface KanbanCardProps {
     token?: string;
 }
 
-export function KanbanCard({ lead, onDragStart, onDelete, onOpenDetails, onMarkAsClient, vendedores = [], token }: KanbanCardProps) {
+export function KanbanCard({
+    lead,
+    onDragStart,
+    onDelete,
+    onOpenDetails,
+    onMarkAsClient,
+    vendedores = [],
+    token,
+}: KanbanCardProps) {
     if (!lead) return null;
 
     const [showMenu, setShowMenu] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
     const [intelligence, setIntelligence] = useState<any>(null);
-    const [followupStatus, setFollowupStatus] = useState<string | null>(null);
+    const [followupState, setFollowupState] = useState<FollowupState | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
-    // Fetch AI Opportunity Score for this lead (non-blocking)
     useEffect(() => {
         if (!token || !lead.id) return;
         fetch(`${apiBase}/api/leads/${lead.id}/opportunity-score`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data?.hasScore) setIntelligence(data); })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (data?.hasScore) setIntelligence(data);
+            })
             .catch(() => { });
     }, [lead.id, token]);
 
-    // Fetch Follow-up Engine status for this lead (non-blocking)
     useEffect(() => {
-        if (!token || !lead.phone) return;
+        if (!token || !lead.phone) {
+            setFollowupState(null);
+            return;
+        }
+
         const jid = encodeURIComponent(lead.phone.replace(/\D/g, '') + '@s.whatsapp.net');
         fetch(`${apiBase}/api/followup/status/${jid}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
         })
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data && data.status !== 'none') setFollowupStatus(data.status); })
-            .catch(() => { });
-    }, [lead.id, lead.phone, token]);
+            .then((response) => (response.ok ? response.json() : null))
+            .then((data) => {
+                if (data && data.status !== 'none') {
+                    setFollowupState(data);
+                    return;
+                }
+                setFollowupState(null);
+            })
+            .catch(() => setFollowupState(null));
+    }, [lead.phone, token]);
 
     useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        const handler = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowMenu(false);
             }
         };
+
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
@@ -66,87 +132,112 @@ export function KanbanCard({ lead, onDragStart, onDelete, onOpenDetails, onMarkA
     const intentCfg = lead.intentLabel ? INTENT_CONFIG[lead.intentLabel] : null;
     const score = lead.score ?? 0;
     const circumference = 2 * Math.PI * 10;
-    const assignedVendedor = vendedores.find(v => v.id === (lead as any).assignedTo);
+    const assignedVendedor = vendedores.find((vendedor) => vendedor.id === (lead as any).assignedTo);
+    const followupBadge = followupState ? FOLLOWUP_BADGE_CONFIG[followupState.status] || FOLLOWUP_BADGE_CONFIG.pending : null;
 
     const formatValue = (value: number) => new Intl.NumberFormat('pt-BR', {
-        style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0,
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(value);
 
     const formatDate = (dateString: string) => {
         try {
             return new Intl.DateTimeFormat('pt-BR', {
-                year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
             }).format(new Date(dateString));
-        } catch { return dateString; }
+        } catch {
+            return dateString;
+        }
     };
+
+    const followupSchedule = followupState?.scheduled_at
+        ? new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(new Date(followupState.scheduled_at))
+        : null;
+
+    const followupDetail = followupState?.next_recommendation
+        || (followupSchedule ? `Proximo toque em ${followupSchedule}.` : 'Acompanhe a proxima acao sugerida pela IA.');
 
     return (
         <div
             draggable
-            onDragStart={(e) => onDragStart(e, lead.id)}
+            onDragStart={(event) => onDragStart(event, lead.id)}
             onClick={() => onOpenDetails?.(lead)}
-            className={`bg-surface border rounded-lg p-2.5 shadow-sm hover:shadow-md transition-all cursor-pointer group animate-fade-in mb-2 active:scale-[0.99] overflow-hidden ${intentCfg ? intentCfg.cardBorder : 'border-border/50'} hover:border-primary/30`}
+            className={`mb-2 cursor-pointer overflow-hidden rounded-lg border bg-surface p-2.5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md active:scale-[0.99] ${intentCfg ? intentCfg.cardBorder : 'border-border/50'} group animate-fade-in`}
             title="Abrir detalhes do lead"
         >
-            {/* Header Row */}
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                    {/* Avatar */}
+            <div className="mb-2 flex items-start justify-between">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                     <div className="relative flex-shrink-0">
                         {intentCfg && score > 0 ? (
                             <svg width="36" height="36" viewBox="0 0 36 36" className="absolute inset-0">
                                 <circle cx="18" cy="18" r="10" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
-                                <circle cx="18" cy="18" r="10" fill="none" stroke={intentCfg.ring} strokeWidth="3"
+                                <circle
+                                    cx="18"
+                                    cy="18"
+                                    r="10"
+                                    fill="none"
+                                    stroke={intentCfg.ring}
+                                    strokeWidth="3"
                                     strokeDasharray={`${(score / 100) * circumference} ${circumference}`}
-                                    strokeLinecap="round" transform="rotate(-90 18 18)" />
+                                    strokeLinecap="round"
+                                    transform="rotate(-90 18 18)"
+                                />
                             </svg>
                         ) : null}
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-xs font-bold text-white border border-white/5 relative z-10 m-[2px]">
-                            {(lead.name || 'Sem Nome').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                        <div className="relative z-10 m-[2px] flex h-8 w-8 items-center justify-center rounded-full border border-white/5 bg-gradient-to-br from-gray-700 to-gray-800 text-xs font-bold text-white">
+                            {(lead.name || 'Sem Nome')
+                                .split(' ')
+                                .map((name) => name[0])
+                                .join('')
+                                .substring(0, 2)
+                                .toUpperCase()}
                         </div>
                     </div>
 
-                    {/* Info */}
                     <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h4
-                                className="font-semibold text-text-primary text-sm leading-tight"
-                                title="Abrir detalhes do lead"
-                            >
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-sm font-semibold leading-tight text-text-primary" title="Abrir detalhes do lead">
                                 {lead.name || 'Sem Nome'}
                             </h4>
+
                             {intentCfg && score > 0 && (
-                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${intentCfg.bg} ${intentCfg.color} border ${intentCfg.border} flex-shrink-0 tracking-wide`}>
+                                <span className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide ${intentCfg.bg} ${intentCfg.color} border ${intentCfg.border}`}>
                                     {intentCfg.label} {score}
                                 </span>
                             )}
-                            {/* AI Lead Score badge from Opportunity Scoring Engine */}
+
                             {intelligence && !intentCfg && (
-                                <div className={`text-[10px] font-bold px-2 py-0.5 rounded flex-shrink-0 tracking-wide flex items-center gap-1
-                                ${intelligence.temperature === 'quente' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/25' :
-                                        intelligence.temperature === 'morno' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/25' :
-                                            'bg-blue-500/10 text-blue-400 border border-blue-500/25'}`}
+                                <div
+                                    className={`flex flex-shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold tracking-wide ${intelligence.temperature === 'quente'
+                                        ? 'border border-orange-500/25 bg-orange-500/10 text-orange-400'
+                                        : intelligence.temperature === 'morno'
+                                            ? 'border border-yellow-500/25 bg-yellow-500/10 text-yellow-400'
+                                            : 'border border-blue-500/25 bg-blue-500/10 text-blue-400'
+                                        }`}
                                 >
                                     <Brain size={10} />
-                                    {intelligence.temperature === 'quente' ? '🔥' : intelligence.temperature === 'morno' ? '🌡️' : '❄️'} {intelligence.score}
+                                    {intelligence.temperature === 'quente' ? 'Score quente' : intelligence.temperature === 'morno' ? 'Score morno' : 'Score frio'} {intelligence.score}
                                 </div>
                             )}
-                            {/* Follow-up Engine Status Badge */}
-                            {followupStatus === 'pending' && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/25 flex items-center gap-1 flex-shrink-0">
-                                    <Bell size={8} /> FOLLOW-UP ACTIVE
+
+                            {followupBadge && (
+                                <span className={`flex flex-shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold ${followupBadge.className}`}>
+                                    <Bell size={8} />
+                                    {followupBadge.label}
                                 </span>
                             )}
-                            {followupStatus === 'sent' && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/25 flex items-center gap-1 flex-shrink-0">
-                                    <Bell size={8} /> FOLLOW-UP SENT
-                                </span>
-                            )}
-                            {followupStatus === 'replied' && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/25 flex items-center gap-1 flex-shrink-0">
-                                    ✅ LEAD REENGAGED
-                                </span>
-                            )}
+
                             {lead.hasAiSummary && (
                                 <span
                                     title="A IA ja gerou um resumo operacional para este lead"
@@ -156,100 +247,165 @@ export function KanbanCard({ lead, onDragStart, onDelete, onOpenDetails, onMarkA
                                 </span>
                             )}
                         </div>
+
                         {lead.phone && (
-                            <p className="text-xs text-text-secondary flex items-center gap-1 mt-0.5"><Phone size={10} />{lead.phone}</p>
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-text-secondary">
+                                <Phone size={10} />
+                                {lead.phone}
+                            </p>
                         )}
                         {lead.email && (
-                            <p className="text-xs text-text-secondary flex items-center gap-1 mt-0.5 truncate max-w-[180px]" title={lead.email}><Mail size={10} />{lead.email}</p>
+                            <p className="mt-0.5 flex max-w-[180px] items-center gap-1 truncate text-xs text-text-secondary" title={lead.email}>
+                                <Mail size={10} />
+                                {lead.email}
+                            </p>
                         )}
                         {lead.source && (
-                            <p className="text-xs text-text-secondary flex items-center gap-1 mt-0.5"><Globe size={10} />{lead.source}</p>
+                            <p className="mt-0.5 flex items-center gap-1 text-xs text-text-secondary">
+                                <Globe size={10} />
+                                {lead.source}
+                            </p>
                         )}
                         {lead.briefing && (
-                            <p className="text-[10px] text-text-muted italic mt-0.5 leading-tight line-clamp-1" title={lead.briefing}>{lead.briefing}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[10px] italic leading-tight text-text-muted" title={lead.briefing}>
+                                {lead.briefing}
+                            </p>
                         )}
-                        {/* AI Intelligence: detected intent + product + top objection */}
+
                         {intelligence && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="mt-1.5 flex flex-wrap gap-1">
                                 {intelligence.intent && (
-                                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                    <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-400">
                                         {intelligence.intent}
                                     </span>
                                 )}
                                 {intelligence.product_interest && intelligence.product_interest !== 'N/A' && (
-                                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                        🛒 {intelligence.product_interest}
+                                    <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-medium text-blue-400">
+                                        Produto: {intelligence.product_interest}
                                     </span>
                                 )}
                                 {intelligence.top_objection && (
-                                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 truncate max-w-[100px]" title={intelligence.top_objection}>
-                                        ⚠️ {intelligence.top_objection}
+                                    <span
+                                        className="max-w-[100px] truncate rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-400"
+                                        title={intelligence.top_objection}
+                                    >
+                                        Objecao: {intelligence.top_objection}
                                     </span>
                                 )}
                             </div>
                         )}
+
                         {!intentCfg && lead.temperature && !intelligence && (
-                            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold mt-1.5 border ${lead.temperature.includes('Quente') ? 'bg-red-500/10 text-red-500 border-red-500/20' : lead.temperature.includes('Morno') ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}>
+                            <div className={`mt-1.5 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold ${lead.temperature.includes('Quente')
+                                ? 'border-red-500/20 bg-red-500/10 text-red-500'
+                                : lead.temperature.includes('Morno')
+                                    ? 'border-yellow-500/20 bg-yellow-500/10 text-yellow-600'
+                                    : 'border-blue-500/20 bg-blue-500/10 text-blue-500'
+                                }`}>
                                 <span>{lead.temperature}</span>
+                            </div>
+                        )}
+
+                        {followupState && (
+                            <div className="mt-2.5 rounded-xl border border-primary/15 bg-primary/[0.05] px-2.5 py-2">
+                                <div className="flex items-start gap-2">
+                                    <div className="mt-0.5 rounded-full bg-primary/10 p-1 text-primary">
+                                        <Sparkles size={10} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                                            Recovery OS
+                                        </p>
+                                        <p className="mt-1 text-[11px] font-semibold text-text-primary">
+                                            {followupState.sequence_name || 'Sequencia automatica'}
+                                            {followupState.current_step ? ` · passo ${followupState.current_step}/${followupState.total_steps || followupState.current_step}` : ''}
+                                        </p>
+                                        <p className="mt-1 text-[10px] leading-relaxed text-text-secondary">
+                                            {followupDetail}
+                                        </p>
+                                        {(followupSchedule || followupState.assigned_vendor_name) && (
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                {followupSchedule && (
+                                                    <span className="rounded-full border border-black/5 bg-white/70 px-2 py-0.5 text-[9px] font-semibold text-text-secondary">
+                                                        {followupSchedule}
+                                                    </span>
+                                                )}
+                                                {followupState.assigned_vendor_name && (
+                                                    <span className="rounded-full border border-black/5 bg-white/70 px-2 py-0.5 text-[9px] font-semibold text-text-secondary">
+                                                        Vendedor: {followupState.assigned_vendor_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Actions — consolidated into a single dropdown */}
-                <div className="relative flex-shrink-0 ml-1" ref={menuRef}>
+                <div className="relative ml-1 flex-shrink-0" ref={menuRef}>
                     <button
-                        onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
-                        className="text-text-muted hover:text-text-primary transition-colors p-1 hover:bg-white/5 rounded focus:outline-none"
-                        title="Ações"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            setShowMenu((value) => !value);
+                        }}
+                        className="rounded p-1 text-text-muted transition-colors hover:bg-white/5 hover:text-text-primary focus:outline-none"
+                        title="Acoes"
                     >
                         <MoreHorizontal size={16} />
                     </button>
 
                     {showMenu && (
-                        <div className="absolute right-0 top-full mt-1 w-52 bg-surface border border-border rounded-lg shadow-xl z-50 py-1 overflow-hidden transform origin-top-right">
-
-                            {/* Option: Close Deal */}
+                        <div className="absolute right-0 top-full z-50 mt-1 w-52 origin-top-right overflow-hidden rounded-lg border border-border bg-surface py-1 shadow-xl">
                             {onMarkAsClient && lead.status !== 'Cliente' && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); if (confirm(`Marcar ${lead.name} como Cliente?`)) { onMarkAsClient(lead.id); } setShowMenu(false); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-green-500/10 text-green-500 transition-colors"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        if (confirm(`Marcar ${lead.name} como Cliente?`)) {
+                                            onMarkAsClient(lead.id);
+                                        }
+                                        setShowMenu(false);
+                                    }}
+                                    className="flex w-full items-center gap-2 px-3 py-2 text-xs text-green-500 transition-colors hover:bg-green-500/10"
                                 >
                                     <UserCheck size={14} />
-                                    Fechar Negócio (Cliente)
+                                    Fechar negocio
                                 </button>
                             )}
 
-                            {/* Option: Delete */}
                             {onDelete && (
-                                <div className="border-t border-border/30 mt-1 pt-1">
+                                <div className="mt-1 border-t border-border/30 pt-1">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); if (confirm('Excluir este lead?')) { onDelete(lead.id); } setShowMenu(false); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-red-500/10 text-red-500 transition-colors"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            if (confirm('Excluir este lead?')) {
+                                                onDelete(lead.id);
+                                            }
+                                            setShowMenu(false);
+                                        }}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/10"
                                     >
                                         <Trash2 size={14} />
-                                        Excluir Lead
+                                        Excluir lead
                                     </button>
                                 </div>
                             )}
-
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Vendor badge */}
             {assignedVendedor && (
-                <div className="flex items-center gap-1 mb-1.5">
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center gap-1">
+                <div className="mb-1.5 flex items-center gap-1">
+                    <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                         <User size={9} />
                         {assignedVendedor.nome}
                     </span>
                 </div>
             )}
 
-            {/* Footer */}
-            <div className="flex items-center justify-between text-[10px] text-text-secondary border-t border-border/30 pt-2 mt-1">
+            <div className="mt-1 flex items-center justify-between border-t border-border/30 pt-2 text-[10px] text-text-secondary">
                 <div className="flex items-center gap-1.5 font-medium text-text-primary/80">
                     <DollarSign size={10} className="text-green-500" />
                     {formatValue(lead.value || 0)}
@@ -261,9 +417,14 @@ export function KanbanCard({ lead, onDragStart, onDelete, onOpenDetails, onMarkA
             </div>
 
             {lead.tags && lead.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                    {lead.tags.map(tag => (
-                        <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-text-primary/5 text-text-secondary border border-text-primary/5">{tag}</span>
+                <div className="mt-2 flex flex-wrap gap-1">
+                    {lead.tags.map((tag) => (
+                        <span
+                            key={tag}
+                            className="rounded-full border border-text-primary/5 bg-text-primary/5 px-1.5 py-0.5 text-[9px] font-medium text-text-secondary"
+                        >
+                            {tag}
+                        </span>
                     ))}
                 </div>
             )}
