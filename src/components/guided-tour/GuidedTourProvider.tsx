@@ -12,7 +12,6 @@ import {
 import { ArrowLeft, ArrowRight, PartyPopper, Sparkles, X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { cn } from "../../utils/cn";
 import {
     GUIDED_TOUR_STEPS,
     GUIDED_TOUR_VERSION,
@@ -46,6 +45,7 @@ const GuidedTourContext = createContext<GuidedTourContextValue | undefined>(unde
 const TOUR_SESSION_PREFIX = "kogna_guided_tour_session";
 const TARGET_PADDING = 14;
 const CARD_WIDTH = 380;
+const DEFAULT_CARD_HEIGHT = 360;
 
 function getSessionKey(userId?: string | null) {
     return `${TOUR_SESSION_PREFIX}:${userId || "anonymous"}`;
@@ -59,7 +59,12 @@ function getCurrentRoute(pathname: string, search: string) {
     return `${pathname}${search || ""}`;
 }
 
-function getPopoverStyle(rect: SpotlightRect | null, placement: GuidedTourPlacement) {
+function getPopoverStyle(
+    rect: SpotlightRect | null,
+    placement: GuidedTourPlacement,
+    cardWidth: number,
+    cardHeight: number,
+) {
     if (!rect || placement === "center") {
         return {
             top: "50%",
@@ -71,27 +76,39 @@ function getPopoverStyle(rect: SpotlightRect | null, placement: GuidedTourPlacem
     const margin = 24;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const cardHeight = 260;
+    const safeCardWidth = Math.min(cardWidth, viewportWidth - 40);
+    const safeCardHeight = Math.min(cardHeight, viewportHeight - 40);
+    let resolvedPlacement = placement;
     let top = rect.top;
     let left = rect.left;
 
-    if (placement === "bottom") {
+    if (placement === "bottom" && rect.top + rect.height + margin + safeCardHeight > viewportHeight - 20 && rect.top - safeCardHeight - margin >= 20) {
+        resolvedPlacement = "top";
+    } else if (placement === "top" && rect.top - safeCardHeight - margin < 20 && rect.top + rect.height + margin + safeCardHeight <= viewportHeight - 20) {
+        resolvedPlacement = "bottom";
+    } else if (placement === "right" && rect.left + rect.width + margin + safeCardWidth > viewportWidth - 20 && rect.left - safeCardWidth - margin >= 20) {
+        resolvedPlacement = "left";
+    } else if (placement === "left" && rect.left - safeCardWidth - margin < 20 && rect.left + rect.width + margin + safeCardWidth <= viewportWidth - 20) {
+        resolvedPlacement = "right";
+    }
+
+    if (resolvedPlacement === "bottom") {
         top = rect.top + rect.height + margin;
-        left = rect.left + rect.width / 2 - CARD_WIDTH / 2;
-    } else if (placement === "top") {
-        top = rect.top - cardHeight - margin;
-        left = rect.left + rect.width / 2 - CARD_WIDTH / 2;
-    } else if (placement === "left") {
-        top = rect.top + rect.height / 2 - cardHeight / 2;
-        left = rect.left - CARD_WIDTH - margin;
-    } else if (placement === "right") {
-        top = rect.top + rect.height / 2 - cardHeight / 2;
+        left = rect.left + rect.width / 2 - safeCardWidth / 2;
+    } else if (resolvedPlacement === "top") {
+        top = rect.top - safeCardHeight - margin;
+        left = rect.left + rect.width / 2 - safeCardWidth / 2;
+    } else if (resolvedPlacement === "left") {
+        top = rect.top + rect.height / 2 - safeCardHeight / 2;
+        left = rect.left - safeCardWidth - margin;
+    } else if (resolvedPlacement === "right") {
+        top = rect.top + rect.height / 2 - safeCardHeight / 2;
         left = rect.left + rect.width + margin;
     }
 
     return {
-        top: clamp(top, 20, viewportHeight - cardHeight - 20),
-        left: clamp(left, 20, viewportWidth - CARD_WIDTH - 20),
+        top: clamp(top, 20, viewportHeight - safeCardHeight - 20),
+        left: clamp(left, 20, viewportWidth - safeCardWidth - 20),
     };
 }
 
@@ -144,15 +161,47 @@ function GuidedTourOverlay({
     onPrevious: () => void;
     onSkip: () => void;
 }) {
-    const popoverStyle = getPopoverStyle(spotlightRect, spotlightRect ? step.placement : "center");
+    const isIntroStep = stepIndex === 0;
+    const cardRef = useRef<HTMLDivElement | null>(null);
+    const [cardSize, setCardSize] = useState({ width: CARD_WIDTH, height: DEFAULT_CARD_HEIGHT });
+    const popoverStyle = getPopoverStyle(
+        spotlightRect,
+        spotlightRect ? step.placement : "center",
+        cardSize.width,
+        cardSize.height,
+    );
+
+    useEffect(() => {
+        if (!cardRef.current) return;
+
+        const updateSize = () => {
+            if (!cardRef.current) return;
+            const rect = cardRef.current.getBoundingClientRect();
+            setCardSize({
+                width: rect.width || CARD_WIDTH,
+                height: rect.height || DEFAULT_CARD_HEIGHT,
+            });
+        };
+
+        updateSize();
+
+        const observer = new ResizeObserver(() => updateSize());
+        observer.observe(cardRef.current);
+        window.addEventListener("resize", updateSize);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", updateSize);
+        };
+    }, [step.id]);
 
     return (
         <div className="pointer-events-none fixed inset-0 z-[1200]">
-            <div className="absolute inset-0 bg-slate-950/72 backdrop-blur-[3px]" />
+            <div className="absolute inset-0 bg-slate-950/44" />
 
             {spotlightRect && (
                 <div
-                    className="absolute rounded-[32px] border border-primary/30 shadow-[0_0_0_9999px_rgba(2,6,23,0.72),0_0_0_1px_rgba(255,255,255,0.12),0_25px_60px_rgba(15,23,42,0.28)] transition-all duration-300"
+                    className="absolute rounded-[32px] border border-primary/35 shadow-[0_0_0_9999px_rgba(2,6,23,0.44),0_0_0_1px_rgba(255,255,255,0.12),0_25px_60px_rgba(15,23,42,0.18)] transition-all duration-300"
                     style={{
                         top: spotlightRect.top,
                         left: spotlightRect.left,
@@ -163,66 +212,57 @@ function GuidedTourOverlay({
             )}
 
             <div
+                ref={cardRef}
                 className="pointer-events-auto absolute w-[min(92vw,380px)] overflow-hidden rounded-[30px] border border-white/12 bg-white/[0.96] shadow-[0_30px_90px_rgba(15,23,42,0.36)] transition-all duration-300 dark:border-white/[0.10] dark:bg-[#111214]/96"
                 style={popoverStyle}
             >
-                <div className="bg-[radial-gradient(circle_at_top_right,rgba(255,122,26,0.16),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(255,122,26,0.10),transparent_30%)] p-5">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                                <Sparkles size={12} />
-                                Tour guiado
+                <div className="flex max-h-[calc(100vh-40px)] flex-col bg-[radial-gradient(circle_at_top_right,rgba(255,122,26,0.16),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(255,122,26,0.10),transparent_30%)]">
+                    <div className="overflow-y-auto p-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <div className="inline-flex rounded-full border border-primary/15 bg-primary/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
+                                    TOUR GUIADO
+                                </div>
+                                <h3 className="mt-4 text-2xl font-display font-bold tracking-tight text-foreground">
+                                    {step.title}
+                                </h3>
                             </div>
-                            <h3 className="mt-4 text-2xl font-display font-bold tracking-tight text-foreground">
-                                {step.title}
-                            </h3>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={onSkip}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.06] bg-white/80 text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.04]"
-                            aria-label="Pular tour"
-                        >
-                            <X size={16} />
-                        </button>
-                    </div>
-
-                    <div className="mt-5 rounded-[24px] border border-primary/12 bg-primary/[0.06] p-4">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
-                            Qual problema isso resolve
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-foreground">{step.problemSolved}</p>
-                    </div>
-
-                    <p className="mt-4 text-sm leading-7 text-muted-foreground">{step.description}</p>
-
-                    <div className="mt-6 flex items-center justify-between gap-4">
-                        <div className="text-xs font-medium text-muted-foreground">
-                            Passo {stepIndex + 1} de {totalSteps}
-                        </div>
-                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={onPrevious}
-                                disabled={stepIndex === 0}
-                                className={cn(
-                                    "inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition-colors",
-                                    stepIndex === 0
-                                        ? "cursor-not-allowed border-black/[0.06] bg-black/[0.03] text-muted-foreground dark:border-white/[0.08] dark:bg-white/[0.03]"
-                                        : "border-black/[0.08] bg-white text-foreground hover:border-primary/20 dark:border-white/[0.08] dark:bg-white/[0.04]",
+                                onClick={onSkip}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.06] bg-white/80 text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                aria-label="Pular tour"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <p className="mt-5 text-sm leading-7 text-muted-foreground">{step.description}</p>
+                    </div>
+                    <div className="border-t border-black/[0.06] px-5 py-4 dark:border-white/[0.08]">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="text-xs font-medium text-muted-foreground">
+                                Passo {stepIndex + 1} de {totalSteps}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {!isIntroStep && (
+                                    <button
+                                        type="button"
+                                        onClick={onPrevious}
+                                        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary/20 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                    >
+                                        <ArrowLeft size={14} />
+                                        Anterior
+                                    </button>
                                 )}
-                            >
-                                <ArrowLeft size={14} />
-                                Anterior
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onNext}
-                                className="inline-flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF7A1A] via-[#FF6B2D] to-[#FF9A5A] px-4 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]"
-                            >
-                                Proximo
-                                <ArrowRight size={14} />
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={onNext}
+                                    className="inline-flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF7A1A] via-[#FF6B2D] to-[#FF9A5A] px-4 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]"
+                                >
+                                    {isIntroStep ? "Começar" : "Próximo"}
+                                    {!isIntroStep && <ArrowRight size={14} />}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
