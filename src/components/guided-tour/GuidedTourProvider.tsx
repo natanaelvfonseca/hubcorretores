@@ -64,20 +64,22 @@ function getPopoverStyle(
     placement: GuidedTourPlacement,
     cardWidth: number,
     cardHeight: number,
+    offsetX = 0,
+    offsetY = 0,
 ) {
-    if (!rect || placement === "center") {
-        return {
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-        };
-    }
-
-    const margin = 24;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const safeCardWidth = Math.min(cardWidth, viewportWidth - 40);
     const safeCardHeight = Math.min(cardHeight, viewportHeight - 40);
+
+    if (!rect || placement === "center") {
+        return {
+            top: clamp(viewportHeight / 2 - safeCardHeight / 2 + offsetY, 20, viewportHeight - safeCardHeight - 20),
+            left: clamp(viewportWidth / 2 - safeCardWidth / 2 + offsetX, 20, viewportWidth - safeCardWidth - 20),
+        };
+    }
+
+    const margin = 24;
     let resolvedPlacement = placement;
     let top = rect.top;
     let left = rect.left;
@@ -107,8 +109,8 @@ function getPopoverStyle(
     }
 
     return {
-        top: clamp(top, 20, viewportHeight - safeCardHeight - 20),
-        left: clamp(left, 20, viewportWidth - safeCardWidth - 20),
+        top: clamp(top + offsetY, 20, viewportHeight - safeCardHeight - 20),
+        left: clamp(left + offsetX, 20, viewportWidth - safeCardWidth - 20),
     };
 }
 
@@ -169,6 +171,8 @@ function GuidedTourOverlay({
         spotlightRect ? step.placement : "center",
         cardSize.width,
         cardSize.height,
+        step.popoverOffsetX ?? 0,
+        step.popoverOffsetY ?? 0,
     );
 
     useEffect(() => {

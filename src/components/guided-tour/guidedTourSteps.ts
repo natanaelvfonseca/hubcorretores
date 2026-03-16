@@ -7,6 +7,8 @@ export interface GuidedTourStep {
     route: string;
     targetId: string;
     placement: GuidedTourPlacement;
+    popoverOffsetX?: number;
+    popoverOffsetY?: number;
     title: string;
     description: string;
 }
@@ -81,6 +83,7 @@ export const GUIDED_TOUR_STEPS: GuidedTourStep[] = [
         route: "/live-chat",
         targetId: "tour-live-chat-layout",
         placement: "center",
+        popoverOffsetX: 180,
         title: "Assuma conversas importantes na hora certa",
         description: "Quando uma conversa precisa de atuação humana, é aqui que ela chega. O live chat reúne histórico, contexto e informações úteis para o time entrar rápido, responder melhor e continuar a negociação sem perder o fio da conversa.",
     },
