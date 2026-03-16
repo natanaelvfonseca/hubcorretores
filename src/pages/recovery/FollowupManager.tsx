@@ -328,6 +328,13 @@ export function FollowupManager() {
         setPageRefreshing(false);
     }, [fetchDashboard, fetchQueue, fetchSequences, fetchSettings]);
 
+    const closeNewSequenceModal = useCallback(() => {
+        setShowNewSeq(false);
+        setNewSeqName('');
+        setNewSeqStage('');
+        setNewSeqAI(false);
+    }, []);
+
     useEffect(() => {
         refreshAll();
     }, [refreshAll]);
@@ -339,6 +346,19 @@ export function FollowupManager() {
             pushFlash('error', 'Nao foi possivel abrir os passos da sequencia.');
         });
     }, [fetchSteps, pushFlash, selectedSequenceId, stepsBySeq]);
+
+    useEffect(() => {
+        if (!showNewSeq) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                closeNewSequenceModal();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [closeNewSequenceModal, showNewSeq]);
 
     const selectedSequence = useMemo(
         () => sequences.find((sequence) => sequence.id === selectedSequenceId) || null,
@@ -381,10 +401,9 @@ export function FollowupManager() {
             body: JSON.stringify({ name: newSeqName.trim(), pipeline_stage: newSeqStage || null, ai_mode: newSeqAI }),
         });
         if (!res.ok) return pushFlash('error', 'Nao foi possivel criar a sequencia.');
-        setShowNewSeq(false);
-        setNewSeqName('');
-        setNewSeqStage('');
-        setNewSeqAI(false);
+        const created = await res.json();
+        closeNewSequenceModal();
+        setSelectedSequenceId(created.id);
         pushFlash('success', 'Sequencia criada.');
         await fetchSequences();
     };
@@ -612,42 +631,6 @@ export function FollowupManager() {
                 {activeTab === 'sequences' && (
                     <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_420px]">
                         <div className="space-y-6">
-                            {showNewSeq && (
-                                <Surface className="p-6">
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Novo fluxo</p>
-                                            <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground">Criar sequencia de follow-up</h2>
-                                        </div>
-                                        <button onClick={() => setShowNewSeq(false)} className="rounded-2xl border border-black/[0.06] p-2 text-muted-foreground dark:border-white/[0.08]" type="button">
-                                            <X size={18} />
-                                        </button>
-                                    </div>
-                                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                                        <input value={newSeqName} onChange={(event) => setNewSeqName(event.target.value)} placeholder="Nome da sequencia" className="rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm text-foreground outline-none dark:border-white/[0.08] dark:bg-white/[0.04]" />
-                                        <select value={newSeqStage} onChange={(event) => setNewSeqStage(event.target.value)} className="rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm text-foreground outline-none dark:border-white/[0.08] dark:bg-white/[0.04]">
-                                            <option value="">Todas as etapas</option>
-                                            {PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="mt-4 flex items-center justify-between rounded-[24px] border border-black/[0.06] bg-[#F8F8FA] p-4 dark:border-white/[0.08] dark:bg-[#111214]">
-                                        <div>
-                                            <p className="text-sm font-semibold text-foreground">Modo IA</p>
-                                            <p className="mt-1 text-xs text-muted-foreground">Ajusta a mensagem final ao contexto de cada conversa.</p>
-                                        </div>
-                                        <button type="button" onClick={() => setNewSeqAI((current) => !current)} className={cn('relative h-7 w-12 rounded-full', newSeqAI ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700')}>
-                                            <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform', newSeqAI ? 'translate-x-6' : 'translate-x-1')} />
-                                        </button>
-                                    </div>
-                                    <div className="mt-5 flex flex-wrap gap-3">
-                                        <button onClick={createSequence} className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF7A1A] via-[#FF6B2D] to-[#FF9A5A] px-5 py-3 text-sm font-semibold text-white" type="button">
-                                            <Save size={15} />
-                                            Salvar sequencia
-                                        </button>
-                                    </div>
-                                </Surface>
-                            )}
-
                             {loadingSeqs ? (
                                 <Surface className="flex items-center justify-center p-12"><Loader2 size={22} className="animate-spin text-primary" /></Surface>
                             ) : filteredSequences.length === 0 ? (
@@ -1029,6 +1012,114 @@ export function FollowupManager() {
                                 ))}
                             </div>
                         </Surface>
+                    </div>
+                )}
+
+                {showNewSeq && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+                        <button
+                            type="button"
+                            aria-label="Fechar criacao de sequencia"
+                            onClick={closeNewSequenceModal}
+                            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[3px]"
+                        />
+
+                        <div className="relative z-10 w-full max-w-2xl">
+                            <Surface className="overflow-hidden">
+                                <div className="bg-[radial-gradient(circle_at_top_right,rgba(255,120,51,0.18),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(255,120,51,0.08),transparent_28%)] p-6 sm:p-8">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="max-w-xl">
+                                            <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+                                                <Plus size={13} />
+                                                Novo fluxo
+                                            </span>
+                                            <h2 className="mt-5 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Criar sequencia de follow-up</h2>
+                                            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                                                Configure o fluxo inicial em um popup mais limpo e depois refine os passos com calma na tela principal.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={closeNewSequenceModal}
+                                            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/[0.06] bg-white/75 text-muted-foreground transition-colors hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                            type="button"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-8 grid gap-4 md:grid-cols-2">
+                                        <label className="block">
+                                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Nome da sequencia</p>
+                                            <input
+                                                value={newSeqName}
+                                                onChange={(event) => setNewSeqName(event.target.value)}
+                                                placeholder="Ex.: Reativacao de orcamentos"
+                                                className="w-full rounded-[22px] border border-black/[0.08] bg-white px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/30 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                            />
+                                        </label>
+
+                                        <label className="block">
+                                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Etapa do pipeline</p>
+                                            <select
+                                                value={newSeqStage}
+                                                onChange={(event) => setNewSeqStage(event.target.value)}
+                                                className="w-full rounded-[22px] border border-black/[0.08] bg-white px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary/30 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                            >
+                                                <option value="">Todas as etapas</option>
+                                                {PIPELINE_STAGES.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <div className="mt-5 rounded-[28px] border border-black/[0.06] bg-white/75 p-5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-foreground">Modo IA</p>
+                                                <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                                                    Permite ajustar a mensagem final ao contexto comercial de cada conversa.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewSeqAI((current) => !current)}
+                                                className={cn('relative h-7 w-12 rounded-full transition-colors', newSeqAI ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700')}
+                                            >
+                                                <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform', newSeqAI ? 'translate-x-6' : 'translate-x-1')} />
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            <span className="rounded-full border border-black/[0.06] bg-white px-3 py-1 text-xs font-semibold text-muted-foreground dark:border-white/[0.08] dark:bg-[#17181A]">
+                                                Fluxo editavel depois
+                                            </span>
+                                            <span className="rounded-full border border-primary/15 bg-primary/[0.08] px-3 py-1 text-xs font-semibold text-primary">
+                                                {newSeqAI ? 'IA contextual ligada' : 'IA contextual opcional'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <button
+                                            onClick={closeNewSequenceModal}
+                                            className="inline-flex items-center justify-center rounded-2xl border border-black/[0.08] bg-white px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/20 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                            type="button"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                        <button
+                                            onClick={createSequence}
+                                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#FF7A1A] via-[#FF6B2D] to-[#FF9A5A] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]"
+                                            type="button"
+                                        >
+                                            <Save size={15} />
+                                            Salvar sequencia
+                                        </button>
+                                    </div>
+                                </div>
+                            </Surface>
+                        </div>
                     </div>
                 )}
             </div>
