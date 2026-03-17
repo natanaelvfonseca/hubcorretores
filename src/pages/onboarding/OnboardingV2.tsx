@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { BrandLogo } from '../../components/branding/BrandLogo';
+import { formatCurrencyInputBRL, getCurrencyEditingValue, sanitizeCurrencyEditingValue } from '../../lib/currencyInput';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FormData {
@@ -182,6 +183,15 @@ export function OnboardingV2() {
     const toggleArr = (k: keyof FormData, v: string) => {
         const arr = (form[k] as string[]);
         set(k, arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
+    };
+    const handleCurrencyChange = (key: 'productPrice' | 'revenueGoal', value: string) => {
+        set(key, sanitizeCurrencyEditingValue(value));
+    };
+    const handleCurrencyBlur = (key: 'productPrice' | 'revenueGoal') => {
+        set(key, formatCurrencyInputBRL(form[key]));
+    };
+    const handleCurrencyFocus = (key: 'productPrice' | 'revenueGoal') => {
+        set(key, getCurrencyEditingValue(form[key]));
     };
 
     const go = (n: number) => { setError(''); setStep(n); window.scrollTo(0, 0); };
@@ -408,6 +418,9 @@ export function OnboardingV2() {
                     {error && <ErrorBanner msg={error} />}
                     <StepContent
                         step={step} form={form} set={set} toggleArr={toggleArr}
+                        handleCurrencyChange={handleCurrencyChange}
+                        handleCurrencyBlur={handleCurrencyBlur}
+                        handleCurrencyFocus={handleCurrencyFocus}
                         next={next} loading={loading} go={go} files={files} setFiles={setFiles}
                         chatMessages={chatMessages} chatInput={chatInput} setChatInput={setChatInput}
                         sendChat={sendChat} chatLoading={chatLoading} msgsUsed={msgsUsed}
@@ -429,7 +442,7 @@ export function OnboardingV2() {
 }
 
 // ── Step Content ───────────────────────────────────────────────────────────────
-function StepContent({ step, form, set, toggleArr, next, loading, go, files, setFiles,
+function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleCurrencyBlur, handleCurrencyFocus, next, loading, go, files, setFiles,
     chatMessages, chatInput, setChatInput, sendChat, chatLoading, msgsUsed, chatEndRef,
     pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate,
     improvementSelected, setImprovementSelected, improvementDetail, setImprovementDetail,
@@ -586,7 +599,9 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                     <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">R$</span>
                         <Input placeholder="1.500,00" value={form.productPrice} className="pl-10"
-                            onChange={e => set('productPrice', e.target.value.replace(/[^\d.,]/g, ''))} />
+                            onChange={e => handleCurrencyChange('productPrice', e.target.value)}
+                            onBlur={() => handleCurrencyBlur('productPrice')}
+                            onFocus={() => handleCurrencyFocus('productPrice')} />
                     </div>
                 </div>
             </div>
@@ -658,12 +673,14 @@ function StepContent({ step, form, set, toggleArr, next, loading, go, files, set
                 <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 pointer-events-none select-none">R$</span>
                     <Input placeholder="50.000,00" value={form.revenueGoal} className="pl-10"
-                        onChange={e => set('revenueGoal', e.target.value.replace(/[^\d.,]/g, ''))} />
+                        onChange={e => handleCurrencyChange('revenueGoal', e.target.value)}
+                        onBlur={() => handleCurrencyBlur('revenueGoal')}
+                        onFocus={() => handleCurrencyFocus('revenueGoal')} />
                 </div>
             </div>
             <div className="flex flex-wrap gap-2 mt-1">
                 {['5000', '10000', '25000', '50000', '100000', '250000'].map(v => (
-                    <button key={v} onClick={() => set('revenueGoal', v)}
+                    <button key={v} onClick={() => set('revenueGoal', formatCurrencyInputBRL(v))}
                         className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-[#FF4C00]/50 hover:text-[#FF4C00] transition-colors font-mono">
                         R$ {parseInt(v).toLocaleString('pt-BR')}
                     </button>

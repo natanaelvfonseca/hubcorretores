@@ -9,24 +9,12 @@ import { agentTemplates, type AgentTemplate } from '../../data/agentTemplates';
 import { IndustryPicker } from '../../components/onboarding/IndustryPicker';
 import confetti from 'canvas-confetti';
 import { DebugModal, DebugLog } from '../../components/DebugModal';
+import { formatCurrencyInputBRL, getCurrencyEditingValue, sanitizeCurrencyEditingValue } from '../../lib/currencyInput';
 
 // API Configuration
 const API_URL = '/api';
 
 const AI_NAME_SUGGESTIONS = ['Ana', 'Luna', 'Clara', 'Max', 'Leo', 'Lia', 'Nina', 'Iris', 'Nora', 'Sol'];
-
-const formatCurrency = (value: string) => {
-    // Remove everything that isn't a digit
-    const cleanValue = value.replace(/\D/g, '');
-
-    // Convert to number and format with BRL rules
-    const options = { minimumFractionDigits: 2 };
-    const result = new Intl.NumberFormat('pt-BR', options).format(
-        parseFloat(cleanValue) / 100
-    );
-
-    return result === 'NaN' ? '' : result;
-};
 
 // Micro-sounds (using reliable CDN or placeholder)
 const playSound = (_type: 'click' | 'success' | 'level-up') => {
@@ -152,6 +140,18 @@ export function Onboarding() {
     // Debug State
     const [debugOpen, setDebugOpen] = useState(false);
     const [logs, setLogs] = useState<DebugLog[]>([]);
+
+    const handleCurrencyFieldChange = (field: 'productPrice' | 'desiredRevenue', value: string) => {
+        setFormData(prev => ({ ...prev, [field]: sanitizeCurrencyEditingValue(value) }));
+    };
+
+    const handleCurrencyFieldBlur = (field: 'productPrice' | 'desiredRevenue') => {
+        setFormData(prev => ({ ...prev, [field]: formatCurrencyInputBRL(prev[field]) }));
+    };
+
+    const handleCurrencyFieldFocus = (field: 'productPrice' | 'desiredRevenue') => {
+        setFormData(prev => ({ ...prev, [field]: getCurrencyEditingValue(prev[field]) }));
+    };
 
     const addLog = (type: DebugLog['type'], message: string, details?: any) => {
         const newLog = {
@@ -793,9 +793,11 @@ export function Onboarding() {
                                                 <input
                                                     type="text"
                                                     className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none text-sm"
-                                                    placeholder="Ex: R$ 250,00"
+                                                    placeholder="Ex: 1.500,00"
                                                     value={formData.productPrice}
-                                                    onChange={e => setFormData({ ...formData, productPrice: e.target.value })}
+                                                    onChange={e => handleCurrencyFieldChange('productPrice', e.target.value)}
+                                                    onBlur={() => handleCurrencyFieldBlur('productPrice')}
+                                                    onFocus={() => handleCurrencyFieldFocus('productPrice')}
                                                 />
                                             </div>
 
@@ -850,9 +852,11 @@ export function Onboarding() {
                                             <input
                                                 type="text"
                                                 className="w-full pl-12 pr-4 py-6 bg-background border-2 border-primary/20 rounded-2xl focus:border-primary focus:shadow-lg focus:shadow-primary/20 transition-all outline-none text-3xl font-bold text-center text-primary"
-                                                placeholder="50.000"
+                                                placeholder="50.000,00"
                                                 value={formData.desiredRevenue}
-                                                onChange={e => setFormData({ ...formData, desiredRevenue: formatCurrency(e.target.value) })}
+                                                onChange={e => handleCurrencyFieldChange('desiredRevenue', e.target.value)}
+                                                onBlur={() => handleCurrencyFieldBlur('desiredRevenue')}
+                                                onFocus={() => handleCurrencyFieldFocus('desiredRevenue')}
                                             />
                                         </div>
 
