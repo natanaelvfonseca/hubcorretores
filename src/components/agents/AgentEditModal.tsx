@@ -72,11 +72,11 @@ const SECTION_META: Array<{
     description: string;
     icon: typeof BrainCircuit;
 }> = [
-    { id: 'strategy', label: 'Estrategia', description: 'Objetivo, tom e operacao da IA.', icon: BrainCircuit },
-    { id: 'objections', label: 'Objecoes', description: 'Playbook de contorno comercial.', icon: Sparkles },
-    { id: 'knowledge', label: 'Conhecimento', description: 'Arquivos e contexto de apoio.', icon: FileText },
-    { id: 'connection', label: 'Conexao', description: 'Numero de WhatsApp e operacao.', icon: Cable },
-    { id: 'advanced', label: 'Avancado', description: 'Modelo e refinamento fino.', icon: Wand2 },
+    { id: 'strategy', label: 'Estrategia', description: 'Objetivo, tom e conducao.', icon: BrainCircuit },
+    { id: 'objections', label: 'Objecoes', description: 'Como contornar entraves.', icon: Sparkles },
+    { id: 'knowledge', label: 'Conhecimento', description: 'Arquivos e contexto.', icon: FileText },
+    { id: 'connection', label: 'Conexao', description: 'Numero e operacao.', icon: Cable },
+    { id: 'advanced', label: 'Avancado', description: 'Ajustes finos.', icon: Wand2 },
 ];
 
 const TONES = ['Consultiva', 'Direta', 'Amigavel', 'Executiva', 'Educadora'];
@@ -85,7 +85,8 @@ const GOALS = [
     { value: 'qualificar_agendar', label: 'Qualificar e agendar' },
     { value: 'aquecer_lead', label: 'Aquecer e transferir no momento certo' },
 ];
-const MODELS = ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-4.1'];
+const FIXED_AGENT_MODEL = 'gpt-4.1';
+const FIXED_AGENT_MODEL_LABEL = 'GPT-4.1';
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
     return <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">{children}</label>;
@@ -210,7 +211,6 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
     const [activeSection, setActiveSection] = useState<AgentSection>('strategy');
     const [companyProfile, setCompanyProfile] = useState<CompanyProfileData>(EMPTY_COMPANY_PROFILE);
     const [advancedInstructions, setAdvancedInstructions] = useState(agent.advanced_instructions || '');
-    const [model, setModel] = useState(agent.model_config?.model || 'gpt-4o-mini');
     const [temperature, setTemperature] = useState(agent.model_config?.temperature ?? 0.45);
     const [files, setFiles] = useState<TrainingFile[]>(agent.training_files || []);
     const [whatsappInstanceId, setWhatsappInstanceId] = useState(agent.whatsapp_instance_id || '');
@@ -231,7 +231,6 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
 
         setActiveSection('strategy');
         setAdvancedInstructions(agent.advanced_instructions || '');
-        setModel(agent.model_config?.model || 'gpt-4o-mini');
         setTemperature(agent.model_config?.temperature ?? 0.45);
         setFiles(agent.training_files || []);
         setWhatsappInstanceId(agent.whatsapp_instance_id || '');
@@ -280,7 +279,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
             });
             const profilePayload = await profileRes.json().catch(() => null);
             if (!profileRes.ok) {
-                throw new Error(profilePayload?.error || 'Erro ao salvar estrategia da empresa.');
+                throw new Error(profilePayload?.details || profilePayload?.error || 'Erro ao salvar estrategia da empresa.');
             }
 
             const agentRes = await fetch(`/api/agents/${agent.id}`, {
@@ -291,7 +290,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                 },
                 body: JSON.stringify({
                     advanced_instructions: advancedInstructions,
-                    model_config: { model, temperature },
+                    model_config: { model: FIXED_AGENT_MODEL, temperature },
                     whatsapp_instance_id: whatsappInstanceId || null,
                     use_company_profile: true,
                 }),
@@ -301,7 +300,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                 throw new Error(agentPayload?.error || 'Erro ao salvar configuracoes da IA.');
             }
 
-            setStatusMessage('IA atualizada com o novo playbook operacional.');
+            setStatusMessage('IA atualizada com sucesso.');
             onUpdate();
             setTimeout(() => {
                 onClose();
@@ -369,9 +368,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                         </div>
                         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Central da IA</p>
                         <h2 className="mt-2 text-2xl font-display font-bold tracking-tight text-gray-900 dark:text-white">{agent.name}</h2>
-                        <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
-                            Ajuste a estrategia, o playbook de objecoes, a base de conhecimento e a conexao deste agente.
-                        </p>
+                        <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">Ajuste a IA com foco em venda e operacao.</p>
                     </div>
 
                     <nav className="mt-5 space-y-2">
@@ -421,9 +418,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 <h3 className="mt-4 text-3xl font-display font-bold tracking-[-0.04em] text-gray-900 dark:text-white">
                                     Configurar {agent.name}
                                 </h3>
-                                <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-500 dark:text-gray-400">
-                                    A estrategia e as objecoes abaixo alimentam o playbook do orquestrador. As instrucoes avancadas ficam como camada complementar do agente.
-                                </p>
+                                <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-500 dark:text-gray-400">O playbook da empresa guia a IA. Aqui voce refina a operacao.</p>
                             </div>
                             <button
                                 type="button"
@@ -469,7 +464,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                         ) : (
                             <div className="space-y-5">
                                 {activeSection === 'strategy' && (
-                                    <Surface eyebrow="Estrategia" title="Como esta IA deve conduzir" description="Ajuste o objetivo comercial, o tom e as regras operacionais que guiam o agente sem engessa-lo.">
+                                    <Surface eyebrow="Estrategia" title="Como esta IA deve atuar" description="Defina objetivo, tom e sinais de operacao.">
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="md:col-span-2">
                                                 <FieldLabel>Objetivo principal</FieldLabel>
@@ -532,10 +527,10 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 )}
 
                                 {activeSection === 'objections' && (
-                                    <Surface eyebrow="Playbook" title="Objecoes da operacao" description="Mapeie as objecoes mais comuns e a abordagem certa para a IA responder com mais contexto e mais conversao.">
+                                    <Surface eyebrow="Playbook" title="Objecoes da operacao" description="Mapeie objecoes e a resposta certa da IA.">
                                         <div className="space-y-4">
                                             <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.04] p-4 text-sm leading-6 text-gray-600 dark:text-gray-300">
-                                                Este playbook alimenta o orquestrador da empresa. Ajustes aqui melhoram todas as respostas em contexto de objecao.
+                                                Isso melhora as respostas da IA em contexto de objecao.
                                             </div>
                                             <div>
                                                 <FieldLabel>Diretriz geral de contorno</FieldLabel>
@@ -566,7 +561,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 )}
 
                                 {activeSection === 'knowledge' && (
-                                    <Surface eyebrow="Conhecimento" title="Base de apoio do agente" description="Suba materiais comerciais, roteiros e documentos para dar mais repertorio operacional ao orquestrador.">
+                                    <Surface eyebrow="Conhecimento" title="Base do agente" description="Adicione materiais de apoio e oferta.">
                                         <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                                             <div>
                                                 <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[26px] border-2 border-dashed border-black/[0.08] bg-white px-6 py-10 text-center transition hover:border-primary/35 hover:bg-primary/[0.04] dark:border-white/[0.08] dark:bg-[#171718] dark:hover:border-primary/25">
@@ -579,7 +574,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                                             {isUploading ? 'Enviando arquivos...' : 'Adicionar conhecimento'}
                                                         </p>
                                                         <p className="mt-1 text-sm leading-6 text-gray-500 dark:text-gray-400">
-                                                            PDF, TXT, DOCX ou markdown para enriquecer a leitura da IA.
+                                                            PDF, TXT, DOCX ou markdown.
                                                         </p>
                                                     </div>
                                                 </label>
@@ -620,15 +615,15 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                                 <div className="rounded-[26px] border border-black/[0.06] bg-white/[0.86] p-5 dark:border-white/[0.08] dark:bg-[#171718]">
                                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Resumo de ingestao</p>
                                                     <p className="mt-3 text-sm leading-7 text-gray-700 dark:text-gray-300">
-                                                        {agent.knowledge_summary || 'Os arquivos enviados passam a compor o repertorio da IA. Use materiais que ajudem em contexto, oferta, objecoes e provas.'}
+                                                        {agent.knowledge_summary || 'Use materiais de oferta, contexto, prova e atendimento.'}
                                                     </p>
                                                 </div>
                                                 <div className="rounded-[26px] border border-primary/18 bg-primary/[0.06] p-5">
-                                                    <p className="text-sm font-semibold text-primary">O que vale subir aqui</p>
+                                                    <p className="text-sm font-semibold text-primary">Sugestoes</p>
                                                     <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
-                                                        <li>Apresentacoes comerciais e materiais de oferta.</li>
-                                                        <li>FAQ, provas, cases e politicas de atendimento.</li>
-                                                        <li>Scripts internos que ajudem a IA a ganhar contexto sem improviso.</li>
+                                                        <li>Materiais comerciais e de oferta.</li>
+                                                        <li>FAQ, provas e cases.</li>
+                                                        <li>Scripts e politicas internas.</li>
                                                     </ul>
                                                 </div>
                                             </div>
@@ -637,7 +632,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 )}
 
                                 {activeSection === 'connection' && (
-                                    <Surface eyebrow="Conexao" title="Numero vinculado a este agente" description="Escolha qual conexao de WhatsApp este agente vai operar e veja se o numero esta pronto para entrar em producao.">
+                                    <Surface eyebrow="Conexao" title="Numero vinculado" description="Escolha o numero que esta IA vai operar.">
                                         <div className="space-y-3">
                                             <button
                                                 type="button"
@@ -647,7 +642,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">Nenhum numero conectado</p>
-                                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Use esta opcao quando quiser deixar o agente sem conexao ativa.</p>
+                                                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Deixe o agente sem numero ativo.</p>
                                                     </div>
                                                     <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${!whatsappInstanceId ? 'border-primary/20 bg-white text-primary' : 'border-black/[0.08] text-gray-500 dark:border-white/[0.08] dark:text-gray-400'}`}>
                                                         {!whatsappInstanceId ? 'Selecionado' : 'Livre'}
@@ -692,7 +687,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 )}
 
                                 {activeSection === 'advanced' && (
-                                    <Surface eyebrow="Avancado" title="Refinamentos do agente" description="Aqui ficam os ajustes complementares do agente. O playbook da empresa continua sendo a camada principal do orquestrador.">
+                                    <Surface eyebrow="Avancado" title="Refinamentos do agente" description="Ajustes finos sem mexer no playbook central.">
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <div className="md:col-span-2">
                                                 <FieldLabel>Instrucoes complementares</FieldLabel>
@@ -700,15 +695,17 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                             </div>
                                             <div>
                                                 <FieldLabel>Modelo</FieldLabel>
-                                                <select
-                                                    value={model}
-                                                    onChange={(e) => setModel(e.target.value)}
-                                                    className="w-full rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-[#171718] dark:text-white"
-                                                >
-                                                    {MODELS.map((modelName) => (
-                                                        <option key={modelName} value={modelName}>{modelName}</option>
-                                                    ))}
-                                                </select>
+                                                <div className="rounded-2xl border border-black/[0.08] bg-white px-4 py-4 text-sm text-gray-900 dark:border-white/[0.08] dark:bg-[#171718] dark:text-white">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="font-semibold">{FIXED_AGENT_MODEL_LABEL}</span>
+                                                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                                                            Padrao
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                                        A Kogna usa esse modelo automaticamente.
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div>
                                                 <FieldLabel>Temperatura</FieldLabel>
@@ -736,7 +733,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                     <footer className="border-t border-black/[0.06] bg-white/[0.86] px-5 py-4 backdrop-blur dark:border-white/[0.08] dark:bg-[#151517]/92 sm:px-7">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Salvar esta tela atualiza o perfil da empresa e regenera o prompt operacional desta IA.
+                                Salvar atualiza o perfil e a operacao desta IA.
                             </p>
                             <div className="flex flex-col gap-3 sm:flex-row">
                                 <button

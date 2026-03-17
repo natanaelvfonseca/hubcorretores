@@ -53,7 +53,7 @@ const typeConfig: Record<string, {
     sdr: {
         label: 'SDR',
         eyebrow: 'Prospeccao',
-        description: 'Qualifica leads, conduz conversas e acelera oportunidades com foco em conversao.',
+        description: 'Qualifica e acelera oportunidades.',
         icon: Sparkles,
         iconWrap: 'bg-orange-500/[0.12] text-orange-600 dark:bg-orange-500/[0.15] dark:text-orange-300',
         badge: 'border-orange-200/80 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200',
@@ -63,7 +63,7 @@ const typeConfig: Record<string, {
     vendedor: {
         label: 'Vendedor',
         eyebrow: 'Conversao',
-        description: 'Apresenta valor, remove objecoes e conduz o lead ao fechamento com mais seguranca.',
+        description: 'Apresenta valor e conduz ao fechamento.',
         icon: Activity,
         iconWrap: 'bg-amber-500/[0.12] text-amber-600 dark:bg-amber-500/[0.15] dark:text-amber-300',
         badge: 'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
@@ -73,7 +73,7 @@ const typeConfig: Record<string, {
     suporte: {
         label: 'Suporte',
         eyebrow: 'Sucesso do cliente',
-        description: 'Resolve duvidas com clareza, reduz atrito e sustenta uma experiencia mais confiavel.',
+        description: 'Resolve duvidas com clareza.',
         icon: MessageCircle,
         iconWrap: 'bg-emerald-500/[0.12] text-emerald-600 dark:bg-emerald-500/[0.15] dark:text-emerald-300',
         badge: 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
@@ -83,7 +83,7 @@ const typeConfig: Record<string, {
     atendente: {
         label: 'Atendente',
         eyebrow: 'Operacao',
-        description: 'Atende, direciona e organiza demandas com contexto para manter fluidez no atendimento.',
+        description: 'Atende e direciona com contexto.',
         icon: BrainCircuit,
         iconWrap: 'bg-sky-500/[0.12] text-sky-600 dark:bg-sky-500/[0.15] dark:text-sky-300',
         badge: 'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200',
@@ -93,7 +93,7 @@ const typeConfig: Record<string, {
     custom: {
         label: 'Custom',
         eyebrow: 'Personalizado',
-        description: 'IA configurada para uma rotina sob medida, com contexto adaptado ao seu processo.',
+        description: 'Configura uma rotina sob medida.',
         icon: Settings2,
         iconWrap: 'bg-slate-500/[0.12] text-slate-700 dark:bg-slate-500/[0.15] dark:text-slate-200',
         badge: 'border-slate-200/80 bg-slate-50 text-slate-700 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-200',
@@ -305,7 +305,7 @@ export function MyAIs() {
                     type: newType,
                     system_prompt: createMode === 'company' ? undefined : `Voce e um agente especializado em ${newType}. Seja util, claro e orientado ao objetivo do usuario.`,
                     use_company_profile: createMode === 'company',
-                    model_config: { model: 'gpt-4o-mini', temperature: 0.45 },
+                    model_config: { model: 'gpt-4.1', temperature: 0.45 },
                 }),
             });
 

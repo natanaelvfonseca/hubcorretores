@@ -159,6 +159,7 @@ export function OnboardingV2() {
     const { refreshUser } = useAuth();
     const [step, setStep] = useState(1);
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
+    const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     // Step 16 improvement
@@ -256,6 +257,7 @@ export function OnboardingV2() {
             localStorage.setItem('kogna_token', data.token);
             localStorage.setItem('kogna_user', JSON.stringify(data.user));
             token.current = data.token;
+            setCreatedAgentId(data.agentId || null);
             if (files.length > 0 && data.agentId) {
                 const knowledgeData = new FormData();
                 files.forEach((file) => knowledgeData.append('files', file));
@@ -341,7 +343,7 @@ export function OnboardingV2() {
             const res = await fetch('/api/whatsapp/connect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.current}` },
-                body: JSON.stringify({ email: form.email }),
+                body: JSON.stringify({ email: form.email, connect_agent_id: createdAgentId }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro ao conectar.');

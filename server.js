@@ -117,6 +117,7 @@ const openai = new OpenAI({
 });
 
 const KOGNA_PLAYBOOK_VERSION = "kogna-ai-core-2.1";
+const DEFAULT_AGENT_MODEL = "gpt-4.1";
 
 function safeJsonParse(raw, fallback) {
   if (raw === null || raw === undefined || raw === "") return fallback;
@@ -370,7 +371,7 @@ Regras:
 - Nao crie um prompt monolitico; entregue orientacao estruturada e operacional.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: DEFAULT_AGENT_MODEL,
       messages: [{ role: "system", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.35,
@@ -1746,7 +1747,7 @@ ${history}
 Gere uma mensagem de follow-up curta (máximo 3 parágrafos), natural, sem ser invasivo, adequada ao contexto. Não use emojis em excesso. Responda SOMENTE com o texto da mensagem.`;
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: DEFAULT_AGENT_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 300,
       temperature: 0.7
@@ -3923,7 +3924,61 @@ const ensureGuidedTourColumns = async () => {
 const ensureKognaAICoreTables = async () => {
   try {
     log("[SYSTEM] Ensuring Kogna AI Core 2.1 columns...");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ia_configs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        organization_id UUID REFERENCES organizations(id),
+        user_id UUID REFERENCES users(id),
+        company_name TEXT,
+        agent_name TEXT,
+        main_product TEXT,
+        desired_revenue TEXT,
+        agent_objective TEXT,
+        unknown_behavior TEXT,
+        voice_tone TEXT,
+        restrictions TEXT,
+        customer_pain TEXT,
+        product_price TEXT,
+        target_audience TEXT,
+        customer_desires TEXT,
+        differentiators TEXT,
+        industry TEXT,
+        industry_detail TEXT,
+        channels JSONB DEFAULT '[]'::jsonb,
+        sales_cycle TEXT,
+        human_handoff_policy TEXT,
+        buying_signals TEXT,
+        qualification_criteria TEXT,
+        objection_handling TEXT,
+        ideal_next_step TEXT,
+        agenda_policy TEXT,
+        advanced_instructions TEXT,
+        response_playbook JSONB DEFAULT '{}'::jsonb,
+        qualification_strategy JSONB DEFAULT '{}'::jsonb,
+        offer_strategy JSONB DEFAULT '{}'::jsonb,
+        handoff_strategy JSONB DEFAULT '{}'::jsonb,
+        objection_playbook JSONB DEFAULT '[]'::jsonb,
+        improvement_feedback JSONB DEFAULT '[]'::jsonb,
+        test_transcript JSONB DEFAULT '[]'::jsonb,
+        playbook_version TEXT,
+        last_playbook_generated_at TIMESTAMPTZ,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     const iaConfigAlterations = [
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id)`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS company_name TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS agent_name TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS main_product TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS desired_revenue TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS agent_objective TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS unknown_behavior TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS voice_tone TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS restrictions TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS customer_pain TEXT`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS product_price TEXT`,
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS target_audience TEXT`,
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS customer_desires TEXT`,
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS differentiators TEXT`,
@@ -3952,6 +4007,15 @@ const ensureKognaAICoreTables = async () => {
     for (const statement of iaConfigAlterations) {
       await pool.query(statement).catch(() => { });
     }
+
+    await pool.query(`
+      UPDATE ia_configs ic
+         SET organization_id = u.organization_id
+        FROM users u
+       WHERE ic.user_id = u.id
+         AND ic.organization_id IS NULL
+         AND u.organization_id IS NOT NULL
+    `).catch(() => { });
 
     const leadAlterations = [
       `ALTER TABLE leads ADD COLUMN IF NOT EXISTS needs_human_attention BOOLEAN DEFAULT FALSE`,
@@ -4623,7 +4687,7 @@ IMPORTANTE:
     messages.push({ role: 'user', content: message });
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: DEFAULT_AGENT_MODEL,
       messages,
       max_tokens: 300,
       temperature: 0.75
@@ -4819,7 +4883,7 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
           aiName || 'Agente IA',
           systemPrompt,
           profile.advancedInstructions || null,
-          JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.45 }),
+          JSON.stringify({ model: DEFAULT_AGENT_MODEL, temperature: 0.45 }),
         ]
       );
       createdAgentId = agentInsert.rows[0]?.id || null;
@@ -4886,7 +4950,7 @@ app.put('/api/company-profile', verifyJWT, async (req, res) => {
     res.json({ success: true, profile });
   } catch (err) {
     log('[COMPANY-PROFILE] PUT error: ' + err.message);
-    res.status(500).json({ error: 'Erro ao salvar perfil da empresa.' });
+    res.status(500).json({ error: 'Erro ao salvar perfil da empresa.', details: err.message });
   }
 });
 
@@ -5109,7 +5173,7 @@ app.post('/api/agents', verifyJWT, async (req, res) => {
       })
       : system_prompt;
     const nextModelConfig = {
-      model: model_config?.model || 'gpt-4o-mini',
+      model: DEFAULT_AGENT_MODEL,
       temperature: Number.isFinite(Number(model_config?.temperature)) ? Number(model_config.temperature) : 0.45,
     };
 
@@ -7327,7 +7391,7 @@ RESTRIÇÕES (NUNCA FAZER):
         orgId,
         aiName,
         system_prompt,
-        { model: "gpt-4o-mini", temperature: 0.7 },
+        { model: DEFAULT_AGENT_MODEL, temperature: 0.7 },
         whatsappInstanceId,
       ],
     );
@@ -7432,7 +7496,7 @@ REGRAS:
           row.organization_id,
           agentName,
           systemPrompt,
-          JSON.stringify({ model: "gpt-4o-mini", temperature: 0.7 }),
+          JSON.stringify({ model: DEFAULT_AGENT_MODEL, temperature: 0.7 }),
           row.instance_id,
         ],
       );
@@ -8553,6 +8617,29 @@ const getUserById = async (userId) => {
   }
 };
 
+const assignWhatsAppInstanceToAgent = async ({ organizationId, agentId, instanceId }) => {
+  if (!organizationId || !agentId || !instanceId) return;
+
+  await pool.query(
+    `UPDATE agents
+        SET whatsapp_instance_id = NULL,
+            updated_at = NOW()
+      WHERE organization_id = $1
+        AND whatsapp_instance_id = $2
+        AND id <> $3`,
+    [organizationId, instanceId, agentId],
+  ).catch(() => { });
+
+  await pool.query(
+    `UPDATE agents
+        SET whatsapp_instance_id = $1,
+            updated_at = NOW()
+      WHERE id = $2
+        AND organization_id = $3`,
+    [instanceId, agentId, organizationId],
+  );
+};
+
 // --- AGENTS API ---
 // Moved to top to avoid shadowing issues
 
@@ -8694,7 +8781,7 @@ app.post("/api/agents", verifyJWT, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO agents(organization_id, name, type, system_prompt, model_config)
 VALUES($1, $2, $3, $4, $5) RETURNING * `,
-      [orgId, name, type, system_prompt || "", model_config || {}],
+      [orgId, name, type, system_prompt || "", { model: DEFAULT_AGENT_MODEL, temperature: Number.isFinite(Number(model_config?.temperature)) ? Number(model_config.temperature) : 0.45 }],
     );
 
     log(`[DEBUG] Agent created successfully: ${result.rows[0].id} `);
@@ -8839,7 +8926,7 @@ app.put("/api/agents/:id", verifyJWT, async (req, res) => {
     if (model_config !== undefined) {
       fields.push(`model_config = $${idx++} `);
       values.push({
-        model: model_config?.model || "gpt-4o-mini",
+        model: DEFAULT_AGENT_MODEL,
         temperature: Number.isFinite(Number(model_config?.temperature)) ? Number(model_config.temperature) : 0.45,
       });
     }
@@ -9493,7 +9580,7 @@ app.get("/api/vendedores", verifyJWT, async (req, res) => {
 
 // WhatsApp Connection Endpoint (Automated)
 app.post("/api/whatsapp/connect", verifyJWT, async (req, res) => {
-  const { instanceLabel } = req.body;
+  const { instanceLabel, connect_agent_id } = req.body;
   log(
     `WhatsApp connect request for UserID: ${req.userId} [Label: ${instanceLabel || "Default"}]`,
   );
@@ -9554,6 +9641,13 @@ app.post("/api/whatsapp/connect", verifyJWT, async (req, res) => {
       log(`Instance already exists: ${instance.status}`);
 
       if (instance.status === "CONNECTED") {
+        if (connect_agent_id && instance.id) {
+          await assignWhatsAppInstanceToAgent({
+            organizationId,
+            agentId: connect_agent_id,
+            instanceId: instance.id,
+          });
+        }
         await runAdminEventAutomations('whatsapp_connected', {
           userId: instance.user_id,
           eventKey: `whatsapp_connected:${instance.id || instance.instance_name}`,
@@ -9643,6 +9737,13 @@ app.post("/api/whatsapp/connect", verifyJWT, async (req, res) => {
               ["CONNECTED", instance.id],
             );
             instance.status = "CONNECTED";
+            if (connect_agent_id && instance.id) {
+              await assignWhatsAppInstanceToAgent({
+                organizationId,
+                agentId: connect_agent_id,
+                instanceId: instance.id,
+              });
+            }
             await runAdminEventAutomations('whatsapp_connected', {
               userId: instance.user_id,
               eventKey: `whatsapp_connected:${instance.id || instance.instance_name}`,
@@ -9656,6 +9757,14 @@ app.post("/api/whatsapp/connect", verifyJWT, async (req, res) => {
             return res.json({
               exists: true,
               instance: instance,
+            });
+          }
+
+          if (connect_agent_id && instance.id) {
+            await assignWhatsAppInstanceToAgent({
+              organizationId,
+              agentId: connect_agent_id,
+              instanceId: instance.id,
             });
           }
 
@@ -9822,6 +9931,14 @@ app.post("/api/whatsapp/connect", verifyJWT, async (req, res) => {
           organizationId,
         ],
       );
+    }
+
+    if (connect_agent_id && dbResult.rows[0]?.id) {
+      await assignWhatsAppInstanceToAgent({
+        organizationId,
+        agentId: connect_agent_id,
+        instanceId: dbResult.rows[0].id,
+      });
     }
 
     res.json({
@@ -15148,10 +15265,7 @@ async function processAIResponse(
       content: currentTurnParts, // Pass the array directly for GPT-4o
     };
 
-    // Decide Model
-    // If hasImage, MUST use gpt-4o or gpt-4o-mini (vision supported).
-    // We are already using gpt-4o-mini.
-    const model = agent.model_config?.model || "gpt-4o-mini";
+    const model = agent.model_config?.model || DEFAULT_AGENT_MODEL;
     const temperature = Number.isFinite(Number(agent.model_config?.temperature))
       ? Math.max(0, Math.min(1.2, Number(agent.model_config.temperature)))
       : 0.45;

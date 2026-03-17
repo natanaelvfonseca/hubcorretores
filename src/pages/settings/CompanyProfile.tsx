@@ -93,7 +93,7 @@ export function CompanyProfile() {
                 body: JSON.stringify(data),
             });
             const payload = await response.json().catch(() => null);
-            if (!response.ok) throw new Error(payload?.error || 'Erro ao salvar perfil.');
+            if (!response.ok) throw new Error(payload?.details || payload?.error || 'Erro ao salvar perfil.');
             if (payload?.profile) setData({ ...EMPTY_COMPANY_PROFILE, ...payload.profile });
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
@@ -112,7 +112,7 @@ export function CompanyProfile() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const payload = await response.json().catch(() => null);
-            if (!response.ok) throw new Error(payload?.error || 'Erro ao regenerar playbook.');
+            if (!response.ok) throw new Error(payload?.details || payload?.error || 'Erro ao regenerar playbook.');
             if (payload?.profile) setData({ ...EMPTY_COMPANY_PROFILE, ...payload.profile });
         } catch (error) {
             window.alert(error instanceof Error ? error.message : 'Erro ao regenerar playbook.');
@@ -136,7 +136,7 @@ export function CompanyProfile() {
                             Perfil operacional
                         </div>
                         <h1 className="mt-4 text-4xl font-display font-bold tracking-[-0.04em] text-gray-900 dark:text-white sm:text-5xl">Contexto da empresa</h1>
-                        <p className="mt-3 max-w-2xl text-base leading-7 text-gray-500 dark:text-gray-400">A Kogna usa este perfil para gerar o playbook do orquestrador, definir objecoes e guiar respostas no WhatsApp.</p>
+                        <p className="mt-3 max-w-2xl text-base leading-7 text-gray-500 dark:text-gray-400">Este perfil orienta a IA, o playbook comercial e as respostas no WhatsApp.</p>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                         <div className="rounded-2xl border border-black/[0.06] bg-white/75 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]"><p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Playbook</p><p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{data.playbookVersion || 'A gerar'}</p></div>
@@ -147,7 +147,7 @@ export function CompanyProfile() {
             </section>
 
             <form onSubmit={handleSave} className="space-y-6">
-                <Surface eyebrow="Negocio" title="Oferta, ICP e operacao" description="Defina o que a IA precisa saber sobre a empresa, o fit ideal e como a venda acontece.">
+                <Surface eyebrow="Negocio" title="Oferta, ICP e operacao" description="Defina o contexto comercial que move a venda.">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div><Label>Nome da empresa</Label><Input value={data.companyName} onChange={(e) => setField('companyName', e.target.value)} placeholder="Ex: Kogna" /></div>
                         <div><Label>Nome principal da IA</Label><Input value={data.agentName} onChange={(e) => setField('agentName', e.target.value)} placeholder="Ex: Atlas" /></div>
@@ -164,7 +164,7 @@ export function CompanyProfile() {
                     </div>
                 </Surface>
 
-                <Surface eyebrow="Orquestracao" title="Como a IA deve conduzir" description="Defina objetivo, tom, sinais de compra, proximo passo ideal e como o humano entra sem silenciar a conversa.">
+                <Surface eyebrow="Orquestracao" title="Como a IA deve conduzir" description="Defina objetivo, tom, sinais e momento humano.">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="md:col-span-2"><Label>Objetivo principal</Label><div className="grid gap-3 md:grid-cols-3">{OBJECTIVES.map((objective) => <button key={objective.value} type="button" onClick={() => setField('agentObjective', objective.value)} className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${data.agentObjective === objective.value ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-300'}`}>{objective.label}</button>)}</div></div>
                         <div><Label>Tom de voz</Label><div className="flex flex-wrap gap-2">{TONES.map((tone) => <button key={tone} type="button" onClick={() => setField('voiceTone', tone)} className={`rounded-full border px-3 py-1.5 text-sm transition ${data.voiceTone === tone ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-300'}`}>{tone}</button>)}</div></div>
@@ -178,12 +178,12 @@ export function CompanyProfile() {
                     </div>
                 </Surface>
 
-                <Surface eyebrow="Objecoes" title="Playbook de objecoes" description="Cadastre as objecoes principais, como a IA deve contornar e qual CTA deve puxar em seguida.">
+                <Surface eyebrow="Objecoes" title="Playbook de objecoes" description="Mapeie objecoes e a melhor resposta para cada uma.">
                     <div className="space-y-4">
                         <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/[0.04] p-4 text-sm text-gray-600 dark:text-gray-300">
                             <div className="flex items-start gap-3">
                                 <BrainCircuit className="mt-0.5 h-4 w-4 text-primary" />
-                                <p>Este bloco alimenta o playbook do orquestrador. Quanto melhor suas objecoes estiverem mapeadas, mais ativa e util a IA fica na venda.</p>
+                                <p>Quanto melhor esse bloco estiver, mais ativa e precisa a IA fica na venda.</p>
                             </div>
                         </div>
                         {data.objectionPlaybook.map((item, index) => (
@@ -214,7 +214,7 @@ export function CompanyProfile() {
                     </div>
                 </Surface>
 
-                <Surface eyebrow="Guardrails" title="Tom, limites e refinamento livre" description="Use este bloco para orientar a IA sem engessa-la. O orquestrador continua sendo a camada principal.">
+                <Surface eyebrow="Guardrails" title="Tom, limites e refinamento livre" description="Refine a resposta sem engessar a operacao.">
                     <div className="grid gap-4 md:grid-cols-2">
                         <div><Label>Como quebrar objecoes</Label><Textarea rows={4} value={data.objectionHandling} onChange={(e) => setField('objectionHandling', e.target.value)} placeholder="Descreva a linha mestra para contornar objecoes." /></div>
                         <div><Label>O que a IA nunca deve dizer</Label><Textarea rows={4} value={data.restrictions} onChange={(e) => setField('restrictions', e.target.value)} placeholder="Ex: nao prometer desconto, nao citar concorrente..." /></div>
@@ -224,7 +224,7 @@ export function CompanyProfile() {
 
                 <div className="flex flex-col gap-3 rounded-[28px] border border-black/[0.06] bg-white/[0.88] p-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-[#111111] sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-2">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Salvar o perfil regenera o playbook do orquestrador.</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Salvar atualiza o playbook da operacao.</div>
                         {saved ? <div className="inline-flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-300"><CheckCircle2 size={16} />Perfil salvo com sucesso</div> : null}
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row">
