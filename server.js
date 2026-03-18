@@ -634,7 +634,8 @@ async function upsertCanonicalCompanyProfile({
          sales_cycle, human_handoff_policy, buying_signals, qualification_criteria, objection_handling,
          ideal_next_step, agenda_policy, advanced_instructions, response_playbook,
          qualification_strategy, offer_strategy, handoff_strategy, objection_playbook,
-         improvement_feedback, test_transcript, playbook_version, last_playbook_generated_at
+         improvement_feedback, test_transcript, playbook_version, last_playbook_generated_at,
+         created_at, updated_at
        ) VALUES (
          $1, $2, $3, $4, $5, $6,
          $7, $8, $9, $10, $11, $12,
@@ -642,7 +643,7 @@ async function upsertCanonicalCompanyProfile({
          $19, $20, $21, $22, $23,
          $24, $25, $26, $27::jsonb,
          $28::jsonb, $29::jsonb, $30::jsonb, $31::jsonb,
-         $32::jsonb, $33::jsonb, $34, $35::timestamptz
+         $32::jsonb, $33::jsonb, $34, $35::timestamptz, NOW(), NOW()
        )`,
       values,
     );
@@ -4116,6 +4117,10 @@ const ensureKognaAICoreTables = async () => {
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS test_transcript JSONB DEFAULT '[]'::jsonb`,
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS playbook_version TEXT`,
       `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS last_playbook_generated_at TIMESTAMPTZ`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`,
+      `ALTER TABLE ia_configs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`,
+      `ALTER TABLE ia_configs ALTER COLUMN created_at SET DEFAULT NOW()`,
+      `ALTER TABLE ia_configs ALTER COLUMN updated_at SET DEFAULT NOW()`,
     ];
 
     for (const statement of iaConfigAlterations) {
@@ -4125,10 +4130,18 @@ const ensureKognaAICoreTables = async () => {
     await pool.query(`
       UPDATE ia_configs ic
          SET organization_id = u.organization_id
-        FROM users u
-       WHERE ic.user_id = u.id
-         AND ic.organization_id IS NULL
-         AND u.organization_id IS NOT NULL
+       FROM users u
+      WHERE ic.user_id = u.id
+        AND ic.organization_id IS NULL
+        AND u.organization_id IS NOT NULL
+    `).catch(() => { });
+
+    await pool.query(`
+      UPDATE ia_configs
+         SET created_at = COALESCE(created_at, NOW()),
+             updated_at = COALESCE(updated_at, created_at, NOW())
+       WHERE created_at IS NULL
+          OR updated_at IS NULL
     `).catch(() => { });
 
     const leadAlterations = [
