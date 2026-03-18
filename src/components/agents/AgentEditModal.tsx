@@ -59,6 +59,7 @@ interface WhatsAppInstance {
 
 interface AgentEditModalProps {
     agent: Agent;
+    initialSection?: AgentSection;
     isOpen: boolean;
     onClose: () => void;
     onUpdate: () => void;
@@ -204,7 +205,7 @@ function ObjectionEditor({
     );
 }
 
-export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: AgentEditModalProps) {
+export default function AgentEditModal({ agent, initialSection = 'strategy', isOpen, onClose, onUpdate }: AgentEditModalProps) {
     const { token } = useAuth();
     const authToken = token || localStorage.getItem('kogna_token') || '';
     const [activeSection, setActiveSection] = useState<AgentSection>('strategy');
@@ -228,7 +229,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
     useEffect(() => {
         if (!isOpen) return;
 
-        setActiveSection('strategy');
+        setActiveSection(initialSection);
         setAdvancedInstructions(agent.advanced_instructions || '');
         setTemperature(agent.model_config?.temperature ?? 0.45);
         setFiles(agent.training_files || []);
@@ -251,7 +252,7 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                 setErrorMessage('Nao foi possivel carregar o contexto da IA agora.');
             })
             .finally(() => setIsLoading(false));
-    }, [agent, authToken, isOpen]);
+    }, [agent, authToken, initialSection, isOpen]);
 
     if (!isOpen) return null;
 
@@ -633,6 +634,26 @@ export default function AgentEditModal({ agent, isOpen, onClose, onUpdate }: Age
                                 {activeSection === 'connection' && (
                                     <Surface eyebrow="Conexao" title="Numero vinculado" description="Escolha o numero que esta IA vai operar.">
                                         <div className="space-y-3">
+                                            <div className="rounded-[24px] border border-primary/18 bg-primary/[0.06] p-4">
+                                                <p className="text-sm font-semibold text-primary">Cada agente precisa de um WhatsApp proprio.</p>
+                                                <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                                                    A curadoria instala a IA ja alinhada ao orquestrador da empresa, mas o numero deve ser dedicado para manter roteamento limpo entre suporte, vendas e SDR.
+                                                </p>
+                                                <a
+                                                    href="/whatsapp"
+                                                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 dark:bg-[#171718]"
+                                                >
+                                                    <Plus size={14} />
+                                                    Criar ou gerenciar conexoes
+                                                </a>
+                                            </div>
+
+                                            {instances.length === 0 ? (
+                                                <div className="rounded-[24px] border border-dashed border-black/[0.08] bg-white/80 px-4 py-5 text-sm leading-6 text-gray-500 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-400">
+                                                    Nenhuma conexao disponivel ainda. Crie uma linha dedicada e depois volte para vincular este agente.
+                                                </div>
+                                            ) : null}
+
                                             <button
                                                 type="button"
                                                 onClick={() => setWhatsappInstanceId('')}

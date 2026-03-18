@@ -18930,8 +18930,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['interesse_curso', 'preco_curso', 'horario_aula', 'duracao_curso', 'certificado', 'formas_pagamento', 'agendar_visita', 'bolsa_desconto']),
     default_objections: JSON.stringify(['preco_alto', 'falta_tempo', 'distancia', 'duvida_certificado', 'precisa_falar_com_pais']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'edu_sdr', name: 'AI SDR – Captação de Alunos', icon: '📚', role: 'SDR', description: 'Qualifica interessados e agenda visitas ou matrículas.' },
-      { id: 'edu_followup', name: 'AI Follow-up de Interessados', icon: '🔔', role: 'Follow-up', description: 'Reativa alunos que pediram informações e não retornaram.' }
+      { id: 'edu_suporte', name: 'AI Secretaria Acadêmica', icon: '🎓', role: 'Suporte', description: 'Resolve dúvidas sobre matrícula, documentos, financeiro e rotina do aluno.' },
+      { id: 'edu_vendas', name: 'AI Consultora de Matrículas', icon: '📚', role: 'Vendas', description: 'Apresenta cursos, contorna objeções e conduz até a matrícula.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'lead_pediu_preco', delay_minutes: 30, message_hint: 'Retome o contato com condições de pagamento e bolsa disponível.' },
@@ -18946,8 +18946,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['interesse_imovel', 'preco_imovel', 'localizacao', 'financiamento', 'agendar_visita', 'planta_baixa', 'condicoes_pagamento']),
     default_objections: JSON.stringify(['preco_alto', 'nao_aprovado_credito', 'precisa_vender_atual', 'localizacao_longe', 'nao_decidiu']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'imob_sdr', name: 'AI SDR – Qualificação Imobiliária', icon: '🏡', role: 'SDR', description: 'Qualifica perfil de compra e agenda visitas ao imóvel.' },
-      { id: 'imob_vendedor', name: 'AI Corretora Digital', icon: '🔑', role: 'Vendedor', description: 'Apresenta imóveis, trata objeções e conduz ao fechamento.' }
+      { id: 'imob_suporte', name: 'AI Suporte Imobiliário', icon: '🏡', role: 'Suporte', description: 'Resolve dúvidas sobre imóvel, visita, documentos e andamento da proposta.' },
+      { id: 'imob_vendas', name: 'AI Corretora Digital', icon: '🔑', role: 'Vendas', description: 'Apresenta imóveis, trabalha objeções e conduz até visita, proposta ou fechamento.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'lead_pediu_preco', delay_minutes: 60, message_hint: 'Envie simulação de financiamento personalizada.' },
@@ -18961,7 +18961,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['cotar_seguro', 'comparar_planos', 'preco_seguro', 'coberturas', 'sinistro', 'renovacao']),
     default_objections: JSON.stringify(['preco_alto', 'ja_tem_seguro', 'nao_ve_necessidade', 'nao_confia_seguradora']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'seg_corretor', name: 'AI Corretor de Seguros', icon: '🛡️', role: 'Vendedor', description: 'Cotação interativa, comparação de coberturas e fechamento.' }
+      { id: 'seg_suporte', name: 'AI Suporte ao Segurado', icon: '🧾', role: 'Suporte', description: 'Atende dúvidas sobre cobertura, apólice, renovação e sinistro.' },
+      { id: 'seg_vendas', name: 'AI Consultor de Seguros', icon: '🛡️', role: 'Vendas', description: 'Compara coberturas, trata objeções e conduz ao fechamento da apólice.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'lead_pediu_cotacao', delay_minutes: 30, message_hint: 'Envie a cotação e destaque a principal cobertura diferencial.' },
@@ -18975,8 +18976,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['agendar_consulta', 'preco_procedimento', 'convenio', 'duvida_tratamento', 'resultado_esperado', 'disponibilidade']),
     default_objections: JSON.stringify(['preco_alto', 'sem_convenio', 'medo_procedimento', 'indisponibilidade_horario', 'nao_urgente']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'clinica_atendente', name: 'AI Atendente de Clínica', icon: '👩‍⚕️', role: 'Atendente', description: 'Agenda consultas, informa procedimentos e convênios aceitos.' },
-      { id: 'clinica_reativacao', name: 'AI Reativação de Pacientes', icon: '💊', role: 'Follow-up', description: 'Reativa pacientes inativos e lembra de consultas de retorno.' }
+      { id: 'clinica_suporte', name: 'AI Suporte ao Paciente', icon: '👩‍⚕️', role: 'Suporte', description: 'Resolve dúvidas sobre agenda, preparo, retorno e acompanhamento do paciente.' },
+      { id: 'clinica_vendas', name: 'AI Consultora de Procedimentos', icon: '💎', role: 'Vendas', description: 'Apresenta tratamentos, diferenciais e conduz ao agendamento da avaliação.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'lead_pediu_informacoes', delay_minutes: 60, message_hint: 'Confirme a disponibilidade de horários e incentive o agendamento.' },
@@ -18990,7 +18991,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['interesse_produto', 'preco', 'disponibilidade', 'frete', 'prazo_entrega', 'troca_devolucao', 'promocao']),
     default_objections: JSON.stringify(['preco_alto', 'frete_caro', 'prazo_longo', 'desconfia_loja', 'ja_comprou_outro']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'varejo_vendedor', name: 'AI Consultora de Vendas', icon: '🛍️', role: 'Vendedor', description: 'Apresenta produtos, informa estoque e conduz ao pedido.' }
+      { id: 'varejo_suporte', name: 'AI Suporte Pós-venda', icon: '📦', role: 'Suporte', description: 'Resolve dúvidas sobre pedido, entrega, troca e acompanhamento da compra.' },
+      { id: 'varejo_vendas', name: 'AI Consultora de Vendas', icon: '🛍️', role: 'Vendas', description: 'Apresenta produtos, trabalha objeções e conduz até o pedido.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'carrinho_abandonado', delay_minutes: 30, message_hint: 'Lembre do produto no carrinho e ofereça um cupom de desconto.' },
@@ -19004,7 +19006,8 @@ const INDUSTRY_PROFILES_SEED = [
     default_intents: JSON.stringify(['solicitar_orcamento', 'prazo_execucao', 'portfolio', 'formas_pagamento', 'garantia', 'disponibilidade']),
     default_objections: JSON.stringify(['preco_alto', 'precisa_comparar', 'nao_urgente', 'ja_tem_fornecedor', 'sem_orcamento_agora']),
     recommended_ai_agents: JSON.stringify([
-      { id: 'servicos_sdr', name: 'AI SDR Comercial', icon: '💼', role: 'SDR', description: 'Qualifica a necessidade, coleta briefing e agenda reunião.' }
+      { id: 'servicos_suporte', name: 'AI Suporte de Operações', icon: '🧰', role: 'Suporte', description: 'Atualiza status, escopo, prazos e alinhamentos do cliente em andamento.' },
+      { id: 'servicos_vendas', name: 'AI Consultor Comercial', icon: '💼', role: 'Vendas', description: 'Diagnostica a necessidade, posiciona valor e conduz até proposta e contrato.' }
     ]),
     recommended_followup_sequences: JSON.stringify([
       { trigger: 'orcamento_enviado', delay_minutes: 120, message_hint: 'Pergunte se teve alguma dúvida sobre a proposta enviada.' },
@@ -19059,7 +19062,15 @@ const ensureIndustryProfileTables = async () => {
       await pool.query(`
         INSERT INTO industry_profiles (name, slug, description, icon, default_pipeline, default_intents, default_objections, recommended_ai_agents, recommended_followup_sequences)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        ON CONFLICT (slug) DO NOTHING
+        ON CONFLICT (slug) DO UPDATE
+           SET name = EXCLUDED.name,
+               description = EXCLUDED.description,
+               icon = EXCLUDED.icon,
+               default_pipeline = EXCLUDED.default_pipeline,
+               default_intents = EXCLUDED.default_intents,
+               default_objections = EXCLUDED.default_objections,
+               recommended_ai_agents = EXCLUDED.recommended_ai_agents,
+               recommended_followup_sequences = EXCLUDED.recommended_followup_sequences
       `, [profile.name, profile.slug, profile.description, profile.icon, profile.default_pipeline, profile.default_intents, profile.default_objections, profile.recommended_ai_agents, profile.recommended_followup_sequences]);
     }
 

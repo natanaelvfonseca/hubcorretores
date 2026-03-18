@@ -36,9 +36,17 @@ interface Agent {
     created_at: string;
     whatsapp_instance_name?: string;
     whatsapp_instance_status?: string;
+    whatsapp_instance_id?: string | null;
+    system_prompt?: string;
+    advanced_instructions?: string;
+    model_config?: {
+        model?: string;
+        temperature?: number;
+    } | null;
 }
 
 type AgentStatus = Agent['status'];
+type AgentEditSection = 'strategy' | 'objections' | 'knowledge' | 'connection' | 'advanced';
 
 const typeConfig: Record<string, {
     label: string;
@@ -174,6 +182,7 @@ export function MyAIs() {
     const [companyData, setCompanyData] = useState<CompanyProfileData | null>(null);
     const [isLoadingCompanyData, setIsLoadingCompanyData] = useState(false);
     const [hasCompanyData, setHasCompanyData] = useState<boolean | null>(null);
+    const [editingSection, setEditingSection] = useState<AgentEditSection>('strategy');
 
     const [industrySlug, setIndustrySlug] = useState<string | null>(null);
     const [installingAgentId, setInstallingAgentId] = useState<string | null>(null);
@@ -269,21 +278,32 @@ export function MyAIs() {
     const handleInstallIndustryAgent = async (agent: { id: string; name: string; role: string; systemPrompt?: string }) => {
         setInstallingAgentId(agent.id);
         try {
+            const normalizedType = agent.role?.toLowerCase() === 'vendas'
+                ? 'vendedor'
+                : agent.role?.toLowerCase() || 'atendente';
             const res = await fetch('/api/agents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
                     name: agent.name,
-                    type: agent.role?.toLowerCase() || 'atendente',
-                    system_prompt: agent.systemPrompt || `Voce e ${agent.name}.`,
-                    model_config: {},
+                    type: normalizedType,
+                    use_company_profile: true,
+                    advanced_instructions: agent.systemPrompt || '',
+                    model_config: { model: 'gpt-4.1', temperature: 0.35 },
                 }),
             });
             if (res.ok) {
+                const createdAgent = await res.json();
                 await fetchAgents();
+                setEditingSection('connection');
+                setEditingAgent(createdAgent);
+            } else {
+                const errorData = await res.json().catch(() => null);
+                alert(`Erro ao instalar agente: ${errorData?.error || 'falha inesperada'}`);
             }
         } catch (error) {
             console.error(error);
+            alert('Erro de conexao ao instalar o agente.');
         } finally {
             setInstallingAgentId(null);
         }
@@ -438,7 +458,7 @@ export function MyAIs() {
                             </div>
                         </div>
 
-                        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+                        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             {toInstall.map((agent) => (
                                 <div
                                     key={agent.id}
@@ -450,6 +470,9 @@ export function MyAIs() {
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="text-sm font-semibold text-text-primary">{agent.name}</p>
+                                            <span className="mt-2 inline-flex rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                                                {agent.role}
+                                            </span>
                                             <p className="mt-2 text-sm leading-6 text-text-secondary">{agent.description}</p>
                                             <button
                                                 onClick={() => handleInstallIndustryAgent(agent)}
@@ -615,7 +638,10 @@ export function MyAIs() {
                                             </div>
 
                                             <button
-                                                onClick={() => setEditingAgent(agent)}
+                                                onClick={() => {
+                                                    setEditingSection('strategy');
+                                                    setEditingAgent(agent);
+                                                }}
                                                 className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                             >
                                                 <Cpu size={16} />
@@ -889,6 +915,7 @@ export function MyAIs() {
             {editingAgent && (
                 <AgentEditModal
                     agent={editingAgent}
+                    initialSection={editingSection}
                     isOpen={!!editingAgent}
                     onClose={() => setEditingAgent(null)}
                     onUpdate={fetchAgents}
