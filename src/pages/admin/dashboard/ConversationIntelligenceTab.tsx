@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useState } from 'react';
 import {
     AlertTriangle,
     BrainCircuit,
-    CalendarClock,
     MessageSquare,
     Sparkles,
     TrendingUp,
@@ -45,17 +44,6 @@ const STAGE_COLORS: Record<string, string> = {
     negociacao: '#EF4444',
     fechamento: '#10B981',
 };
-
-function formatDateTime(value?: string) {
-    if (!value) return 'Aguardando marco';
-    return new Date(value).toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
 
 function KpiCard({
     title,
@@ -117,7 +105,7 @@ function TopList({
     );
 }
 
-export function ConversationIntelligenceTab({ metricsStartAt }: { metricsStartAt?: string }) {
+export function ConversationIntelligenceTab() {
     const { token } = useAuth();
     const [loading, setLoading] = useState(true);
     const [summary, setSummary] = useState<any>(null);
@@ -172,7 +160,6 @@ export function ConversationIntelligenceTab({ metricsStartAt }: { metricsStartAt
         : '0h';
     const stageMap = Object.fromEntries(stages.map((stage) => [stage.stage, stage.count]));
     const maxStage = Math.max(...Object.values(stageMap) as number[], 1);
-    const effectiveStartAt = summary?.metrics_start_at || metricsStartAt;
 
     return (
         <div className="space-y-6">
@@ -182,12 +169,8 @@ export function ConversationIntelligenceTab({ metricsStartAt }: { metricsStartAt
                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Conversation intelligence</p>
                         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">Leitura da operacao conversacional</h2>
                         <p className="mt-2 max-w-2xl text-sm leading-6 text-text-muted">
-                            Os dados abaixo consideram somente o que aconteceu depois do novo marco do admin.
+                            Intencoes, objecoes, etapas do funil e sinais de compra em uma visao consolidada das conversas processadas.
                         </p>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-[#F8F8F8] px-4 py-2 text-xs font-medium text-text-muted dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <CalendarClock className="h-4 w-4 text-orange-500" />
-                        Desde {formatDateTime(effectiveStartAt)}
                     </div>
                 </div>
             </section>

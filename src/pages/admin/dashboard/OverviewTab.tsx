@@ -5,6 +5,9 @@ import {
     Bar,
     BarChart,
     CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -12,13 +15,11 @@ import {
 } from 'recharts';
 import {
     Bot,
-    Building2,
     Coins,
     DollarSign,
     MessageSquare,
     Sparkles,
     Users,
-    Wallet,
 } from 'lucide-react';
 
 function formatBrl(value?: number) {
@@ -72,20 +73,24 @@ function StatCard({
     );
 }
 
-function SnapshotRow({
-    label,
-    value,
-    accent,
+function ChartCard({
+    eyebrow,
+    title,
+    subtitle,
+    children,
 }: {
-    label: string;
-    value: string;
-    accent?: string;
+    eyebrow: string;
+    title: string;
+    subtitle?: string;
+    children: ReactNode;
 }) {
     return (
-        <div className="flex items-center justify-between gap-4 border-b border-black/[0.06] py-3 last:border-b-0 dark:border-white/[0.08]">
-            <span className="text-sm text-text-muted">{label}</span>
-            <span className={`text-sm font-semibold ${accent || 'text-text-primary'}`}>{value}</span>
-        </div>
+        <section className="rounded-[32px] border border-black/[0.06] bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">{eyebrow}</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">{title}</h3>
+            {subtitle && <p className="mt-1 text-sm leading-6 text-text-muted">{subtitle}</p>}
+            <div className="mt-6">{children}</div>
+        </section>
     );
 }
 
@@ -103,7 +108,28 @@ export function OverviewTab({ data }: { data: any }) {
 
     const overview = data.overview;
     const meta = data.meta;
-    const tracking = data.tracking || {};
+    const usdToBrlRate = Number(meta?.usdToBrlRate || 5);
+    const apiCostBrl = Number(overview.apiCost || 0) * usdToBrlRate;
+    const marginBrl = Math.max(Number(overview.totalRevenue || 0) - apiCostBrl, 0);
+    const tokenMixData = [
+        { name: 'Prompt', value: Number(overview.totalPromptTokens || 0), fill: '#FF6A1A' },
+        { name: 'Completion', value: Number(overview.totalCompletionTokens || 0), fill: '#FDBA74' },
+    ];
+    const koinsFlowData = [
+        { name: 'Vendidos', value: Number(overview.koinsSold || 0), fill: '#FF5B22' },
+        { name: 'Consumidos', value: Number(overview.koinsConsumed || 0), fill: '#F59E0B' },
+        { name: 'Saldo', value: Number(meta.totalKoinsBalance || 0), fill: '#FB923C' },
+    ];
+    const clientBalanceData = [
+        { name: 'Com saldo', value: Number(meta.usersWithKoins || 0), fill: '#FF5B22' },
+        { name: 'Sem saldo', value: Math.max(Number(meta.totalClients || 0) - Number(meta.usersWithKoins || 0), 0), fill: '#E5E7EB' },
+    ];
+    const businessCompareData = [
+        { name: 'Receita', value: Number(overview.totalRevenue || 0), fill: '#FF5B22' },
+        { name: 'API', value: apiCostBrl, fill: '#FDBA74' },
+        { name: 'Margem', value: marginBrl, fill: '#FB923C' },
+    ];
+    const totalTokenVolume = tokenMixData.reduce((sum, item) => sum + item.value, 0);
 
     return (
         <div className="space-y-6">
@@ -111,56 +137,63 @@ export function OverviewTab({ data }: { data: any }) {
                 <StatCard
                     label="Receita aprovada"
                     value={formatBrl(overview.totalRevenue)}
-                    detail="Valor confirmado em billing history desde a virada do dashboard."
+                    detail="Somatorio real de pagamentos aprovados no painel."
                     icon={<DollarSign className="h-5 w-5" />}
                 />
                 <StatCard
                     label="OpenAI API"
                     value={formatUsd(overview.apiCost)}
-                    detail="Custo real agregado a partir de token_cost nas mensagens processadas."
+                    detail="Custo consolidado a partir de token_cost nas mensagens."
                     icon={<Bot className="h-5 w-5" />}
                 />
                 <StatCard
-                    label="Clientes totais"
-                    value={formatNumber(meta.totalClients)}
+                    label="Clientes ativos"
+                    value={formatNumber(overview.activeClients)}
                     detail={`${formatNumber(overview.newClients)} novos clientes dentro do periodo selecionado.`}
                     icon={<Users className="h-5 w-5" />}
                 />
                 <StatCard
                     label="Koins consumidos"
                     value={formatKoins(overview.koinsConsumed)}
-                    detail="Consumo real rastreado em ledger a partir do novo marco operacional."
+                    detail="Consumo real registrado no ledger de uso."
                     icon={<Coins className="h-5 w-5" />}
                 />
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-                <section className="rounded-[32px] border border-black/[0.06] bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Receita recente</p>
-                            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">Evolucao financeira do novo ciclo</h3>
-                            <p className="mt-1 text-sm text-text-muted">Sem extrapolacao nem preenchimento artificial. O grafico mostra apenas o que entrou de fato.</p>
-                        </div>
-                        <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] px-4 py-3 text-right dark:border-white/[0.08] dark:bg-white/[0.03]">
+            <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+                <ChartCard
+                    eyebrow="Receita"
+                    title="Evolucao financeira"
+                    subtitle="Leitura fluida do faturamento do periodo, sem preenchimento artificial."
+                >
+                    <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Crescimento</p>
                             <p className="mt-1 text-lg font-semibold text-text-primary">
                                 {overview.growthPercentage > 0 ? '+' : ''}
                                 {Number(overview.growthPercentage || 0).toFixed(1)}%
                             </p>
                         </div>
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Ticket medio</p>
+                            <p className="mt-1 text-lg font-semibold text-text-primary">{formatBrl(overview.ticketMedio)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Mensagens</p>
+                            <p className="mt-1 text-lg font-semibold text-text-primary">{formatNumber(overview.totalMessages)}</p>
+                        </div>
                     </div>
 
-                    <div className="mt-6 h-[320px]">
+                    <div className="h-[340px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={overview.revenueChartData || []} margin={{ top: 10, right: 10, left: -16, bottom: 0 }}>
+                            <AreaChart data={overview.revenueChartData || []} margin={{ top: 12, right: 10, left: -16, bottom: 0 }}>
                                 <defs>
-                                    <linearGradient id="overviewRevenue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#FF6A1A" stopOpacity={0.35} />
-                                        <stop offset="100%" stopColor="#FF6A1A" stopOpacity={0.02} />
+                                    <linearGradient id="overviewRevenueGlow" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#FF6A1A" stopOpacity={0.45} />
+                                        <stop offset="100%" stopColor="#FF6A1A" stopOpacity={0.03} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(38,38,38,0.09)" />
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(38,38,38,0.08)" />
                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} tickFormatter={(value) => `R$${value}`} />
                                 <Tooltip
@@ -176,110 +209,228 @@ export function OverviewTab({ data }: { data: any }) {
                                     type="monotone"
                                     dataKey="total"
                                     stroke="#FF5B22"
-                                    strokeWidth={2.5}
-                                    fill="url(#overviewRevenue)"
-                                    activeDot={{ r: 4, strokeWidth: 0 }}
+                                    strokeWidth={3}
+                                    fill="url(#overviewRevenueGlow)"
+                                    activeDot={{ r: 5, strokeWidth: 0, fill: '#FF5B22' }}
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </section>
+                </ChartCard>
 
-                <section className="space-y-6">
-                    <div className="rounded-[32px] border border-black/[0.06] bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Operacao</p>
-                        <h3 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">Snapshot real da base</h3>
-                        <div className="mt-4">
-                            <SnapshotRow label="Mensagens processadas" value={formatNumber(overview.totalMessages)} />
-                            <SnapshotRow label="Prompt tokens" value={formatNumber(overview.totalPromptTokens)} />
-                            <SnapshotRow label="Completion tokens" value={formatNumber(overview.totalCompletionTokens)} />
-                            <SnapshotRow label="Koins vendidos" value={formatKoins(overview.koinsSold)} accent="text-orange-600 dark:text-orange-300" />
-                            <SnapshotRow label="Koins em saldo" value={formatKoins(meta.totalKoinsBalance)} />
-                            <SnapshotRow label="Parceiros cadastrados" value={formatNumber(meta.totalPartners)} />
-                            <SnapshotRow label="Organizacoes ativas" value={formatNumber(meta.totalOrganizations)} />
+                <div className="grid gap-6">
+                    <ChartCard
+                        eyebrow="Mix de tokens"
+                        title="Prompt x completion"
+                        subtitle="Volume técnico do uso da IA no periodo atual."
+                    >
+                        <div className="grid items-center gap-4 md:grid-cols-[0.95fr_1fr]">
+                            <div className="h-[220px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={tokenMixData}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            innerRadius={58}
+                                            outerRadius={86}
+                                            paddingAngle={4}
+                                            stroke="none"
+                                        >
+                                            {tokenMixData.map((entry) => (
+                                                <Cell key={entry.name} fill={entry.fill} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{
+                                                borderRadius: '18px',
+                                                border: '1px solid rgba(38,38,38,0.08)',
+                                                background: 'rgba(255,255,255,0.96)',
+                                                boxShadow: '0 20px 50px rgba(15,23,42,0.12)',
+                                            }}
+                                            formatter={(value: number) => [formatNumber(value), 'Tokens']}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Volume total</p>
+                                    <p className="mt-1 text-lg font-semibold text-text-primary">{formatNumber(totalTokenVolume)}</p>
+                                </div>
+                                {tokenMixData.map((item) => (
+                                    <div key={item.name} className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <span className="text-sm font-medium text-text-primary">{item.name}</span>
+                                            <span className="text-sm font-semibold text-text-primary">{formatNumber(item.value)}</span>
+                                        </div>
+                                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/[0.05] dark:bg-white/[0.08]">
+                                            <div
+                                                className="h-full rounded-full"
+                                                style={{
+                                                    width: `${totalTokenVolume > 0 ? (item.value / totalTokenVolume) * 100 : 0}%`,
+                                                    background: item.fill,
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    </ChartCard>
 
-                    <div className="rounded-[32px] border border-black/[0.06] bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Tracking do painel</p>
-                        <h3 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">O que ja esta medindo</h3>
-                        <div className="mt-5 space-y-3">
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
-                                Consumo de Koins real: ativo a partir desta virada.
+                    <ChartCard
+                        eyebrow="Base ativa"
+                        title="Clientes com saldo"
+                        subtitle="Leitura visual da base pronta para operar agora."
+                    >
+                        <div className="grid items-center gap-4 md:grid-cols-[0.95fr_1fr]">
+                            <div className="h-[220px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={clientBalanceData}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            innerRadius={58}
+                                            outerRadius={86}
+                                            paddingAngle={3}
+                                            stroke="none"
+                                        >
+                                            {clientBalanceData.map((entry) => (
+                                                <Cell key={entry.name} fill={entry.fill} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{
+                                                borderRadius: '18px',
+                                                border: '1px solid rgba(38,38,38,0.08)',
+                                                background: 'rgba(255,255,255,0.96)',
+                                                boxShadow: '0 20px 50px rgba(15,23,42,0.12)',
+                                            }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
                             </div>
-                            <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] px-4 py-3 text-sm text-text-muted dark:border-white/[0.08] dark:bg-white/[0.03]">
-                                Receita por produto: {tracking.productRevenueTracked ? 'match por catalogo em andamento.' : 'zera enquanto nenhum pagamento novo entra ou enquanto nao houver match confiavel.'}
-                            </div>
-                            <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] px-4 py-3 text-sm text-text-muted dark:border-white/[0.08] dark:bg-white/[0.03]">
-                                Ads: aguardando integracao com Meta Ads e Google Ads.
+                            <div className="space-y-3">
+                                <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Clientes ativos</p>
+                                    <p className="mt-1 text-lg font-semibold text-text-primary">{formatNumber(overview.activeClients)}</p>
+                                </div>
+                                <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Com saldo</p>
+                                    <p className="mt-1 text-lg font-semibold text-text-primary">{formatNumber(meta.usersWithKoins)}</p>
+                                </div>
+                                <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Koins em saldo</p>
+                                    <p className="mt-1 text-lg font-semibold text-text-primary">{formatKoins(meta.totalKoinsBalance)}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </section>
+                    </ChartCard>
+                </div>
             </div>
 
-            <section className="rounded-[32px] border border-black/[0.06] bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Volume tecnico</p>
-                        <h3 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">Tokens por etapa de uso</h3>
+            <div className="grid gap-6 xl:grid-cols-2">
+                <ChartCard
+                    eyebrow="Economia de Koins"
+                    title="Fluxo de venda, consumo e saldo"
+                    subtitle="Representacao visual das principais massas da economia da plataforma."
+                >
+                    <div className="h-[320px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={koinsFlowData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(38,38,38,0.08)" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        borderRadius: '18px',
+                                        border: '1px solid rgba(38,38,38,0.08)',
+                                        background: 'rgba(255,255,255,0.96)',
+                                        boxShadow: '0 20px 50px rgba(15,23,42,0.12)',
+                                    }}
+                                    formatter={(value: number) => [formatKoins(value), 'Koins']}
+                                />
+                                <Bar dataKey="value" radius={[18, 18, 0, 0]} barSize={56}>
+                                    {koinsFlowData.map((entry) => (
+                                        <Cell key={entry.name} fill={entry.fill} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-[#F8F8F8] px-4 py-2 text-xs font-medium text-text-muted dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <Wallet className="h-4 w-4 text-orange-500" />
-                        {formatNumber(meta.usersWithKoins)} clientes ainda tem saldo disponivel
-                    </div>
-                </div>
+                </ChartCard>
 
-                <div className="mt-6 h-[260px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart
-                            data={[
-                                { name: 'Prompt', total: overview.totalPromptTokens },
-                                { name: 'Completion', total: overview.totalCompletionTokens },
-                            ]}
-                            margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                        >
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(38,38,38,0.09)" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
-                            <Tooltip
-                                contentStyle={{
-                                    borderRadius: '18px',
-                                    border: '1px solid rgba(38,38,38,0.08)',
-                                    background: 'rgba(255,255,255,0.96)',
-                                    boxShadow: '0 20px 50px rgba(15,23,42,0.12)',
-                                }}
-                                formatter={(value: number) => [formatNumber(value), 'Tokens']}
-                            />
-                            <Bar dataKey="total" radius={[16, 16, 0, 0]} fill="#FF5B22" barSize={54} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+                <ChartCard
+                    eyebrow="Calculo financeiro"
+                    title="Receita x custo x margem"
+                    subtitle={`Comparativo em BRL usando USD/BRL ${usdToBrlRate.toFixed(2)} para o custo da OpenAI.`}
+                >
+                    <div className="h-[320px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={businessCompareData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgba(38,38,38,0.08)" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#7A7A7A', fontSize: 12 }} tickFormatter={(value) => `R$${value}`} />
+                                <Tooltip
+                                    contentStyle={{
+                                        borderRadius: '18px',
+                                        border: '1px solid rgba(38,38,38,0.08)',
+                                        background: 'rgba(255,255,255,0.96)',
+                                        boxShadow: '0 20px 50px rgba(15,23,42,0.12)',
+                                    }}
+                                    formatter={(value: number) => [formatBrl(value), 'Valor']}
+                                />
+                                <Bar dataKey="value" radius={[18, 18, 0, 0]} barSize={56}>
+                                    {businessCompareData.map((entry) => (
+                                        <Cell key={entry.name} fill={entry.fill} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
 
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                            <MessageSquare className="h-4 w-4 text-orange-500" />
-                            Mensagens
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Receita</p>
+                            <p className="mt-1 text-lg font-semibold text-text-primary">{formatBrl(overview.totalRevenue)}</p>
                         </div>
-                        <p className="mt-2 text-xl font-semibold text-text-primary">{formatNumber(overview.totalMessages)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                            <Building2 className="h-4 w-4 text-orange-500" />
-                            Organizacoes
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">API em BRL</p>
+                            <p className="mt-1 text-lg font-semibold text-text-primary">{formatBrl(apiCostBrl)}</p>
                         </div>
-                        <p className="mt-2 text-xl font-semibold text-text-primary">{formatNumber(meta.totalOrganizations)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-black/[0.06] bg-[#F8F8F8] p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                            <Sparkles className="h-4 w-4 text-orange-500" />
-                            Receita conexoes
+                        <div className="rounded-2xl border border-black/[0.06] bg-[#FBFBFB] px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">Margem visivel</p>
+                            <p className="mt-1 text-lg font-semibold text-text-primary">{formatBrl(marginBrl)}</p>
                         </div>
-                        <p className="mt-2 text-xl font-semibold text-text-primary">{formatBrl(overview.connectionsRevenue)}</p>
                     </div>
+                </ChartCard>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-[28px] border border-black/[0.06] bg-white/80 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+                    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                        <MessageSquare className="h-4 w-4 text-orange-500" />
+                        Mensagens processadas
+                    </div>
+                    <p className="mt-3 text-2xl font-semibold tracking-tight text-text-primary">{formatNumber(overview.totalMessages)}</p>
                 </div>
-            </section>
+                <div className="rounded-[28px] border border-black/[0.06] bg-white/80 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+                    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                        <Sparkles className="h-4 w-4 text-orange-500" />
+                        Slots WhatsApp
+                    </div>
+                    <p className="mt-3 text-2xl font-semibold tracking-tight text-text-primary">{formatNumber(meta.totalWhatsappSlots)}</p>
+                </div>
+                <div className="rounded-[28px] border border-black/[0.06] bg-white/80 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+                    <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
+                        <Bot className="h-4 w-4 text-orange-500" />
+                        Prompt tokens
+                    </div>
+                    <p className="mt-3 text-2xl font-semibold tracking-tight text-text-primary">{formatNumber(overview.totalPromptTokens)}</p>
+                </div>
+            </div>
         </div>
     );
 }

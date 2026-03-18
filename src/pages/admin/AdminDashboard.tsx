@@ -53,19 +53,8 @@ const periods = [
     { value: 'this_month', label: 'Este mes' },
     { value: 'last_month', label: 'Mes anterior' },
     { value: 'this_year', label: 'Este ano' },
-    { value: 'all', label: 'Desde a virada' },
+    { value: 'all', label: 'Todo o periodo' },
 ];
-
-function formatDateTime(value?: string) {
-    if (!value) return 'Aguardando definicao';
-    return new Date(value).toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
 
 function formatCompactNumber(value?: number) {
     return Number(value || 0).toLocaleString('pt-BR');
@@ -73,6 +62,15 @@ function formatCompactNumber(value?: number) {
 
 function formatKoins(value?: number) {
     return `${formatCompactNumber(value)} koins`;
+}
+
+function formatUsd(value?: number) {
+    return Number(value || 0).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4,
+    });
 }
 
 function HeaderStat({
@@ -246,6 +244,7 @@ export function AdminDashboard() {
     );
 
     const meta = strategicData?.meta;
+    const overview = strategicData?.overview;
 
     return (
         <div className="space-y-8 px-4 py-6 md:px-8">
@@ -257,19 +256,18 @@ export function AdminDashboard() {
                             Admin Kogna
                         </div>
                         <h1 className="mt-4 text-3xl font-semibold tracking-tight text-text-primary md:text-5xl">
-                            Dashboard pronto para o novo ciclo comercial.
+                            Painel executivo da operacao Kogna.
                         </h1>
                         <p className="mt-3 max-w-2xl text-sm leading-6 text-text-muted md:text-base">
-                            Clientes e parceiros permanecem preservados. As metricas operacionais contam a partir de{' '}
-                            <span className="font-semibold text-text-primary">{formatDateTime(meta?.metricsStartAt)}</span>.
+                            Monitore clientes, consumo, receita e inteligencia comercial com a mesma linguagem premium do restante da plataforma.
                         </p>
                     </div>
 
                     <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 xl:w-auto">
-                        <HeaderStat label="Clientes" value={formatCompactNumber(meta?.totalClients)} />
-                        <HeaderStat label="Parceiros" value={formatCompactNumber(meta?.totalPartners)} />
+                        <HeaderStat label="Clientes Ativos" value={formatCompactNumber(overview?.activeClients ?? meta?.totalClients)} />
                         <HeaderStat label="Koins em saldo" value={formatKoins(meta?.totalKoinsBalance)} />
-                        <HeaderStat label="Slots WhatsApp" value={formatCompactNumber(meta?.totalWhatsappSlots)} />
+                        <HeaderStat label="OpenAI API" value={formatUsd(overview?.apiCost)} />
+                        <HeaderStat label="Mensagens" value={formatCompactNumber(overview?.totalMessages)} />
                     </div>
                 </div>
 
@@ -318,7 +316,7 @@ export function AdminDashboard() {
                     {activeTab === 'overview' && <OverviewTab data={strategicData} />}
                     {activeTab === 'products' && <ProductsTab data={strategicData} />}
                     {activeTab === 'ads' && <AdsTab data={strategicData} />}
-                    {activeTab === 'intelligence' && <ConversationIntelligenceTab metricsStartAt={meta?.metricsStartAt} />}
+                    {activeTab === 'intelligence' && <ConversationIntelligenceTab />}
 
                     {activeTab === 'users' && (
                         <section className="overflow-hidden rounded-[32px] border border-black/[0.06] bg-white/80 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/[0.08] dark:bg-white/[0.04]">

@@ -111,13 +111,13 @@ export function ProductsTab({ data }: { data: any }) {
                 <TopCard
                     label="Koins vendidos"
                     value={formatKoins(products.koinsSold)}
-                    detail="Total de Koins creditados por vendas desde a nova virada."
+                    detail="Total de Koins creditados por vendas no periodo atual."
                     icon={<Coins className="h-5 w-5" />}
                 />
                 <TopCard
                     label="Koins consumidos"
                     value={formatKoins(products.koinsConsumed)}
-                    detail="Queima real registrada no ledger operacional."
+                    detail="Queima real registrada no ledger de consumo."
                     icon={<Receipt className="h-5 w-5" />}
                 />
                 <TopCard
