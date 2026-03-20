@@ -5324,6 +5324,13 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
 
     await client.query('UPDATE organizations SET owner_id = $1 WHERE id = $2', [user.id, org.id]);
 
+    await ensureDefaultVendedorForUser(client, {
+      orgId: org.id,
+      nome: name,
+      email: email.toLowerCase(),
+      whatsapp: phone || null,
+    });
+
     // Mark onboarding complete (non-blocking if column missing)
     await client.query(`UPDATE users SET onboarding_completed = true WHERE id = $1`, [user.id]).catch(() => { });
 
@@ -7678,12 +7685,19 @@ app.post("/api/onboarding/complete", verifyJWT, async (req, res) => {
 
     // Check current status
     const userRes = await pool.query(
-      "SELECT onboarding_completed, organization_id FROM users WHERE id = $1",
+      "SELECT name, email, personal_phone, company_phone, onboarding_completed, organization_id FROM users WHERE id = $1",
       [userId],
     );
     const user = userRes.rows[0];
 
     if (!user) return res.status(404).json({ error: "User not found" });
+
+    await ensureDefaultVendedorForUser(pool, {
+      orgId: user.organization_id,
+      nome: user.name,
+      email: user.email,
+      whatsapp: user.personal_phone || user.company_phone || null,
+    });
 
     if (user.onboarding_completed) {
       // Idempotent success
@@ -12880,6 +12894,74 @@ async function getNextVendedor(orgId) {
   const chosen = await calculateNextVendedor(orgId);
   // Do NOT increment here anymore for AI tools
   return chosen;
+}
+
+const DEFAULT_VENDEDOR_BUSINESS_HOURS = [
+  { diaSemana: 1, horaInicio: "09:00", horaFim: "18:00", intervalo: 30 },
+  { diaSemana: 2, horaInicio: "09:00", horaFim: "18:00", intervalo: 30 },
+  { diaSemana: 3, horaInicio: "09:00", horaFim: "18:00", intervalo: 30 },
+  { diaSemana: 4, horaInicio: "09:00", horaFim: "18:00", intervalo: 30 },
+  { diaSemana: 5, horaInicio: "09:00", horaFim: "18:00", intervalo: 30 },
+];
+
+async function ensureDefaultVendedorForUser(db, { orgId, nome, email, whatsapp }) {
+  if (!db || !orgId || !nome || !email) return null;
+
+  const normalizedName = String(nome).trim();
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedWhatsapp = whatsapp ? String(whatsapp).trim() : null;
+
+  const existingRes = await db.query(
+    `SELECT id, nome, email, whatsapp
+     FROM vendedores
+     WHERE organization_id = $1
+       AND LOWER(email) = LOWER($2)
+     ORDER BY created_at ASC
+     LIMIT 1`,
+    [orgId, normalizedEmail]
+  );
+
+  let vendedorId = existingRes.rows[0]?.id || null;
+
+  if (!vendedorId) {
+    const insertRes = await db.query(
+      `INSERT INTO vendedores (organization_id, nome, email, whatsapp, porcentagem)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [orgId, normalizedName, normalizedEmail, normalizedWhatsapp, 100]
+    );
+    vendedorId = insertRes.rows[0].id;
+  } else {
+    await db.query(
+      `UPDATE vendedores
+       SET nome = COALESCE(NULLIF(nome, ''), $2),
+           whatsapp = COALESCE(NULLIF(whatsapp, ''), $3)
+       WHERE id = $1`,
+      [vendedorId, normalizedName, normalizedWhatsapp]
+    );
+  }
+
+  const disponibilidadeRes = await db.query(
+    `SELECT dia_semana
+     FROM disponibilidade_vendedor
+     WHERE vendedor_id = $1`,
+    [vendedorId]
+  );
+
+  const diasExistentes = new Set(
+    disponibilidadeRes.rows.map((row) => Number(row.dia_semana))
+  );
+
+  for (const slot of DEFAULT_VENDEDOR_BUSINESS_HOURS) {
+    if (diasExistentes.has(slot.diaSemana)) continue;
+    await db.query(
+      `INSERT INTO disponibilidade_vendedor (vendedor_id, dia_semana, hora_inicio, hora_fim, intervalo)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [vendedorId, slot.diaSemana, slot.horaInicio, slot.horaFim, slot.intervalo]
+    );
+  }
+
+  return vendedorId;
 }
 
 // ── Check Availability ──
