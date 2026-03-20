@@ -42,9 +42,10 @@ const menuItems = [
 interface SidebarProps {
     collapsed: boolean;
     setCollapsed: (collapsed: boolean) => void;
+    isMobile: boolean;
 }
 
-export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
+export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
     const location = useLocation();
     const { user, logout } = useAuth();
     const { isSidebarLocked } = useGuidedTour();
@@ -88,17 +89,19 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
                         wordSize={31}
                     />
                 )}
-                <button
-                    onClick={() => {
-                        if (!isSidebarLocked) {
-                            setCollapsed(!collapsed);
-                        }
-                    }}
-                    className="p-2 rounded-lg hover:bg-surfaceHover text-text-secondary hover:text-primary transition-all ml-auto hover:shadow-lg hover:shadow-primary/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={isSidebarLocked}
-                >
-                    {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                </button>
+                {isMobile && (
+                    <button
+                        onClick={() => {
+                            if (!isSidebarLocked) {
+                                setCollapsed(!collapsed);
+                            }
+                        }}
+                        className="p-2 rounded-lg hover:bg-surfaceHover text-text-secondary hover:text-primary transition-all ml-auto hover:shadow-lg hover:shadow-primary/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isSidebarLocked}
+                    >
+                        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                    </button>
+                )}
             </div>
 
             <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-1.5 scrollbar-hide" data-tour-id="tour-sidebar">

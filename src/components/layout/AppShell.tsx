@@ -1,22 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useGuidedTour } from '../guided-tour/GuidedTourProvider';
 
+const MOBILE_MEDIA_QUERY = '(max-width: 1023px)';
+
 export function AppShell() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+    });
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+    });
     const location = useLocation();
     const { isSidebarLocked } = useGuidedTour();
     const isFullScreenPage = location.pathname.includes('/live-chat') || location.pathname.includes('/kanban'); // Future proofing
-    const effectiveCollapsed = isSidebarLocked ? false : sidebarCollapsed;
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+        const syncLayoutMode = (matches: boolean) => {
+            setIsMobile(matches);
+            if (!matches) {
+                setSidebarCollapsed(false);
+            }
+        };
+
+        syncLayoutMode(mediaQuery.matches);
+        const handleChange = (event: MediaQueryListEvent) => syncLayoutMode(event.matches);
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
+
+    const effectiveCollapsed = isSidebarLocked ? false : (isMobile ? sidebarCollapsed : false);
+    const contentMarginClass = isMobile
+        ? (effectiveCollapsed ? 'ml-20' : 'ml-72')
+        : 'ml-72';
 
     return (
         <div className="flex h-screen bg-background overflow-hidden relative" data-tour-id="tour-app-shell">
-            <Sidebar collapsed={effectiveCollapsed} setCollapsed={setSidebarCollapsed} />
+            <Sidebar collapsed={effectiveCollapsed} setCollapsed={setSidebarCollapsed} isMobile={isMobile} />
             <div
-                className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${effectiveCollapsed ? 'ml-20' : 'ml-72'
-                    }`}
+                className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${contentMarginClass}`}
             >
                 <Topbar />
                 {/* 
