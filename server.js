@@ -2109,6 +2109,187 @@ async function getFollowupSettings(orgId) {
   return settingsRes.rows[0];
 }
 
+async function buildFollowupQueuePayload(orgId, remoteJid) {
+  const settings = await getFollowupSettings(orgId);
+  if (!settings.enabled) return null;
+
+  const existingQ = await pool.query(
+    `SELECT id FROM followup_queue WHERE remote_jid = $1 AND organization_id = $2 AND status = 'pending'`,
+    [remoteJid, orgId]
+  );
+  if (existingQ.rows.length > 0) return null;
+
+  const phone = remoteJid.split('@')[0];
+  const hasMobilePhoneColumn = await doesColumnExist('leads', 'mobile_phone');
+  const leadPhoneFilter = hasMobilePhoneColumn
+    ? '(l.phone LIKE $2 OR l.mobile_phone LIKE $2)'
+    : 'l.phone LIKE $2';
+  const leadRes = await pool.query(
+    `SELECT l.id AS lead_id, os.temperature, os.intent, os.product_interest, os.top_objection, os.score, l.status AS pipeline_stage
+     FROM leads l
+     LEFT JOIN opportunity_scores os ON os.lead_id = l.id
+     WHERE l.organization_id = $1 AND ${leadPhoneFilter}
+     LIMIT 1`,
+    [orgId, `%${phone}%`]
+  );
+
+  const lead = leadRes.rows[0];
+  const temperature = lead?.temperature || 'frio';
+  const pipelineStage = lead?.pipeline_stage || 'Novo Lead';
+
+  let requiredDelay;
+  if (temperature === 'quente') requiredDelay = settings.quente_delay_minutes;
+  else if (temperature === 'morno') requiredDelay = settings.morno_delay_minutes;
+  else requiredDelay = settings.frio_delay_minutes;
+
+  const sentCount = await pool.query(
+    `SELECT COUNT(*) FROM followup_queue WHERE remote_jid = $1 AND organization_id = $2 AND status IN ('sent', 'replied')`,
+    [remoteJid, orgId]
+  );
+  if (parseInt(sentCount.rows[0].count) >= settings.max_followups_per_lead) return null;
+
+  const seqRes = await pool.query(
+    `SELECT fs.id, COUNT(st.id) AS step_count
+     FROM followup_sequences_v2 fs
+     LEFT JOIN followup_steps st ON st.sequence_id = fs.id
+     WHERE fs.organization_id = $1 AND fs.active = TRUE
+       AND (fs.pipeline_stage IS NULL OR fs.pipeline_stage = $2)
+     GROUP BY fs.id
+     ORDER BY fs.pipeline_stage NULLS LAST
+     LIMIT 1`,
+    [orgId, pipelineStage]
+  );
+
+  if (seqRes.rows.length === 0) return null;
+
+  const sequence = seqRes.rows[0];
+  const trigger = temperature === 'quente' ? 'high_temp_inactivity' :
+    temperature === 'morno' ? 'medium_temp_inactivity' : 'low_temp_inactivity';
+
+  return {
+    lead,
+    temperature,
+    pipelineStage,
+    requiredDelay,
+    sequence,
+    trigger,
+  };
+}
+
+async function enqueueFollowupForConversation({
+  orgId,
+  remoteJid,
+  instanceName,
+  baseTime = new Date(),
+}) {
+  const payload = await buildFollowupQueuePayload(orgId, remoteJid);
+  if (!payload) return null;
+
+  const baseDate = baseTime instanceof Date ? baseTime : new Date(baseTime);
+  const scheduledAt = new Date(baseDate.getTime() + payload.requiredDelay * 60 * 1000);
+
+  await pool.query(`
+    INSERT INTO followup_queue (
+      organization_id, lead_id, remote_jid, instance_name, sequence_id,
+      current_step, total_steps, scheduled_at, status,
+      conversation_temperature, pipeline_stage, last_customer_message_at,
+      followup_trigger_reason, detected_objection, detected_product_interest, intent_score
+    ) VALUES ($1,$2,$3,$4,$5,1,$6,$7,'pending',$8,$9,$10,$11,$12,$13,$14)
+  `, [
+    orgId,
+    payload.lead?.lead_id || null,
+    remoteJid,
+    instanceName,
+    payload.sequence.id,
+    parseInt(payload.sequence.step_count) || 1,
+    scheduledAt.toISOString(),
+    payload.temperature,
+    payload.pipelineStage,
+    baseDate.toISOString(),
+    payload.trigger,
+    payload.lead?.top_objection || null,
+    payload.lead?.product_interest || null,
+    payload.lead?.score || 0,
+  ]);
+
+  return {
+    scheduledAt,
+    requiredDelay: payload.requiredDelay,
+    temperature: payload.temperature,
+  };
+}
+
+async function backfillMissedFollowupQueue({ lookbackHours = 24, limit = 100 } = {}) {
+  try {
+    await ensureFollowupEngineReady();
+
+    const candidatesRes = await pool.query(`
+      SELECT *
+      FROM (
+        SELECT
+          a.organization_id,
+          cm.remote_jid,
+          COALESCE(wi.instance_name, org_wi.instance_name) AS instance_name,
+          cm.created_at AS last_assistant_at,
+          ROW_NUMBER() OVER (
+            PARTITION BY a.organization_id, cm.remote_jid
+            ORDER BY cm.created_at DESC
+          ) AS rn
+        FROM chat_messages cm
+        JOIN agents a ON a.id = cm.agent_id
+        LEFT JOIN whatsapp_instances wi ON wi.id = a.whatsapp_instance_id
+        LEFT JOIN LATERAL (
+          SELECT instance_name
+          FROM whatsapp_instances
+          WHERE organization_id = a.organization_id
+            AND LOWER(status) IN ('connected', 'open')
+          ORDER BY created_at DESC
+          LIMIT 1
+        ) org_wi ON TRUE
+        WHERE cm.role = 'assistant'
+          AND cm.remote_jid IS NOT NULL
+          AND cm.created_at >= NOW() - ($1 || ' hours')::interval
+      ) ranked
+      WHERE rn = 1
+        AND instance_name IS NOT NULL
+      ORDER BY last_assistant_at DESC
+      LIMIT $2
+    `, [lookbackHours, limit]);
+
+    let enqueued = 0;
+
+    for (const candidate of candidatesRes.rows) {
+      const repliedAfter = await pool.query(
+        `SELECT 1
+           FROM chat_messages
+          WHERE remote_jid = $1
+            AND role = 'user'
+            AND created_at > $2
+          LIMIT 1`,
+        [candidate.remote_jid, candidate.last_assistant_at]
+      );
+      if (repliedAfter.rows.length > 0) continue;
+
+      const result = await enqueueFollowupForConversation({
+        orgId: candidate.organization_id,
+        remoteJid: candidate.remote_jid,
+        instanceName: candidate.instance_name,
+        baseTime: candidate.last_assistant_at,
+      });
+
+      if (result) {
+        enqueued += 1;
+      }
+    }
+
+    if (enqueued > 0) {
+      log(`[FOLLOWUP] Backfill queued ${enqueued} missed follow-up(s)`);
+    }
+  } catch (err) {
+    log(`[FOLLOWUP] backfillMissedFollowupQueue error: ${err.message}`);
+  }
+}
+
 /**
  * Event-Driven: Schedule a follow-up directly after the agent replies.
  * Called when `role = 'assistant'` message is sent to the customer.
@@ -2116,92 +2297,10 @@ async function getFollowupSettings(orgId) {
 async function scheduleFollowupEvent(orgId, remoteJid, instanceName) {
   try {
     await ensureFollowupEngineReady();
-    const settings = await getFollowupSettings(orgId);
-    if (!settings.enabled) return;
-
-    // Check if there's already a pending follow-up
-    const existingQ = await pool.query(
-      `SELECT id FROM followup_queue WHERE remote_jid = $1 AND organization_id = $2 AND status = 'pending'`,
-      [remoteJid, orgId]
-    );
-    if (existingQ.rows.length > 0) return;
-
-    // Get lead temperature
-    const phone = remoteJid.split('@')[0];
-    const hasMobilePhoneColumn = await doesColumnExist('leads', 'mobile_phone');
-    const leadPhoneFilter = hasMobilePhoneColumn
-      ? '(l.phone LIKE $2 OR l.mobile_phone LIKE $2)'
-      : 'l.phone LIKE $2';
-    const leadRes = await pool.query(
-      `SELECT l.id AS lead_id, os.temperature, os.intent, os.product_interest, os.top_objection, os.score, l.status AS pipeline_stage
-       FROM leads l
-       LEFT JOIN opportunity_scores os ON os.lead_id = l.id
-       WHERE l.organization_id = $1 AND ${leadPhoneFilter}
-       LIMIT 1`,
-      [orgId, `%${phone}%`]
-    );
-
-    const lead = leadRes.rows[0];
-    const temperature = lead?.temperature || 'frio';
-    const pipelineStage = lead?.pipeline_stage || 'Novo Lead';
-
-    // Adaptive delay
-    let requiredDelay;
-    if (temperature === 'quente') requiredDelay = settings.quente_delay_minutes;
-    else if (temperature === 'morno') requiredDelay = settings.morno_delay_minutes;
-    else requiredDelay = settings.frio_delay_minutes;
-
-    // Check sent count
-    const sentCount = await pool.query(
-      `SELECT COUNT(*) FROM followup_queue WHERE remote_jid = $1 AND organization_id = $2 AND status IN ('sent', 'replied')`,
-      [remoteJid, orgId]
-    );
-    if (parseInt(sentCount.rows[0].count) >= settings.max_followups_per_lead) return;
-
-    // Find the best sequence
-    const seqRes = await pool.query(
-      `SELECT fs.id, COUNT(st.id) AS step_count
-       FROM followup_sequences_v2 fs
-       LEFT JOIN followup_steps st ON st.sequence_id = fs.id
-       WHERE fs.organization_id = $1 AND fs.active = TRUE
-         AND (fs.pipeline_stage IS NULL OR fs.pipeline_stage = $2)
-       GROUP BY fs.id
-       ORDER BY fs.pipeline_stage NULLS LAST
-       LIMIT 1`,
-      [orgId, pipelineStage]
-    );
-
-    if (seqRes.rows.length === 0) return;
-
-    const sequence = seqRes.rows[0];
-    const trigger = temperature === 'quente' ? 'high_temp_inactivity' :
-      temperature === 'morno' ? 'medium_temp_inactivity' : 'low_temp_inactivity';
-
-    // Schedule directly into the queue
-    await pool.query(`
-      INSERT INTO followup_queue (
-        organization_id, lead_id, remote_jid, instance_name, sequence_id,
-        current_step, total_steps, scheduled_at, status,
-        conversation_temperature, pipeline_stage, last_customer_message_at,
-        followup_trigger_reason, detected_objection, detected_product_interest, intent_score
-      ) VALUES ($1,$2,$3,$4,$5,1,$6,NOW() + ($7 || ' minutes')::interval,'pending',$8,$9,NOW(),$10,$11,$12,$13)
-    `, [
-      orgId,
-      lead?.lead_id || null,
-      remoteJid,
-      instanceName,
-      sequence.id,
-      parseInt(sequence.step_count) || 1,
-      requiredDelay,
-      temperature,
-      pipelineStage,
-      trigger,
-      lead?.top_objection || null,
-      lead?.product_interest || null,
-      lead?.score || 0
-    ]);
-
-    log(`[FOLLOWUP] Queued future follow-up (+${requiredDelay}m) for ${remoteJid} (${temperature})`);
+    const result = await enqueueFollowupForConversation({ orgId, remoteJid, instanceName });
+    if (result) {
+      log(`[FOLLOWUP] Queued future follow-up (+${result.requiredDelay}m) for ${remoteJid} (${result.temperature})`);
+    }
   } catch (err) {
     log(`[FOLLOWUP] scheduleFollowupEvent error: ${err.message}`);
   }
@@ -2353,6 +2452,7 @@ async function sendFollowupWhatsApp(instanceName, remoteJid, message, mediaUrl) 
 async function processFollowupQueue() {
   try {
     await ensureFollowupEngineReady();
+    await backfillMissedFollowupQueue();
     const pendingRes = await pool.query(`
       SELECT fq.*, fs.ai_mode AS sequence_ai_mode
       FROM followup_queue fq
