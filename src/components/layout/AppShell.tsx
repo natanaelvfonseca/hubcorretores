@@ -5,7 +5,7 @@ import { Topbar } from './Topbar';
 import { useGuidedTour } from '../guided-tour/GuidedTourProvider';
 
 export function AppShell() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const location = useLocation();
     const { isSidebarLocked } = useGuidedTour();
     const isFullScreenPage = location.pathname.includes('/live-chat') || location.pathname.includes('/kanban'); // Future proofing

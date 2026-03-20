@@ -554,10 +554,10 @@ export function Onboarding() {
     return (
         <div className="min-h-screen bg-background flex justify-center py-12 px-4 font-sans relative overflow-x-hidden">
 
-            <div className="flex gap-12 w-full max-w-6xl items-start justify-center">
+            <div className="flex w-full max-w-6xl min-w-0 items-start justify-center gap-6 lg:gap-12">
 
                 {/* Main Content */}
-                <div className="w-full max-w-2xl flex flex-col items-center z-10">
+                <div className="z-10 flex w-full max-w-2xl min-w-0 flex-col items-center">
 
                     {/* Header */}
                     <div className="mb-10 text-center relative w-full">
@@ -938,7 +938,7 @@ export function Onboarding() {
 
                                 <FileUpload onFilesChanged={setFiles} accept=".pdf,.txt,.docx,.doc" />
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex flex-col gap-3 pt-4 sm:flex-row sm:gap-4">
                                     <button onClick={() => { setStep(4); setPotential(95); playSound('click'); }} className="flex-1 py-3 text-muted-foreground font-medium hover:text-foreground">
                                         Pular (Configurar Depois)
                                     </button>

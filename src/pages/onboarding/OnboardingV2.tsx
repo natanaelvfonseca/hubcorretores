@@ -397,7 +397,7 @@ export function OnboardingV2() {
 
     // ── Layout ────────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gray-50 text-gray-900 flex">
+        <div className="min-h-screen bg-gray-50 text-gray-900 flex overflow-x-hidden">
             {/* Subtle warm glow */}
             <div className="fixed inset-0 pointer-events-none">
                 <div className="absolute top-[-20%] left-[30%] w-[500px] h-[500px] bg-[#FF4C00]/4 rounded-full blur-[140px]" />
@@ -406,8 +406,8 @@ export function OnboardingV2() {
 
 
             {/* Content */}
-            <div className="flex-1 flex flex-col items-center justify-start py-10 px-4 relative z-10 overflow-y-auto">
-                <div className="w-full max-w-lg">
+            <div className="flex-1 flex min-w-0 flex-col items-center justify-start overflow-y-auto overflow-x-hidden px-4 py-8 sm:py-10 relative z-10">
+                <div className="w-full max-w-lg min-w-0">
                     {/* Mobile Logo */}
                     <div className="lg:hidden flex justify-center mb-6">
                         <BrandLogo
@@ -466,7 +466,7 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
     const selectedIndustry = INDUSTRIES.find(i => i.v === form.industry);
 
     if (step === 1) return (
-        <div className="text-center space-y-6 animate-fade-in mt-16">
+        <div className="text-center space-y-6 animate-fade-in mt-10 sm:mt-16 min-w-0">
             <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
                 <Rocket className="w-12 h-12 text-[#FF4C00]" />
             </div>
@@ -822,8 +822,8 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                     ))}
                 </div>
             )}
-            <div className="flex gap-3 mt-6">
-                <button onClick={() => go(13)} className="flex-none px-5 py-3 text-sm text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded-xl whitespace-nowrap">Pular</button>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button onClick={() => go(13)} className="px-5 py-3 text-sm text-gray-400 hover:text-gray-600 transition-colors border border-gray-200 rounded-xl sm:flex-none">Pular</button>
                 <button onClick={next} className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all shadow-lg shadow-[#FF4C00]/20">Continuar <ChevronRight className="w-4 h-4" /></button>
             </div>
         </div>
@@ -886,10 +886,10 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                     <p className="text-gray-500 text-sm mt-1">Converse com sua IA como se fosse um cliente. Limite de 5 troca de mensagens.</p>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-200 bg-gray-50">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-sm font-semibold text-gray-900">{form.aiName || 'IA'}</span>
-                        <span className={`text-xs ml-auto font-medium ${isLimitReached ? 'text-red-400' : 'text-gray-400'}`}>
+                        <span className={`w-full text-left text-xs font-medium sm:ml-auto sm:w-auto sm:text-right ${isLimitReached ? 'text-red-400' : 'text-gray-400'}`}>
                             {isLimitReached ? 'Limite atingido' : `${5 - msgsUsed} mensagem${5 - msgsUsed !== 1 ? 's' : ''} restante${5 - msgsUsed !== 1 ? 's' : ''}`}
                         </span>
                     </div>
@@ -919,11 +919,11 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                         <div ref={chatEndRef} />
                     </div>
                     {!isLimitReached ? (
-                        <div className="flex gap-2 p-3 border-t border-gray-200">
+                        <div className="flex min-w-0 gap-2 p-3 border-t border-gray-200">
                             <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
                                 placeholder="Escreva como se fosse um cliente..." disabled={chatLoading}
-                                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FF4C00]/60 transition-all" />
+                                className="flex-1 min-w-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#FF4C00]/60 transition-all" />
                             <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()}
                                 className="w-10 h-10 rounded-xl bg-[#FF4C00] hover:bg-[#FF6A30] disabled:opacity-40 flex items-center justify-center transition-colors shrink-0">
                                 <Send className="w-4 h-4 text-white" />
@@ -1051,7 +1051,7 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                 )}
                 {wsStatus === 'qrcode' && qrCode && (
                     <>
-                        <img src={qrCode} alt="QR Code" className="w-48 h-48 rounded-xl border border-gray-200" />
+                        <img src={qrCode} alt="QR Code" className="w-48 h-48 max-w-full rounded-xl border border-gray-200" />
                         <p className="text-xs text-gray-500 text-center">Abra o WhatsApp → Aparelhos conectados → Conectar aparelho</p>
                         <span className="text-xs font-mono text-gray-400">{wsTtl}s</span>
                     </>
@@ -1102,11 +1102,11 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                 ))}
             </div>
             <div className="bg-gradient-to-r from-[#FF4C00]/15 to-orange-500/10 border border-[#FF4C00]/25 rounded-2xl p-4">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#FF4C00]/20 flex items-center justify-center shrink-0">
                         <Zap className="w-5 h-5 text-[#FF4C00] fill-[#FF4C00]/50" />
                     </div>
-                    <div className="text-left">
+                    <div className="min-w-0 text-left">
                         <p className="text-sm font-bold text-[#FF4C00]">+100 Koins creditados</p>
                         <p className="text-xs text-gray-500">As Koins será usada para abastecer sua IA e atender seus clientes</p>
                     </div>
