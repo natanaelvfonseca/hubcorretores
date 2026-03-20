@@ -150,6 +150,10 @@ const ADMIN_METRICS_SCOPE = "global";
 const ADMIN_USD_TO_BRL = Number.isFinite(Number(process.env.ADMIN_USD_TO_BRL))
   ? Number(process.env.ADMIN_USD_TO_BRL)
   : 5;
+const META_CAPI_API_VERSION = process.env.META_CAPI_API_VERSION || "v22.0";
+const META_CAPI_PIXEL_ID = process.env.META_CAPI_PIXEL_ID || "";
+const META_CAPI_ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN || "";
+const META_CAPI_TEST_EVENT_CODE = process.env.META_CAPI_TEST_EVENT_CODE || "";
 
 function cloneDate(value) {
   return value ? new Date(value) : null;
@@ -183,6 +187,112 @@ function addMonths(value, amount) {
   const date = cloneDate(value) || new Date();
   date.setMonth(date.getMonth() + amount);
   return date;
+}
+
+function normalizeMetaHashInput(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function sha256Hex(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function hashMetaField(value, { digitsOnly = false } = {}) {
+  if (value === null || value === undefined) return null;
+  let normalized = String(value).trim();
+  if (!normalized) return null;
+
+  if (digitsOnly) {
+    normalized = normalized.replace(/\D/g, "");
+  } else {
+    normalized = normalizeMetaHashInput(normalized);
+  }
+
+  if (!normalized) return null;
+  return sha256Hex(normalized);
+}
+
+function getRequestIp(req) {
+  const forwardedFor = req.headers["x-forwarded-for"];
+  if (typeof forwardedFor === "string" && forwardedFor.trim()) {
+    return forwardedFor.split(",")[0].trim();
+  }
+  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+    return String(forwardedFor[0] || "").split(",")[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || undefined;
+}
+
+function buildMetaEventSourceUrl(req, pathName = "/register") {
+  const originHeader = req.headers.origin;
+  if (typeof originHeader === "string" && originHeader.trim()) {
+    return `${originHeader.replace(/\/$/, "")}${pathName}`;
+  }
+
+  const refererHeader = req.headers.referer;
+  if (typeof refererHeader === "string" && refererHeader.trim()) {
+    return refererHeader;
+  }
+
+  if (process.env.APP_URL) {
+    return `${process.env.APP_URL.replace(/\/$/, "")}${pathName}`;
+  }
+
+  return undefined;
+}
+
+async function sendMetaCompleteRegistrationEvent({
+  req,
+  user,
+  email,
+  phone,
+  eventSourceUrl,
+}) {
+  if (!META_CAPI_PIXEL_ID || !META_CAPI_ACCESS_TOKEN) {
+    log("[META CAPI] Skipped CompleteRegistration: META_CAPI_PIXEL_ID or META_CAPI_ACCESS_TOKEN missing.");
+    return;
+  }
+
+  const eventTime = Math.floor(Date.now() / 1000);
+  const userData = {
+    em: [hashMetaField(email)].filter(Boolean),
+    ph: [hashMetaField(phone, { digitsOnly: true })].filter(Boolean),
+    client_ip_address: getRequestIp(req),
+    client_user_agent: req.headers["user-agent"] || undefined,
+    fbp: req.cookies?._fbp || req.cookies?.fbp || undefined,
+    fbc: req.cookies?._fbc || req.cookies?.fbc || undefined,
+  };
+
+  const payload = {
+    data: [
+      {
+        event_name: "CompleteRegistration",
+        event_time: eventTime,
+        action_source: "website",
+        event_id: `complete_registration:${user.id}`,
+        event_source_url: eventSourceUrl || buildMetaEventSourceUrl(req),
+        user_data: userData,
+      },
+    ],
+  };
+
+  if (META_CAPI_TEST_EVENT_CODE) {
+    payload.test_event_code = META_CAPI_TEST_EVENT_CODE;
+  }
+
+  const url = `https://graph.facebook.com/${META_CAPI_API_VERSION}/${META_CAPI_PIXEL_ID}/events?access_token=${encodeURIComponent(META_CAPI_ACCESS_TOKEN)}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Meta CAPI responded ${response.status}: ${responseText}`);
+  }
+
+  log(`[META CAPI] CompleteRegistration sent for user ${user.id}: ${responseText}`);
 }
 
 function maxDate(...values) {
@@ -5418,6 +5528,16 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
     log(`[ONBOARDING-V2] New account created: ${email} (org: ${org.id})`);
     res.status(201).json({ token, user: { ...safeUser, organization: org }, role: 'user', agentId: createdAgent.id });
 
+    runNonBlockingTask(`meta-complete-registration:${user.id}`, async () => {
+      await sendMetaCompleteRegistrationEvent({
+        req,
+        user,
+        email: user.email,
+        phone: phone || user.personal_phone || null,
+        eventSourceUrl: buildMetaEventSourceUrl(req, "/register"),
+      });
+    });
+
     runNonBlockingTask(`onboarding-playbook:${org.id}`, async () => {
       const currentProfile = await getCanonicalCompanyProfile({ orgId: org.id, userId: user.id });
       const hydratedProfile = await upsertCanonicalCompanyProfile({
@@ -7329,6 +7449,16 @@ app.post("/api/register", async (req, res) => {
       user: { ...safeUser, organization },
       role: user.role,
       token,
+    });
+
+    runNonBlockingTask(`meta-complete-registration:${user.id}`, async () => {
+      await sendMetaCompleteRegistrationEvent({
+        req,
+        user,
+        email: user.email,
+        phone: whatsapp || user.personal_phone || null,
+        eventSourceUrl: buildMetaEventSourceUrl(req, "/register"),
+      });
     });
 
     runNonBlockingTask(`register-automation:${user.id}`, async () => {
