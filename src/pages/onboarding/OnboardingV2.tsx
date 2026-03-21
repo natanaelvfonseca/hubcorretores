@@ -759,6 +759,40 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                 <Rocket className="w-12 h-12 text-[#FF4C00]" />
             </div>
             <div>
+                <p className="text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-3">ATIVA&Ccedil;&Atilde;O KOGNA</p>
+                <h1 className="text-4xl font-bold text-gray-900 leading-tight">Seu WhatsApp est&aacute; perdendo vendas todos os dias.</h1>
+                <p className="text-gray-500 mt-4 text-lg leading-relaxed max-w-md mx-auto">
+                    A Kogna transforma suas conversas em oportunidades reais, respondendo, qualificando e conduzindo clientes automaticamente.
+                </p>
+            </div>
+            <div className="max-w-sm mx-auto text-left">
+                <p className="text-sm font-semibold text-gray-900 mb-4">Em poucos minutos voc&ecirc; vai:</p>
+            </div>
+            <div className="flex flex-col gap-3 max-w-sm mx-auto text-left">
+                {[
+                    { icon: Brain, t: 'Criar sua IA de atendimento e vendas' },
+                    { icon: GitBranch, t: 'Organizar seus leads sem esfor&ccedil;o' },
+                    { icon: MessageSquare, t: 'Come&ccedil;ar a recuperar clientes perdidos' },
+                ].map(({ icon: Icon, t }) => (
+                    <div key={t} className="flex items-center gap-3 text-sm text-gray-600">
+                        <div className="w-7 h-7 rounded-lg bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-[#FF4C00]" />
+                        </div>
+                        {t}
+                    </div>
+                ))}
+            </div>
+            <NextBtn onClick={() => setStepOneStage('account')} label="AUMENTAR MINHAS VENDAS" />
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">+3.000 conversas analisadas. Sabemos o que funciona, por isso n&atilde;o cobramos mensalidade: &eacute; gratuito!</p>
+        </div>
+    );
+
+    if (step === 1001) return (
+        <div className="text-center space-y-6 animate-fade-in mt-10 sm:mt-16 min-w-0">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
+                <Rocket className="w-12 h-12 text-[#FF4C00]" />
+            </div>
+            <div>
                 <p className="text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-3">Ativacao Kogna</p>
                 <h1 className="text-4xl font-bold text-gray-900 leading-tight">Seu WhatsApp estÃ¡ perdendo vendas todos os dias.</h1>
                 <p className="text-gray-500 mt-4 text-lg leading-relaxed max-w-md mx-auto">
