@@ -20,6 +20,7 @@ import { OverviewTab } from './dashboard/OverviewTab';
 import { ProductsTab } from './dashboard/ProductsTab';
 import { AdsTab } from './dashboard/AdsTab';
 import { ConversationIntelligenceTab } from './dashboard/ConversationIntelligenceTab';
+import { OnboardingTab } from './dashboard/OnboardingTab';
 
 interface AdminUser {
     id: string;
@@ -32,7 +33,7 @@ interface AdminUser {
     plan_type: string;
 }
 
-type AdminTab = 'overview' | 'products' | 'ads' | 'users' | 'intelligence';
+type AdminTab = 'overview' | 'products' | 'ads' | 'users' | 'intelligence' | 'onboarding';
 
 const tabs: Array<{
     id: AdminTab;
@@ -43,6 +44,7 @@ const tabs: Array<{
         { id: 'products', label: 'Produtos e consumo', icon: <Package2 className="h-4 w-4" /> },
         { id: 'ads', label: 'Aquisicao', icon: <Megaphone className="h-4 w-4" /> },
         { id: 'users', label: 'Clientes', icon: <Users className="h-4 w-4" /> },
+        { id: 'onboarding', label: 'Onboarding', icon: <ShieldCheck className="h-4 w-4" /> },
         { id: 'intelligence', label: 'Conversation intel', icon: <BrainCircuit className="h-4 w-4" /> },
     ];
 
@@ -104,6 +106,7 @@ export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<AdminTab>('overview');
     const [period, setPeriod] = useState<string>('30d');
     const [strategicData, setStrategicData] = useState<any>(null);
+    const [onboardingData, setOnboardingData] = useState<any>(null);
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -143,6 +146,14 @@ export function AdminDashboard() {
                     fetch(`${apiBase}/api/admin/users`, { headers })
                         .then((res) => res.json())
                         .then((data) => setUsers(Array.isArray(data) ? data : []))
+                );
+            }
+
+            if (activeTab === 'onboarding') {
+                requests.push(
+                    fetch(`${apiBase}/api/admin/onboarding-analytics`, { headers })
+                        .then((res) => res.json())
+                        .then((data) => setOnboardingData(data))
                 );
             }
 
@@ -316,6 +327,7 @@ export function AdminDashboard() {
                     {activeTab === 'overview' && <OverviewTab data={strategicData} />}
                     {activeTab === 'products' && <ProductsTab data={strategicData} />}
                     {activeTab === 'ads' && <AdsTab data={strategicData} />}
+                    {activeTab === 'onboarding' && <OnboardingTab data={onboardingData} />}
                     {activeTab === 'intelligence' && <ConversationIntelligenceTab />}
 
                     {activeTab === 'users' && (

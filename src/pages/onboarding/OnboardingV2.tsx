@@ -171,7 +171,14 @@ export function OnboardingV2() {
     const [chatInput, setChatInput] = useState('');
     const [chatLoading, setChatLoading] = useState(false);
     const [msgsUsed, setMsgsUsed] = useState(0);
-    const [sessionId] = useState(() => `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+    const [sessionId] = useState(() => {
+        const fallback = `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        if (typeof window === 'undefined') return fallback;
+        const existing = window.sessionStorage.getItem('kogna_onboarding_session_id');
+        if (existing) return existing;
+        window.sessionStorage.setItem('kogna_onboarding_session_id', fallback);
+        return fallback;
+    });
     const [pipelineVisible, setPipelineVisible] = useState(false);
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [wsStatus, setWsStatus] = useState<'idle' | 'connecting' | 'qrcode' | 'connected'>('idle');
@@ -196,6 +203,29 @@ export function OnboardingV2() {
     };
 
     const go = (n: number) => { setError(''); setStep(n); window.scrollTo(0, 0); };
+
+    useEffect(() => {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        const currentToken = token.current;
+        if (currentToken) {
+            headers.Authorization = `Bearer ${currentToken}`;
+        }
+
+        void fetch('/api/onboarding/track-step', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                session_id: sessionId,
+                step,
+                total_steps: TOTAL_STEPS,
+                email: form.email || undefined,
+                phone: form.phone || undefined,
+                metadata: {
+                    source: 'OnboardingV2',
+                },
+            }),
+        }).catch(() => { });
+    }, [sessionId, step]);
 
     // ── Step validators ──────────────────────────────────────────────────────
     const validate: Record<number, () => boolean> = {
@@ -249,7 +279,7 @@ export function OnboardingV2() {
             const res = await fetch('/api/onboarding/register-and-save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form }),
+                body: JSON.stringify({ ...form, onboarding_session_id: sessionId }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro ao criar conta.');

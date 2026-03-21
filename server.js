@@ -4715,6 +4715,147 @@ async function sendProductToLead(orgId, instanceName, remoteJid, leadStage, user
 // ── END Product & Dynamic Offer Engine ───────────────────────────────────────
 
 // ── ONBOARDING V2 SESSION TABLE ───────────────────────────────────────────────
+const ONBOARDING_ANALYTICS_VERSION = 'v2';
+const ONBOARDING_ANALYTICS_TOTAL_STEPS = 18;
+
+let onboardingAnalyticsReadyPromise = null;
+const ensureOnboardingAnalyticsTable = async () => {
+  if (onboardingAnalyticsReadyPromise) return onboardingAnalyticsReadyPromise;
+
+  onboardingAnalyticsReadyPromise = (async () => {
+    try {
+      log('[SYSTEM] Ensuring onboarding_progress_analytics table...');
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS onboarding_progress_analytics (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          session_id TEXT NOT NULL UNIQUE,
+          user_id TEXT DEFAULT NULL,
+          onboarding_version TEXT NOT NULL DEFAULT '${ONBOARDING_ANALYTICS_VERSION}',
+          current_step INT NOT NULL DEFAULT 1,
+          max_step_reached INT NOT NULL DEFAULT 1,
+          total_steps INT NOT NULL DEFAULT ${ONBOARDING_ANALYTICS_TOTAL_STEPS},
+          email TEXT DEFAULT NULL,
+          phone TEXT DEFAULT NULL,
+          started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          registered_at TIMESTAMPTZ DEFAULT NULL,
+          completed_at TIMESTAMPTZ DEFAULT NULL,
+          last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_progress_user_id ON onboarding_progress_analytics(user_id)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_progress_started_at ON onboarding_progress_analytics(started_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_progress_max_step ON onboarding_progress_analytics(max_step_reached DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_onboarding_progress_completed_at ON onboarding_progress_analytics(completed_at DESC)`);
+      log('[SYSTEM] onboarding_progress_analytics table verified.');
+    } catch (err) {
+      onboardingAnalyticsReadyPromise = null;
+      log('[ERROR] ensureOnboardingAnalyticsTable: ' + err.message);
+      throw err;
+    }
+  })();
+
+  return onboardingAnalyticsReadyPromise;
+};
+
+function normalizeOnboardingEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  return normalized || null;
+}
+
+function normalizeOnboardingPhone(phone) {
+  const normalized = normalizeWhatsAppNumber(phone);
+  return normalized || null;
+}
+
+function sanitizeOnboardingStep(step, totalSteps = ONBOARDING_ANALYTICS_TOTAL_STEPS) {
+  const safeTotalSteps = Math.max(Number(totalSteps) || ONBOARDING_ANALYTICS_TOTAL_STEPS, 1);
+  const parsed = Number.parseInt(step, 10);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(Math.max(parsed, 1), safeTotalSteps);
+}
+
+async function trackOnboardingProgress({
+  sessionId,
+  userId = null,
+  step,
+  totalSteps = ONBOARDING_ANALYTICS_TOTAL_STEPS,
+  email = null,
+  phone = null,
+  metadata = {},
+  registered = false,
+  completed = false,
+}, db = pool) {
+  const safeSessionId = String(sessionId || '').trim();
+  if (!safeSessionId) return null;
+
+  await ensureOnboardingAnalyticsTable();
+
+  const safeTotalSteps = Math.max(Number(totalSteps) || ONBOARDING_ANALYTICS_TOTAL_STEPS, 1);
+  const safeStep = sanitizeOnboardingStep(step, safeTotalSteps);
+  const normalizedEmail = normalizeOnboardingEmail(email);
+  const normalizedPhone = normalizeOnboardingPhone(phone);
+  const normalizedUserId = userId ? String(userId).trim() : null;
+  const shouldMarkCompleted = completed || safeStep >= safeTotalSteps;
+  const shouldMarkRegistered = registered || Boolean(normalizedUserId);
+  const safeMetadata = metadata && typeof metadata === 'object' ? metadata : {};
+
+  const result = await db.query(`
+    INSERT INTO onboarding_progress_analytics (
+      session_id,
+      user_id,
+      onboarding_version,
+      current_step,
+      max_step_reached,
+      total_steps,
+      email,
+      phone,
+      registered_at,
+      completed_at,
+      last_seen_at,
+      metadata
+    ) VALUES ($1,$2,$3,$4,$4,$5,$6,$7,
+      CASE WHEN $8 THEN NOW() ELSE NULL END,
+      CASE WHEN $9 THEN NOW() ELSE NULL END,
+      NOW(),
+      $10::jsonb
+    )
+    ON CONFLICT (session_id) DO UPDATE
+      SET user_id = COALESCE(EXCLUDED.user_id, onboarding_progress_analytics.user_id),
+          current_step = EXCLUDED.current_step,
+          max_step_reached = GREATEST(onboarding_progress_analytics.max_step_reached, EXCLUDED.max_step_reached),
+          total_steps = GREATEST(onboarding_progress_analytics.total_steps, EXCLUDED.total_steps),
+          email = COALESCE(EXCLUDED.email, onboarding_progress_analytics.email),
+          phone = COALESCE(EXCLUDED.phone, onboarding_progress_analytics.phone),
+          registered_at = CASE
+            WHEN onboarding_progress_analytics.registered_at IS NOT NULL THEN onboarding_progress_analytics.registered_at
+            WHEN $8 THEN NOW()
+            ELSE onboarding_progress_analytics.registered_at
+          END,
+          completed_at = CASE
+            WHEN onboarding_progress_analytics.completed_at IS NOT NULL THEN onboarding_progress_analytics.completed_at
+            WHEN $9 THEN NOW()
+            ELSE onboarding_progress_analytics.completed_at
+          END,
+          last_seen_at = NOW(),
+          metadata = COALESCE(onboarding_progress_analytics.metadata, '{}'::jsonb) || EXCLUDED.metadata
+    RETURNING *
+  `, [
+    safeSessionId,
+    normalizedUserId,
+    ONBOARDING_ANALYTICS_VERSION,
+    safeStep,
+    safeTotalSteps,
+    normalizedEmail,
+    normalizedPhone,
+    shouldMarkRegistered,
+    shouldMarkCompleted,
+    JSON.stringify(safeMetadata),
+  ]);
+
+  return result.rows[0] || null;
+}
+
 const ensureOnboardingSessionsTable = async () => {
   try {
     log('[SYSTEM] Ensuring onboarding_test_sessions table...');
@@ -4918,6 +5059,7 @@ initPool().then(() => {
   setTimeout(ensureConversationStateTables, 16000); // CSE: Conversation State Engine tables
   setTimeout(ensureProductEngineTables, 18000);      // Product & Dynamic Offer Engine tables
   setTimeout(ensureOnboardingSessionsTable, 20000);   // Onboarding V2 test sessions table
+  setTimeout(ensureOnboardingAnalyticsTable, 20500);  // Onboarding V2 analytics table
   setTimeout(ensureGuidedTourColumns, 22000);         // Guided tour rollout + persistence columns
 
   // Start Follow-up Engine cron jobs (fire after tables are ready)
@@ -5606,6 +5748,49 @@ IMPORTANTE:
 });
 
 // POST /api/onboarding/register-and-save — creates account + org + agent from all onboarding data
+app.post('/api/onboarding/track-step', async (req, res) => {
+  try {
+    const {
+      session_id,
+      step,
+      total_steps,
+      email,
+      phone,
+      metadata,
+    } = req.body || {};
+
+    if (!session_id) {
+      return res.status(400).json({ error: 'session_id é obrigatório.' });
+    }
+
+    const userId = getOptionalUserIdFromAuthHeader(req);
+    const progress = await trackOnboardingProgress({
+      sessionId: session_id,
+      userId,
+      step,
+      totalSteps: total_steps || ONBOARDING_ANALYTICS_TOTAL_STEPS,
+      email,
+      phone,
+      metadata: {
+        route: '/register',
+        ...((metadata && typeof metadata === 'object') ? metadata : {}),
+      },
+      completed: Number(step) >= Number(total_steps || ONBOARDING_ANALYTICS_TOTAL_STEPS),
+    });
+
+    res.json({
+      success: true,
+      session_id: progress?.session_id || session_id,
+      current_step: progress?.current_step || sanitizeOnboardingStep(step, total_steps || ONBOARDING_ANALYTICS_TOTAL_STEPS),
+      max_step_reached: progress?.max_step_reached || sanitizeOnboardingStep(step, total_steps || ONBOARDING_ANALYTICS_TOTAL_STEPS),
+      completed: Boolean(progress?.completed_at),
+    });
+  } catch (err) {
+    log('[ONBOARDING TRACK] ' + err.message);
+    res.status(500).json({ error: 'Erro ao rastrear etapa do onboarding.' });
+  }
+});
+
 app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
   const client = await pool.connect();
   let committedProvisioning = false;
@@ -5620,7 +5805,8 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
       unknownBehavior, voiceTone, restrictions,
       humanHandoffPolicy, buyingSignals, qualificationCriteria, objectionHandling, idealNextStep, agendaPolicy,
       objectionPlaybook, objections,
-      referral_code
+      referral_code,
+      onboarding_session_id,
     } = req.body;
 
     if (!name || !email || !password) return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
@@ -5756,6 +5942,23 @@ app.post('/api/onboarding/register-and-save', authLimiter, async (req, res) => {
 
     log(`[ONBOARDING-V2] New account created: ${email} (org: ${org.id})`);
     res.status(201).json({ token, user: { ...safeUser, organization: org }, role: 'user', agentId: createdAgent.id });
+
+    runNonBlockingTask(`onboarding-track-register:${user.id}`, async () => {
+      if (!onboarding_session_id) return;
+      await trackOnboardingProgress({
+        sessionId: onboarding_session_id,
+        userId: user.id,
+        step: 14,
+        totalSteps: ONBOARDING_ANALYTICS_TOTAL_STEPS,
+        email: user.email,
+        phone: phone || user.personal_phone || null,
+        metadata: {
+          route: '/register',
+          registered_via: 'register-and-save',
+        },
+        registered: true,
+      });
+    });
 
     runNonBlockingTask(`meta-complete-registration:${user.id}`, async () => {
       await sendMetaCompleteRegistrationEvent({
@@ -8877,6 +9080,162 @@ app.get("/api/admin/strategic-metrics", verifyJWT, verifyAdmin, async (req, res)
   } catch (err) {
     log("Strategic Metrics Error: " + err.message);
     res.status(500).json({ error: "Failed fetching strategic metrics" });
+  }
+});
+
+app.get("/api/admin/onboarding-analytics", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    await ensureOnboardingAnalyticsTable();
+
+    const identitySql = `COALESCE(NULLIF(user_id, ''), NULLIF(LOWER(email), ''), session_id)`;
+    const summaryRes = await pool.query(`
+      WITH base AS (
+        SELECT
+          ${identitySql} AS identity_key,
+          max_step_reached,
+          total_steps,
+          completed_at,
+          registered_at,
+          last_seen_at,
+          started_at
+        FROM onboarding_progress_analytics
+        WHERE onboarding_version = $1
+      ),
+      dedup AS (
+        SELECT DISTINCT ON (identity_key)
+          identity_key,
+          max_step_reached,
+          total_steps,
+          completed_at,
+          registered_at,
+          last_seen_at,
+          started_at
+        FROM base
+        ORDER BY
+          identity_key,
+          max_step_reached DESC,
+          completed_at DESC NULLS LAST,
+          registered_at DESC NULLS LAST,
+          last_seen_at DESC,
+          started_at DESC
+      )
+      SELECT
+        COUNT(*)::int AS total_started,
+        COUNT(*) FILTER (WHERE registered_at IS NOT NULL)::int AS total_registered,
+        COUNT(*) FILTER (WHERE completed_at IS NOT NULL)::int AS total_completed
+      FROM dedup
+    `, [ONBOARDING_ANALYTICS_VERSION]);
+
+    const stepsRes = await pool.query(`
+      WITH base AS (
+        SELECT
+          ${identitySql} AS identity_key,
+          max_step_reached,
+          total_steps,
+          completed_at,
+          registered_at,
+          last_seen_at,
+          started_at
+        FROM onboarding_progress_analytics
+        WHERE onboarding_version = $1
+      ),
+      dedup AS (
+        SELECT DISTINCT ON (identity_key)
+          identity_key,
+          max_step_reached,
+          total_steps,
+          completed_at,
+          registered_at,
+          last_seen_at,
+          started_at
+        FROM base
+        ORDER BY
+          identity_key,
+          max_step_reached DESC,
+          completed_at DESC NULLS LAST,
+          registered_at DESC NULLS LAST,
+          last_seen_at DESC,
+          started_at DESC
+      ),
+      steps AS (
+        SELECT generate_series(1, $2::int) AS step_number
+      )
+      SELECT
+        steps.step_number,
+        COUNT(d.identity_key) FILTER (WHERE d.max_step_reached >= steps.step_number)::int AS reached,
+        COUNT(d.identity_key) FILTER (
+          WHERE d.max_step_reached = steps.step_number
+            AND (
+              steps.step_number < $2::int
+              OR d.completed_at IS NULL
+            )
+        )::int AS abandoned
+      FROM steps
+      LEFT JOIN dedup d ON TRUE
+      GROUP BY steps.step_number
+      ORDER BY steps.step_number ASC
+    `, [ONBOARDING_ANALYTICS_VERSION, ONBOARDING_ANALYTICS_TOTAL_STEPS]);
+
+    const totalStarted = Number(summaryRes.rows[0]?.total_started || 0);
+    const totalRegistered = Number(summaryRes.rows[0]?.total_registered || 0);
+    const totalCompleted = Number(summaryRes.rows[0]?.total_completed || 0);
+    const completionRate = totalStarted > 0 ? (totalCompleted / totalStarted) * 100 : 0;
+
+    const stepMap = new Map(
+      (stepsRes.rows || []).map((row) => [
+        Number(row.step_number),
+        {
+          step_number: Number(row.step_number),
+          reached: Number(row.reached || 0),
+          abandoned: Number(row.abandoned || 0),
+        },
+      ]),
+    );
+
+    const steps = Array.from({ length: ONBOARDING_ANALYTICS_TOTAL_STEPS }, (_, index) => {
+      const stepNumber = index + 1;
+      const current = stepMap.get(stepNumber) || { step_number: stepNumber, reached: 0, abandoned: 0 };
+      const next = stepMap.get(stepNumber + 1);
+      const dropOffRate = current.reached > 0 ? (current.abandoned / current.reached) * 100 : 0;
+      const progressionRate = stepNumber >= ONBOARDING_ANALYTICS_TOTAL_STEPS
+        ? (current.reached > 0 ? (totalCompleted / current.reached) * 100 : 0)
+        : (current.reached > 0 ? ((next?.reached || 0) / current.reached) * 100 : 0);
+
+      return {
+        ...current,
+        drop_off_rate: dropOffRate,
+        progression_rate: progressionRate,
+      };
+    });
+
+    const topDropOffStep = totalStarted > 0
+      ? steps.reduce((worst, step) => {
+        if (!worst) return step;
+        if (step.abandoned > worst.abandoned) return step;
+        if (step.abandoned === worst.abandoned && step.drop_off_rate > worst.drop_off_rate) return step;
+        return worst;
+      }, null)
+      : null;
+
+    res.json({
+      totals: {
+        total_started: totalStarted,
+        total_registered: totalRegistered,
+        total_completed: totalCompleted,
+        completion_rate: completionRate,
+      },
+      steps,
+      insights: {
+        top_dropoff_step: topDropOffStep,
+      },
+      meta: {
+        onboarding_version: ONBOARDING_ANALYTICS_VERSION,
+        total_steps: ONBOARDING_ANALYTICS_TOTAL_STEPS,
+      },
+    });
+  } catch (err) {
+    log("Onboarding analytics error: " + err.toString());
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
