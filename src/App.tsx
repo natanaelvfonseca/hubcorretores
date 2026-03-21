@@ -33,6 +33,7 @@ import { Products } from './pages/products/Products';
 import { AdminIntelligence } from './pages/admin/AdminIntelligence';
 import { KognaIntelligencePanel } from './pages/admin/KognaIntelligencePanel';
 import { AdminAutomations } from './pages/admin/AdminAutomations';
+import { VideoOnboardingMvp } from './pages/admin/VideoOnboardingMvp';
 
 import { ReferralRedirect } from './pages/partners/ReferralRedirect';
 import { GuidedTourProvider } from './components/guided-tour/GuidedTourProvider';
@@ -132,6 +133,13 @@ function App() {
                                         <AdminAutomations />
                                     </AdminRoute>
                                 } />
+                                {import.meta.env.DEV && (
+                                    <Route path="admin/onboarding-video-mvp" element={
+                                        <AdminRoute>
+                                            <VideoOnboardingMvp />
+                                        </AdminRoute>
+                                    } />
+                                )}
 
                                 <Route path="checkout" element={<Checkout />} />
                                 <Route path="checkout/success" element={<CheckoutSuccess />} />
