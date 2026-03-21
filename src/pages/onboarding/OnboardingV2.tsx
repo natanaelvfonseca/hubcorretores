@@ -131,9 +131,9 @@ function NextBtn({ onClick, loading, label = 'Continuar' }: { onClick: () => voi
 
 // ── Progress Sidebar ──────────────────────────────────────────────────────────
 const STEP_LABELS = [
-    'Bem-vindo', 'Agente', 'Mercado', 'Identidade', 'Produto',
+    'Conta', 'Agente', 'Mercado', 'Identidade', 'Produto',
     'Público', 'Canais', 'Ciclo', 'Meta', 'Objecoes',
-    'Conducao', 'Conhecimento', 'Pipeline', 'Conta', 'Teste',
+    'Conducao', 'Conhecimento', 'Pipeline', 'Ativacao', 'Teste',
     'Melhorar', 'WhatsApp', 'Concluído'
 ];
 
@@ -156,12 +156,16 @@ function MobileProgress({ step }: { step: number }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 export function OnboardingV2() {
     const navigate = useNavigate();
-    const { refreshUser } = useAuth();
+    const { refreshUser, token: authToken, user } = useAuth();
     const [step, setStep] = useState(1);
     const [form, setForm] = useState<FormData>(EMPTY_FORM);
     const [createdAgentId, setCreatedAgentId] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [accountReady, setAccountReady] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return Boolean(window.localStorage.getItem('kogna_token'));
+    });
     // Step 16 improvement
     const [improvementSelected, setImprovementSelected] = useState<string | null>(null);
     const [improvementDetail, setImprovementDetail] = useState('');
@@ -186,6 +190,9 @@ export function OnboardingV2() {
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const token = useRef<string | null>(null);
+    const activationAttemptedRef = useRef(false);
+    const knowledgeUploadedAgentRef = useRef<string | null>(null);
+    const onboardingCompletionRef = useRef<'idle' | 'done'>('idle');
 
     const set = (k: keyof FormData, v: any) => setForm(f => ({ ...f, [k]: v }));
     const toggleArr = (k: keyof FormData, v: string) => {
@@ -203,6 +210,22 @@ export function OnboardingV2() {
     };
 
     const go = (n: number) => { setError(''); setStep(n); window.scrollTo(0, 0); };
+
+    useEffect(() => {
+        const storedToken = authToken || (typeof window !== 'undefined' ? window.localStorage.getItem('kogna_token') : null);
+        token.current = storedToken;
+        setAccountReady(Boolean(storedToken));
+    }, [authToken]);
+
+    useEffect(() => {
+        if (!user) return;
+        setForm((current) => ({
+            ...current,
+            name: current.name || user.name || '',
+            email: current.email || user.email || '',
+            phone: current.phone || '',
+        }));
+    }, [user]);
 
     useEffect(() => {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -227,8 +250,54 @@ export function OnboardingV2() {
         }).catch(() => { });
     }, [sessionId, step]);
 
+    const buildObjectionPlaybook = () => (
+        form.objections.map((label, index) => ({
+            label,
+            signals: [label],
+            recommended_approach: form.objectionHandling || 'Reposicione valor, contexto e proximo passo com clareza.',
+            cta_after_resolution: form.idealNextStep || 'Conduza para o proximo passo mais simples da jornada.',
+            priority: index + 1,
+        }))
+    );
+
+    const buildCompanyProfilePayload = () => ({
+        companyName: form.companyName,
+        agentName: form.aiName,
+        companyProduct: form.mainProduct,
+        revenueGoal: form.revenueGoal,
+        agentObjective: form.agentObjective,
+        unknownBehavior: form.unknownBehavior,
+        voiceTone: form.voiceTone,
+        restrictions: form.restrictions || '',
+        customerPain: form.customerPain || '',
+        customerDesires: form.customerDesires || '',
+        differentiators: form.differentiators || '',
+        productPrice: form.productPrice || '',
+        targetAudience: form.targetAudience.join(', '),
+        industry: form.industry || '',
+        industryDetail: form.industryDetail || '',
+        channels: form.channels,
+        salesCycle: form.salesCycle || '',
+        humanHandoffPolicy: form.humanHandoffPolicy || '',
+        buyingSignals: form.buyingSignals || '',
+        qualificationCriteria: form.qualificationCriteria || '',
+        objectionHandling: form.objectionHandling || '',
+        idealNextStep: form.idealNextStep || '',
+        agendaPolicy: form.agendaPolicy || '',
+        objectionPlaybook: buildObjectionPlaybook(),
+    });
+
     // ── Step validators ──────────────────────────────────────────────────────
     const validate: Record<number, () => boolean> = {
+        1: () => {
+            if (accountReady) return true;
+            if (!form.name.trim()) { setError('Informe seu nome.'); return false; }
+            if (!form.email.trim() || !form.email.includes('@')) { setError('Informe um e-mail valido.'); return false; }
+            if (!form.phone.trim()) { setError('Informe seu WhatsApp.'); return false; }
+            if (form.password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
+            if (form.password !== form.confirmPassword) { setError('As senhas nao coincidem.'); return false; }
+            return true;
+        },
         2: () => { if (!form.agentObjective) { setError('Selecione o objetivo do agente.'); return false; } return true; },
         3: () => { if (!form.industry) { setError('Selecione o mercado de atuação.'); return false; } return true; },
         4: () => {
@@ -253,54 +322,145 @@ export function OnboardingV2() {
             return true;
         },
         11: () => { if (!form.voiceTone) { setError('Selecione o estilo da IA.'); return false; } return true; },
-        14: () => {
-            if (!form.name.trim()) { setError('Informe seu nome.'); return false; }
-            if (!form.email.trim() || !form.email.includes('@')) { setError('Informe um e-mail válido.'); return false; }
-            if (!form.phone.trim()) { setError('Informe seu WhatsApp.'); return false; }
-            if (form.password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return false; }
-            if (form.password !== form.confirmPassword) { setError('As senhas não coincidem.'); return false; }
-            return true;
-        },
     };
 
     const next = () => {
         const v = validate[step];
         if (v && !v()) return;
-        if (step === 14) { handleRegister(); return; }
+        if (step === 1) { void handleCreateAccount(); return; }
         go(step + 1);
     };
 
     // ── Registration (Step 14) ───────────────────────────────────────────────
-    const handleRegister = async () => {
-        if (!validate[14]()) return;
+    const handleCreateAccount = async () => {
+        if (accountReady) {
+            go(2);
+            return;
+        }
+        if (!validate[1]()) return;
+
         setLoading(true);
         setError('');
         try {
-            const res = await fetch('/api/onboarding/register-and-save', {
+            let affiliateCode: string | undefined;
+            try {
+                const storedAffiliate = localStorage.getItem('kogna_affiliate_data');
+                if (storedAffiliate) {
+                    affiliateCode = JSON.parse(storedAffiliate)?.code;
+                }
+            } catch { }
+
+            const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...form, onboarding_session_id: sessionId }),
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    email: form.email.trim().toLowerCase(),
+                    password: form.password,
+                    whatsapp: form.phone.trim(),
+                    affiliateCode,
+                }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro ao criar conta.');
-            // Store session directly (same pattern as AuthContext.register)
+
+            localStorage.removeItem('kogna_affiliate_data');
             localStorage.setItem('kogna_token', data.token);
             localStorage.setItem('kogna_user', JSON.stringify(data.user));
             token.current = data.token;
-            setCreatedAgentId(data.agentId || null);
-            if (files.length > 0 && data.agentId) {
-                const knowledgeData = new FormData();
-                files.forEach((file) => knowledgeData.append('files', file));
-                fetch(`/api/agents/${data.agentId}/upload`, {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${data.token}` },
-                    body: knowledgeData,
-                }).catch(() => { });
+            setAccountReady(true);
+            refreshUser().catch(() => { });
+            go(2);
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const uploadKnowledgeFiles = async (agentId: string, sessionToken: string) => {
+        if (files.length === 0 || knowledgeUploadedAgentRef.current === agentId) return;
+
+        const knowledgeData = new FormData();
+        files.forEach((file) => knowledgeData.append('files', file));
+
+        const uploadRes = await fetch(`/api/agents/${agentId}/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${sessionToken}` },
+            body: knowledgeData,
+        });
+        const uploadData = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok) {
+            throw new Error(uploadData.error || 'Erro ao enviar os materiais para a IA.');
+        }
+
+        knowledgeUploadedAgentRef.current = agentId;
+    };
+
+    const handleActivateAgent = async () => {
+        if (!token.current) {
+            setError('Crie sua conta antes de ativar a IA.');
+            go(1);
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        try {
+            const authHeaders = {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token.current}`,
+            };
+
+            const profileRes = await fetch('/api/company-profile', {
+                method: 'PUT',
+                headers: authHeaders,
+                body: JSON.stringify(buildCompanyProfilePayload()),
+            });
+            const profileData = await profileRes.json().catch(() => ({}));
+            if (!profileRes.ok) throw new Error(profileData.error || 'Erro ao salvar o perfil da empresa.');
+
+            let agentId = createdAgentId;
+            if (!agentId) {
+                const agentsRes = await fetch('/api/agents', {
+                    headers: { Authorization: `Bearer ${token.current}` },
+                });
+                const agentsData = await agentsRes.json().catch(() => ([]));
+                if (!agentsRes.ok) throw new Error(agentsData.error || 'Erro ao buscar agentes existentes.');
+
+                const existingAgent = Array.isArray(agentsData)
+                    ? agentsData.find((agent: any) => agent.name === form.aiName) || agentsData[0]
+                    : null;
+
+                if (existingAgent?.id) {
+                    agentId = existingAgent.id;
+                } else {
+                    const createRes = await fetch('/api/agents', {
+                        method: 'POST',
+                        headers: authHeaders,
+                        body: JSON.stringify({
+                            name: form.aiName || 'Agente IA',
+                            type: 'sdr',
+                            use_company_profile: true,
+                        }),
+                    });
+                    const createdAgent = await createRes.json().catch(() => ({}));
+                    if (!createRes.ok) throw new Error(createdAgent.error || 'Erro ao criar a IA.');
+                    agentId = createdAgent.id || null;
+                }
             }
+
+            if (!agentId) {
+                throw new Error('Nao foi possivel identificar a IA criada.');
+            }
+
+            setCreatedAgentId(agentId);
+            await uploadKnowledgeFiles(agentId, token.current);
             refreshUser().catch(() => { });
             go(15);
         } catch (e: any) {
             setError(e.message);
+            activationAttemptedRef.current = false;
         } finally {
             setLoading(false);
         }
@@ -418,12 +578,42 @@ export function OnboardingV2() {
         }
     }, [step]);
 
+    useEffect(() => {
+        if (step !== 14 || createdAgentId || activationAttemptedRef.current) return;
+        activationAttemptedRef.current = true;
+        void handleActivateAgent();
+    }, [createdAgentId, step]);
+
     // Confetti on step 18
     useEffect(() => {
         if (step === 18) {
             confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#FF4C00', '#FF4C00', '#FFB090', '#10B981'] });
         }
     }, [step]);
+
+    useEffect(() => {
+        if (step !== 18 || !token.current || onboardingCompletionRef.current === 'done') return;
+
+        let cancelled = false;
+        void (async () => {
+            try {
+                const res = await fetch('/api/onboarding/complete', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token.current}` },
+                });
+                if (!res.ok) throw new Error('Falha ao concluir onboarding.');
+                if (cancelled) return;
+                onboardingCompletionRef.current = 'done';
+                refreshUser().catch(() => { });
+            } catch {
+                if (!cancelled) {
+                    onboardingCompletionRef.current = 'idle';
+                }
+            }
+        })();
+
+        return () => { cancelled = true; };
+    }, [refreshUser, step]);
 
     // ── Layout ────────────────────────────────────────────────────────────────
     return (
@@ -460,13 +650,14 @@ export function OnboardingV2() {
                         chatEndRef={chatEndRef} pipelineVisible={pipelineVisible}
                         qrCode={qrCode} wsStatus={wsStatus} wsTtl={wsTtl}
                         connectWhatsApp={connectWhatsApp} navigate={navigate}
+                        retryActivation={handleActivateAgent}
                         improvementSelected={improvementSelected}
                         setImprovementSelected={setImprovementSelected}
                         improvementDetail={improvementDetail}
                         setImprovementDetail={setImprovementDetail}
                         improvementSending={improvementSending}
                         setImprovementSending={setImprovementSending}
-                        token={token.current}
+                        token={token.current || (accountReady ? 'account-ready' : null)}
                     />
                 </div>
             </div>
@@ -477,7 +668,7 @@ export function OnboardingV2() {
 // ── Step Content ───────────────────────────────────────────────────────────────
 function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleCurrencyBlur, handleCurrencyFocus, next, loading, go, files, setFiles,
     chatMessages, chatInput, setChatInput, sendChat, chatLoading, msgsUsed, chatEndRef,
-    pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate,
+    pipelineVisible, qrCode, wsStatus, wsTtl, connectWhatsApp, navigate, retryActivation,
     improvementSelected, setImprovementSelected, improvementDetail, setImprovementDetail,
     improvementSending, setImprovementSending, token }: any) {
 
@@ -496,6 +687,61 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
     const selectedIndustry = INDUSTRIES.find(i => i.v === form.industry);
 
     if (step === 1) return (
+        <div className="space-y-5 animate-fade-in">
+            <div className="text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
+                    <Rocket className="w-10 h-10 text-[#FF4C00]" />
+                </div>
+                <p className="mt-5 text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-2">Passo 1 - Conta</p>
+                <h1 className="text-3xl font-bold text-gray-900 leading-tight">
+                    {token ? 'Sua conta ja esta pronta' : 'Crie sua conta para montar sua IA'}
+                </h1>
+                <p className="text-gray-500 mt-3 text-sm leading-relaxed max-w-sm mx-auto">
+                    {token
+                        ? 'Agora vamos coletar os dados da operacao para configurar seu primeiro agente de vendas.'
+                        : 'Antes de criar sua IA, precisamos registrar sua conta na plataforma para salvar tudo com seguranca.'}
+                </p>
+            </div>
+
+            {token ? (
+                <div className="space-y-4">
+                    <div className="rounded-2xl border border-[#FF4C00]/15 bg-[#FF4C00]/5 p-4">
+                        <p className="text-sm font-semibold text-gray-900">{form.name || 'Conta criada com sucesso'}</p>
+                        <p className="text-xs text-gray-500 mt-1">{form.email || 'Sessao autenticada na Kogna'}</p>
+                    </div>
+                    <div className="flex flex-col gap-3 text-left">
+                        {[
+                            { icon: Brain, t: 'Definir objetivo e comportamento do agente' },
+                            { icon: GitBranch, t: 'Montar o pipeline e o playbook comercial' },
+                            { icon: MessageSquare, t: 'Testar a IA e conectar ao WhatsApp' },
+                        ].map(({ icon: Icon, t }) => (
+                            <div key={t} className="flex items-center gap-3 text-sm text-gray-600">
+                                <div className="w-7 h-7 rounded-lg bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center shrink-0">
+                                    <Icon className="w-3.5 h-3.5 text-[#FF4C00]" />
+                                </div>
+                                {t}
+                            </div>
+                        ))}
+                    </div>
+                    <NextBtn onClick={next} label="Continuar configuracao" />
+                </div>
+            ) : (
+                <>
+                    <div className="space-y-3">
+                        <div><FieldLabel>Nome completo</FieldLabel><Input placeholder="Joao Silva" value={form.name} onChange={e => set('name', e.target.value)} /></div>
+                        <div><FieldLabel>E-mail</FieldLabel><Input type="email" placeholder="joao@empresa.com" value={form.email} onChange={e => set('email', e.target.value)} /></div>
+                        <div><FieldLabel>WhatsApp</FieldLabel><Input type="tel" placeholder="DDD + NUMERO" value={form.phone} onChange={e => set('phone', e.target.value)} /></div>
+                        <div><FieldLabel>Senha</FieldLabel><Input type="password" placeholder="Minimo 6 caracteres" value={form.password} onChange={e => set('password', e.target.value)} /></div>
+                        <div><FieldLabel>Confirmar senha</FieldLabel><Input type="password" placeholder="Confirme sua senha" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} /></div>
+                    </div>
+                    <NextBtn onClick={next} loading={loading} label="Criar conta e continuar" />
+                    <p className="text-center text-xs text-gray-400">Sem cartao de credito - Gratis para comecar</p>
+                </>
+            )}
+        </div>
+    );
+
+    if (step === 101) return (
         <div className="text-center space-y-6 animate-fade-in mt-10 sm:mt-16 min-w-0">
             <div className="w-24 h-24 bg-gradient-to-br from-[#FF4C00]/20 to-[#FF6A30]/10 rounded-3xl flex items-center justify-center mx-auto border border-[#FF4C00]/20">
                 <Rocket className="w-12 h-12 text-[#FF4C00]" />
@@ -888,6 +1134,41 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
     );
 
     if (step === 14) return (
+        <div className="space-y-6 animate-fade-in text-center">
+            <div>
+                <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 14 - Ativacao</p>
+                <h2 className="text-2xl font-bold text-gray-900">Estamos criando sua IA agora</h2>
+                <p className="text-gray-500 text-sm mt-2">Com a conta pronta, a Kogna esta salvando o perfil da sua empresa e provisionando seu primeiro agente.</p>
+            </div>
+            <div className="relative py-6">
+                {[
+                    'Salvando perfil da operacao',
+                    'Gerando playbook comercial',
+                    'Criando agente principal',
+                    'Preparando ambiente para teste',
+                ].map((stage, i) => (
+                    <div key={stage} className="flex items-center gap-3 mb-4">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF4C00] to-[#FF6A30] flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-[#FF4C00]/20 shrink-0">
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" style={{ animationDelay: `${i * 120}ms` }} /> : i + 1}
+                        </div>
+                        <div className="flex-1 text-left bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                            <p className="text-sm font-semibold text-gray-900">{stage}</p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <p className="text-gray-400 text-xs">Isso leva alguns segundos e acontece uma vez por conta.</p>
+            <button
+                onClick={() => void retryActivation?.()}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[#FF4C00] to-[#FF6A30] hover:brightness-110 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-[#FF4C00]/20 disabled:opacity-50"
+            >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Tentar novamente <ChevronRight className="w-4 h-4" /></>}
+            </button>
+        </div>
+    );
+
+    if (step === 140) return (
         <div className="space-y-5 animate-fade-in">
             <div>
                 <p className="text-xs text-[#FF4C00] font-bold uppercase tracking-widest mb-1">Passo 14 — Conta</p>

@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (onboardingRes.ok) {
                     const status = await onboardingRes.json();
                     if (!status.completed) {
-                        navigate('/onboarding');
+                        navigate('/register');
                         return { success: true };
                     }
                 }

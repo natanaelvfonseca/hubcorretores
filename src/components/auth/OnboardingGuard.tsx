@@ -35,7 +35,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
                     const data = await res.json();
 
 
-                    // If onboarding is NOT completed, we should redirect to /onboarding
+                    // If onboarding is NOT completed, we should redirect to /register
                     if (!data.completed) {
 
                         setShouldRedirect(true);
@@ -64,7 +64,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     }
 
     if (shouldRedirect) {
-        return <Navigate to="/onboarding" replace />;
+        return <Navigate to="/register" replace />;
     }
 
     return <>{children}</>;
