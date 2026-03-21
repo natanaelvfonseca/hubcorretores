@@ -759,17 +759,20 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                 <Rocket className="w-12 h-12 text-[#FF4C00]" />
             </div>
             <div>
-                <p className="text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-3">Revenue Operating System</p>
-                <h1 className="text-4xl font-bold text-gray-900 leading-tight">Bem-vindo à Nova Era<br />das Vendas no WhatsApp</h1>
-                <p className="text-gray-500 mt-4 text-lg leading-relaxed max-w-sm mx-auto">
-                    Você está a poucos passos de transformar seu WhatsApp em um sistema inteligente de vendas que atende, qualifica e recupera clientes automaticamente.
+                <p className="text-xs font-bold text-[#FF4C00] uppercase tracking-widest mb-3">Ativacao Kogna</p>
+                <h1 className="text-4xl font-bold text-gray-900 leading-tight">Seu WhatsApp estÃ¡ perdendo vendas todos os dias.</h1>
+                <p className="text-gray-500 mt-4 text-lg leading-relaxed max-w-md mx-auto">
+                    A Kogna transforma suas conversas em oportunidades reais, respondendo, qualificando e conduzindo clientes automaticamente.
                 </p>
             </div>
-            <div className="flex flex-col gap-3 max-w-xs mx-auto text-left mt-6">
+            <div className="max-w-sm mx-auto text-left">
+                <p className="text-sm font-semibold text-gray-900 mb-4">Em poucos minutos vocÃª vai:</p>
+            </div>
+            <div className="flex flex-col gap-3 max-w-sm mx-auto text-left">
                 {[
-                    { icon: Brain, t: 'Crie sua IA de vendas personalizada' },
-                    { icon: GitBranch, t: 'Monte um pipeline automático de oportunidades' },
-                    { icon: MessageSquare, t: 'Conecte ao WhatsApp e comece a vender' },
+                    { icon: Brain, t: 'Criar sua IA de atendimento e vendas' },
+                    { icon: GitBranch, t: 'Organizar seus leads sem esforco' },
+                    { icon: MessageSquare, t: 'Comecar a recuperar clientes perdidos' },
                 ].map(({ icon: Icon, t }) => (
                     <div key={t} className="flex items-center gap-3 text-sm text-gray-600">
                         <div className="w-7 h-7 rounded-lg bg-[#FF4C00]/15 border border-[#FF4C00]/20 flex items-center justify-center shrink-0">
@@ -779,8 +782,8 @@ function StepContent({ step, form, set, toggleArr, handleCurrencyChange, handleC
                     </div>
                 ))}
             </div>
-            <NextBtn onClick={() => setStepOneStage('account')} label="Ir para cadastro" />
-            <p className="text-xs text-gray-400">Sem cartão de crédito · Grátis para começar</p>
+            <NextBtn onClick={() => setStepOneStage('account')} label="AUMENTAR MINHAS VENDAS" />
+            <p className="text-xs text-gray-400 max-w-sm mx-auto">+3.000 conversas analisadas sabemos o que funciona por isso não cobramos mensalidade é gratuito!</p>
         </div>
     );
 
