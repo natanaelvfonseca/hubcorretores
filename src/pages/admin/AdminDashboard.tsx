@@ -115,6 +115,7 @@ export function AdminDashboard() {
     const [formError, setFormError] = useState('');
     const [formSuccess, setFormSuccess] = useState('');
     const [refreshingOnboarding, setRefreshingOnboarding] = useState(false);
+    const [resettingOnboarding, setResettingOnboarding] = useState(false);
 
     const apiBase = import.meta.env.VITE_API_BASE_URL || '';
     const showPeriodFilter = activeTab === 'overview' || activeTab === 'products' || activeTab === 'ads';
@@ -180,6 +181,33 @@ export function AdminDashboard() {
             console.error('Error refreshing onboarding analytics:', error);
         } finally {
             setRefreshingOnboarding(false);
+        }
+    };
+
+    const handleResetOnboarding = async () => {
+        if (!token || resettingOnboarding) return;
+
+        const confirmed = confirm('Isso vai apagar todas as metricas de tracking do onboarding visiveis no admin. Deseja continuar?');
+        if (!confirmed) return;
+
+        setResettingOnboarding(true);
+        try {
+            const res = await fetch(`${apiBase}/api/admin/onboarding-analytics`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao limpar metricas do onboarding.');
+            }
+
+            await fetchOnboardingAnalytics({ Authorization: `Bearer ${token}` });
+        } catch (error) {
+            console.error('Error resetting onboarding analytics:', error);
+            alert('Nao foi possivel limpar as metricas do onboarding.');
+        } finally {
+            setResettingOnboarding(false);
         }
     };
 
@@ -350,6 +378,8 @@ export function AdminDashboard() {
                             data={onboardingData}
                             onRefresh={handleRefreshOnboarding}
                             refreshing={refreshingOnboarding}
+                            onReset={handleResetOnboarding}
+                            resetting={resettingOnboarding}
                         />
                     )}
                     {activeTab === 'intelligence' && <ConversationIntelligenceTab />}

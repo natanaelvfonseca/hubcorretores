@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Trash2 } from 'lucide-react';
 
 function formatNumber(value?: number) {
     return Number(value || 0).toLocaleString('pt-BR');
@@ -51,11 +51,15 @@ const STEP_LABELS = [
 export function OnboardingTab({
     data,
     onRefresh,
+    onReset,
     refreshing = false,
+    resetting = false,
 }: {
     data: any;
     onRefresh?: () => void;
+    onReset?: () => void;
     refreshing?: boolean;
+    resetting?: boolean;
 }) {
     if (!data?.totals || !Array.isArray(data?.steps)) {
         return (
@@ -87,15 +91,27 @@ export function OnboardingTab({
                         <p className="mt-1 text-sm leading-6 text-text-muted">Use este botao para buscar os numeros mais recentes do funil sem dar refresh no admin inteiro.</p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onRefresh}
-                        disabled={!onRefresh || refreshing}
-                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition-all hover:-translate-y-0.5 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/15"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                        {refreshing ? 'Atualizando metricas' : 'Atualizar metricas'}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onReset}
+                            disabled={!onReset || resetting}
+                            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-5 text-sm font-semibold text-rose-700 transition-all hover:-translate-y-0.5 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:bg-rose-500/15"
+                        >
+                            <Trash2 className={`h-4 w-4 ${resetting ? 'animate-pulse' : ''}`} />
+                            {resetting ? 'Limpando metricas' : 'Limpar metricas'}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={onRefresh}
+                            disabled={!onRefresh || refreshing}
+                            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition-all hover:-translate-y-0.5 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/15"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                            {refreshing ? 'Atualizando metricas' : 'Atualizar metricas'}
+                        </button>
+                    </div>
                 </div>
             </section>
 

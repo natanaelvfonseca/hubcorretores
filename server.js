@@ -9077,6 +9077,27 @@ app.get("/api/admin/onboarding-analytics", verifyJWT, verifyAdmin, async (req, r
   }
 });
 
+app.delete("/api/admin/onboarding-analytics", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    await ensureOnboardingAnalyticsTable();
+
+    const result = await pool.query(
+      `DELETE FROM onboarding_progress_analytics
+       WHERE onboarding_version = $1`,
+      [ONBOARDING_ANALYTICS_VERSION],
+    );
+
+    res.json({
+      success: true,
+      deleted_rows: Number(result.rowCount || 0),
+      onboarding_version: ONBOARDING_ANALYTICS_VERSION,
+    });
+  } catch (err) {
+    log("Onboarding analytics reset error: " + err.toString());
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Admin: Update User Koins
 app.patch(
   "/api/admin/users/:id/koins",
