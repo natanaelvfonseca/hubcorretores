@@ -1,3 +1,5 @@
+import { RefreshCw } from 'lucide-react';
+
 function formatNumber(value?: number) {
     return Number(value || 0).toLocaleString('pt-BR');
 }
@@ -45,7 +47,15 @@ const STEP_LABELS = [
     'Concluido',
 ];
 
-export function OnboardingTab({ data }: { data: any }) {
+export function OnboardingTab({
+    data,
+    onRefresh,
+    refreshing = false,
+}: {
+    data: any;
+    onRefresh?: () => void;
+    refreshing?: boolean;
+}) {
     if (!data?.totals || !Array.isArray(data?.steps)) {
         return (
             <div className="flex min-h-[380px] items-center justify-center rounded-[32px] border border-black/[0.06] bg-white/75 dark:border-white/[0.08] dark:bg-white/[0.04]">
@@ -68,6 +78,26 @@ export function OnboardingTab({ data }: { data: any }) {
 
     return (
         <div className="space-y-6">
+            <section className="rounded-[32px] border border-black/[0.06] bg-white/80 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-white/[0.04]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">Atualizacao manual</p>
+                        <h3 className="mt-2 text-xl font-semibold tracking-tight text-text-primary">Metricas do onboarding sem recarregar a pagina</h3>
+                        <p className="mt-1 text-sm leading-6 text-text-muted">Use este botao para buscar os numeros mais recentes do funil sem dar refresh no admin inteiro.</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        disabled={!onRefresh || refreshing}
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition-all hover:-translate-y-0.5 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/15"
+                    >
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        {refreshing ? 'Atualizando metricas' : 'Atualizar metricas'}
+                    </button>
+                </div>
+            </section>
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                     label="Iniciaram"

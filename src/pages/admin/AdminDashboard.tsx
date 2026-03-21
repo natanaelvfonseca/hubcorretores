@@ -114,6 +114,7 @@ export function AdminDashboard() {
     const [newUserForm, setNewUserForm] = useState({ email: '', name: '', role: 'user' });
     const [formError, setFormError] = useState('');
     const [formSuccess, setFormSuccess] = useState('');
+    const [refreshingOnboarding, setRefreshingOnboarding] = useState(false);
 
     const apiBase = import.meta.env.VITE_API_BASE_URL || '';
     const showPeriodFilter = activeTab === 'overview' || activeTab === 'products' || activeTab === 'ads';
@@ -127,6 +128,12 @@ export function AdminDashboard() {
         setFormError('');
         setFormSuccess('');
         setNewUserForm({ email: '', name: '', role: 'user' });
+    };
+
+    const fetchOnboardingAnalytics = async (headers: HeadersInit) => {
+        const res = await fetch(`${apiBase}/api/admin/onboarding-analytics`, { headers });
+        const data = await res.json();
+        setOnboardingData(data);
     };
 
     const fetchData = async () => {
@@ -151,9 +158,7 @@ export function AdminDashboard() {
 
             if (activeTab === 'onboarding') {
                 requests.push(
-                    fetch(`${apiBase}/api/admin/onboarding-analytics`, { headers })
-                        .then((res) => res.json())
-                        .then((data) => setOnboardingData(data))
+                    fetchOnboardingAnalytics(headers)
                 );
             }
 
@@ -162,6 +167,19 @@ export function AdminDashboard() {
             console.error('Error fetching admin data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRefreshOnboarding = async () => {
+        if (!token || refreshingOnboarding) return;
+
+        setRefreshingOnboarding(true);
+        try {
+            await fetchOnboardingAnalytics({ Authorization: `Bearer ${token}` });
+        } catch (error) {
+            console.error('Error refreshing onboarding analytics:', error);
+        } finally {
+            setRefreshingOnboarding(false);
         }
     };
 
@@ -327,7 +345,13 @@ export function AdminDashboard() {
                     {activeTab === 'overview' && <OverviewTab data={strategicData} />}
                     {activeTab === 'products' && <ProductsTab data={strategicData} />}
                     {activeTab === 'ads' && <AdsTab data={strategicData} />}
-                    {activeTab === 'onboarding' && <OnboardingTab data={onboardingData} />}
+                    {activeTab === 'onboarding' && (
+                        <OnboardingTab
+                            data={onboardingData}
+                            onRefresh={handleRefreshOnboarding}
+                            refreshing={refreshingOnboarding}
+                        />
+                    )}
                     {activeTab === 'intelligence' && <ConversationIntelligenceTab />}
 
                     {activeTab === 'users' && (
