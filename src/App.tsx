@@ -133,13 +133,11 @@ function App() {
                                         <AdminAutomations />
                                     </AdminRoute>
                                 } />
-                                {import.meta.env.DEV && (
-                                    <Route path="admin/onboarding-video-mvp" element={
-                                        <AdminRoute>
-                                            <VideoOnboardingMvp />
-                                        </AdminRoute>
-                                    } />
-                                )}
+                                <Route path="admin/video" element={
+                                    <AdminRoute>
+                                        <VideoOnboardingMvp />
+                                    </AdminRoute>
+                                } />
 
                                 <Route path="checkout" element={<Checkout />} />
                                 <Route path="checkout/success" element={<CheckoutSuccess />} />
