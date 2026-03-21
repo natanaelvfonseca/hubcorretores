@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Login } from './pages/auth/Login';
 import { RevenueMetrics } from './pages/dashboard/RevenueMetrics';
 import { Onboarding } from './pages/onboarding/Onboarding';
@@ -37,10 +38,37 @@ import { VideoOnboardingMvp } from './pages/admin/VideoOnboardingMvp';
 import { ReferralRedirect } from './pages/partners/ReferralRedirect';
 import { GuidedTourProvider } from './components/guided-tour/GuidedTourProvider';
 
+declare global {
+    interface Window {
+        fbq?: (...args: unknown[]) => void;
+    }
+}
+
+function MetaPixelTracker() {
+    const location = useLocation();
+    const hasTrackedInitialPageView = useRef(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof window.fbq !== 'function') {
+            return;
+        }
+
+        if (!hasTrackedInitialPageView.current) {
+            hasTrackedInitialPageView.current = true;
+            return;
+        }
+
+        window.fbq('track', 'PageView');
+    }, [location.pathname, location.search, location.hash]);
+
+    return null;
+}
+
 function App() {
     return (
         <ThemeProvider defaultTheme="light" storageKey="kogna-theme-v2">
             <BrowserRouter>
+                <MetaPixelTracker />
                 <AuthProvider>
                     <NotificationProvider>
                         <Routes>
