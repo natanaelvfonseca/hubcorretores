@@ -14,7 +14,7 @@ import bcrypt from "bcryptjs";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import cron from "node-cron";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -5487,7 +5487,7 @@ app.post("/api/login", async (req, res) => {
 const onboardingPreviewLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 25,
-  keyGenerator: (req) => req.body?.session_id || req.ip,
+  keyGenerator: (req) => req.body?.session_id || ipKeyGenerator(req.ip || ""),
   message: { error: 'Limite de mensagens de teste atingido.' }
 });
 
