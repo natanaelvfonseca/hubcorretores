@@ -3,9 +3,8 @@
 
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kogna IA Sales</title>
+    <title>HUB Corretores do Litoral SC</title>
     <!-- Meta Pixel Code -->
     <script>
         !function(f, b, e, v, n, t, s) {
@@ -28,7 +27,83 @@
 <body>
     <noscript><img height="1" width="1" style="display:none"
             src="https://www.facebook.com/tr?id=1739400967037491&ev=PageView&noscript=1" /></noscript>
-    <div id="root"></div>
+    <div id="root">
+        <style>
+            .hub-loading {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 32px;
+                background:
+                    radial-gradient(circle at top left, rgba(20, 184, 166, 0.12), transparent 30%),
+                    radial-gradient(circle at bottom right, rgba(216, 137, 60, 0.14), transparent 28%),
+                    linear-gradient(180deg, #f5f8fa 0%, #edf4f5 100%);
+                color: #0c2130;
+                font-family: Manrope, Arial, sans-serif;
+            }
+
+            .hub-loading__card {
+                max-width: 720px;
+                border: 1px solid rgba(12, 33, 48, 0.08);
+                border-radius: 28px;
+                background: rgba(255, 255, 255, 0.82);
+                box-shadow: 0 24px 70px rgba(8, 23, 38, 0.12);
+                padding: 32px;
+                backdrop-filter: blur(16px);
+            }
+
+            .hub-loading__eyebrow {
+                margin: 0 0 12px;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.32em;
+                text-transform: uppercase;
+                color: #0f7b8c;
+            }
+
+            .hub-loading__title {
+                margin: 0;
+                font-size: clamp(28px, 4vw, 42px);
+                line-height: 1.05;
+            }
+
+            .hub-loading__text {
+                margin: 16px 0 0;
+                font-size: 15px;
+                line-height: 1.8;
+                color: #4b6170;
+            }
+
+            .hub-loading__code {
+                display: inline-block;
+                margin-top: 18px;
+                border-radius: 999px;
+                background: #062133;
+                color: #fff;
+                padding: 10px 16px;
+                font-size: 14px;
+                font-weight: 700;
+            }
+        </style>
+        <div class="hub-loading">
+            <div class="hub-loading__card">
+                <p class="hub-loading__eyebrow">HUB Corretores do Litoral SC</p>
+                <h1 class="hub-loading__title">Este projeto precisa ser aberto pelo Vite.</h1>
+                <p class="hub-loading__text">
+                    Se você abriu com Live Server ou outro servidor estático, a aplicação React em
+                    <code>tsx</code> não será compilada e a página pode ficar em branco.
+                </p>
+                <p class="hub-loading__text">
+                    Inicie o projeto com:
+                </p>
+                <div class="hub-loading__code">npm run dev</div>
+                <p class="hub-loading__text">
+                    Depois acesse <strong>http://127.0.0.1:5500</strong>.
+                </p>
+            </div>
+        </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>
 

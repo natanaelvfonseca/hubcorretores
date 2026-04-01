@@ -13,9 +13,19 @@ export default {
         surfaceHover: 'rgb(var(--color-surface-hover) / <alpha-value>)',
         sidebar: 'rgb(var(--color-sidebar) / <alpha-value>)',
         primary: {
-          DEFAULT: '#F5793B',
-          light: '#F79A6B',
-          dark: '#E05D22',
+          DEFAULT: '#0F7B8C',
+          light: '#1AA0A4',
+          dark: '#0A4B66',
+        },
+        accent: {
+          DEFAULT: '#D8893C',
+          soft: '#F7E6D2',
+          dark: '#A66328',
+        },
+        marine: {
+          DEFAULT: '#062133',
+          deep: '#04131F',
+          mist: '#E5F4F4',
         },
         text: {
           primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
@@ -25,15 +35,15 @@ export default {
         border: 'rgb(var(--color-border) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['Open Sans', 'sans-serif'],
-        display: ['Exo 2', 'sans-serif'],
+        sans: ['Manrope', 'sans-serif'],
+        display: ['Marcellus', 'serif'],
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #F5793B 0%, #F79A6B 100%)',
-        'gradient-dark': 'linear-gradient(180deg, #18181B 0%, #0C0C0C 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #0F7B8C 0%, #1AA0A4 52%, #0A4B66 100%)',
+        'gradient-coast': 'linear-gradient(135deg, #062133 0%, #0B3A55 48%, #D8893C 100%)',
       },
       boxShadow: {
-        'glow-primary': '0 0 20px rgba(245, 121, 59, 0.3)',
+        'glow-primary': '0 0 24px rgba(15, 118, 110, 0.24)',
       },
       animation: {
         blob: "blob 7s infinite",

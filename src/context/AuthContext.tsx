@@ -71,24 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem('kogna_user', JSON.stringify(data.user));
             setToken(data.token);
             setUser(data.user);
-
-
-            // Check Onboarding Status
-            try {
-                const onboardingRes = await fetch(`${apiBase}/api/onboarding/status`, {
-                    headers: { 'Authorization': `Bearer ${data.token}` }
-                });
-                if (onboardingRes.ok) {
-                    const status = await onboardingRes.json();
-                    if (!status.completed) {
-                        navigate('/register');
-                        return { success: true };
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to check onboarding status', e);
-            }
-
             navigate('/dashboard');
             return { success: true };
 
@@ -134,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(data.token);
             setUser(data.user);
 
-            navigate('/onboarding');
+            navigate('/dashboard');
             return { success: true };
 
         } catch (err) {

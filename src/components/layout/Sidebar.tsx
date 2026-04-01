@@ -1,44 +1,13 @@
 import {
-    MessageSquare,
-    BrainCircuit,
-    MessagesSquare,
-    Users,
-    UserCheck,
-    UserCog,
-    CalendarDays,
-    Zap,
-    Settings,
     ChevronLeft,
     ChevronRight,
     LogOut,
-    Shield,
-    Package,
-    RotateCcw,
-    BarChart2,
-    Bell,
-    MonitorPlay
+    ShieldCheck,
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { hubNavSections, hubModuleMap } from '../../data/hubPlatform';
 import { BrandLogo } from '../branding/BrandLogo';
-import { useGuidedTour } from '../guided-tour/GuidedTourProvider';
-
-const menuItems = [
-    { icon: BarChart2, label: 'Métricas de Receita', path: '/dashboard/revenue-metrics' },
-    { icon: Users, label: 'Funil de Vendas', path: '/crm' },
-    { icon: BrainCircuit, label: 'Agentes de IA', path: '/brain' },
-    { icon: Package, label: 'Produtos', path: '/products' },
-    { icon: MessageSquare, label: 'Canais de Comunicação', path: '/whatsapp' },
-    { icon: MessagesSquare, label: 'Live Chat', path: '/live-chat' },
-    { icon: UserCheck, label: 'Clientes', path: '/clients' },
-    { icon: RotateCcw, label: 'Recuperação', path: '/recovery' },
-    { icon: CalendarDays, label: 'Agenda', path: '/agenda' },
-    { icon: UserCog, label: 'Vendedores', path: '/vendedores' },
-    { icon: Zap, label: 'Ativar Koins', path: '/billing' },
-    { icon: Settings, label: 'Configurações', path: '/settings' },
-    { icon: Shield, label: 'Parceiros', path: '/partners' },
-];
 
 interface SidebarProps {
     collapsed: boolean;
@@ -47,276 +16,174 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
-    const location = useLocation();
     const { user, logout } = useAuth();
-    const { isSidebarLocked } = useGuidedTour();
-    const [dropdownOpen, setDropdownOpen] = useState(false);
-    const dropdownRef = useRef<HTMLDivElement>(null);
-
-
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setDropdownOpen(false);
-            }
-        }
-
-        if (dropdownOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
-        }
-    }, [dropdownOpen]);
-
-    const handleLogout = () => {
-        setDropdownOpen(false);
-        logout();
-    };
-
-    // Get user initials
     const userInitials = user?.name
-        ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-        : user?.email?.slice(0, 2).toUpperCase() || 'U';
+        ? user.name
+            .split(' ')
+            .map((part) => part[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase()
+        : 'HC';
 
     return (
-        <aside className={`h-screen bg-sidebar border-r border-border/20 transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'} flex flex-col fixed left-0 top-0 z-50 shadow-2xl overflow-hidden`} data-tour-id="tour-sidebar-shell">
-            <div className="h-16 flex items-center justify-between px-6 border-b border-border/10 bg-sidebar transition-colors duration-300">
+        <aside
+            className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(3,18,29,0.98),rgba(6,38,57,0.98))] shadow-[0_24px_70px_rgba(4,19,31,0.26)] transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'
+                }`}
+        >
+            <div className="border-b border-white/10 px-5 py-5">
+                <div className="flex items-center justify-between gap-3">
+                    {!collapsed && (
+                        <BrandLogo
+                            className="text-white"
+                            markWidth={28}
+                            markHeight={36}
+                            wordSize={28}
+                        />
+                    )}
+
+                    {isMobile && (
+                        <button
+                            onClick={() => setCollapsed(!collapsed)}
+                            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.08] text-white/[0.76] transition hover:bg-white/[0.12]"
+                            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+                        >
+                            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+                        </button>
+                    )}
+                </div>
+
                 {!collapsed && (
-                    <BrandLogo
-                        className="animate-fade-in text-text-primary"
-                        markWidth={26}
-                        markHeight={34}
-                        wordSize={31}
-                    />
-                )}
-                {isMobile && (
-                    <button
-                        onClick={() => {
-                            if (!isSidebarLocked) {
-                                setCollapsed(!collapsed);
-                            }
-                        }}
-                        className="p-2 rounded-lg hover:bg-surfaceHover text-text-secondary hover:text-primary transition-all ml-auto hover:shadow-lg hover:shadow-primary/5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={isSidebarLocked}
-                    >
-                        {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-                    </button>
+                    <p className="mt-4 text-xs leading-6 text-white/55">
+                        Ecossistema imobiliário regional com curadoria, networking e negócios organizados.
+                    </p>
                 )}
             </div>
 
-            <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6 px-3 space-y-1.5 scrollbar-hide" data-tour-id="tour-sidebar">
-                {menuItems.map((item) => {
-                    const isActive = location.pathname === item.path;
-                    return (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-200 group relative
-                ${isActive
-                                    ? 'bg-primary/10 text-primary font-semibold'
-                                    : 'text-text-secondary hover:bg-surfaceHover hover:text-text-primary font-medium'
-                                }
-              `}
-                        >
-                            {isActive && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full shadow-glow-primary"></div>
-                            )}
-                            <item.icon
-                                size={20}
-                                className={`transition-colors duration-200 ${isActive ? 'text-primary' : 'group-hover:text-text-primary'}`}
-                                strokeWidth={isActive ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">{item.label}</span>}
+            <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5 scrollbar-hide">
+                {hubNavSections.map((section) => (
+                    <div key={section.title}>
+                        {!collapsed && (
+                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/38">
+                                {section.title}
+                            </p>
+                        )}
 
-                            {/* Tooltip for collapsed state */}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-surfaceHover border border-border/50 px-3 py-1.5 rounded-md text-sm text-text-primary opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-xl">
-                                    {item.label}
-                                </div>
-                            )}
-                        </Link>
-                    );
-                })}
+                        <div className="space-y-1.5">
+                            {section.items.map((itemId) => {
+                                const item = hubModuleMap[itemId];
+                                const Icon = item.icon;
 
-                {/* Admin Management Section */}
+                                return (
+                                    <NavLink
+                                        key={item.id}
+                                        to={item.path}
+                                        className={({ isActive }) =>
+                                            `group relative flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all ${isActive
+                                                ? 'bg-white text-[#062133] shadow-[0_16px_32px_rgba(255,255,255,0.14)]'
+                                                : 'text-white/[0.72] hover:bg-white/10 hover:text-white'
+                                            }`
+                                        }
+                                    >
+                                        {({ isActive }) => (
+                                            <>
+                                                <span
+                                                    className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-[#E8F3F4] text-primary' : 'bg-white/[0.08] text-white/[0.72] group-hover:bg-white/[0.12] group-hover:text-white'
+                                                        }`}
+                                                >
+                                                    <Icon size={18} />
+                                                </span>
+
+                                                {!collapsed && (
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate font-semibold">{item.navLabel}</p>
+                                                        <p className={`truncate text-[11px] ${isActive ? 'text-[#406173]' : 'text-white/46'}`}>
+                                                            {item.eyebrow}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {collapsed && (
+                                                    <div className="pointer-events-none absolute left-[4.6rem] top-1/2 z-50 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-[#062133] px-3 py-1 text-xs font-semibold text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                                                        {item.navLabel}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </NavLink>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+
                 {user?.role === 'admin' && (
-                    <div className="pt-4 mt-4 border-t border-purple-500/20">
-                        <Link
+                    <div className="pt-2">
+                        {!collapsed && (
+                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/38">
+                                Gestão
+                            </p>
+                        )}
+
+                        <NavLink
                             to="/admin/dashboard"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative
-                                ${location.pathname === '/admin/dashboard'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
+                            className={({ isActive }) =>
+                                `group relative flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all ${isActive
+                                    ? 'bg-[#F4E7D8] text-[#7A491A]'
+                                    : 'text-[#F6D7B5] hover:bg-[#D8893C]/12 hover:text-[#FFD7AE]'
+                                }`
+                            }
                         >
-                            {location.pathname === '/admin/dashboard' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
+                            {({ isActive }) => (
+                                <>
+                                    <span
+                                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-white/80 text-[#A66328]' : 'bg-[#D8893C]/[0.14] text-[#F6D7B5]'
+                                            }`}
+                                    >
+                                        <ShieldCheck size={18} />
+                                    </span>
+                                    {!collapsed && (
+                                        <div>
+                                            <p className="font-semibold">Painel administrativo</p>
+                                            <p className={`text-[11px] ${isActive ? 'text-[#A36A3A]' : 'text-[#F6D7B5]/70'}`}>
+                                                Curadoria, parceiros e governança
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
                             )}
-                            <Shield
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/dashboard' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/dashboard' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Gestão Kogna</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Gestão Kogna
-                                </div>
-                            )}
-                        </Link>
-                        <Link
-                            to="/admin/partners"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative mt-1
-                                ${location.pathname === '/admin/partners'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
-                        >
-                            {location.pathname === '/admin/partners' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
-                            )}
-                            <Users
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/partners' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/partners' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Gestão Parceiros</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Gestão Parceiros
-                                </div>
-                            )}
-                        </Link>
-                        <Link
-                            to="/admin/products"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative mt-1
-                                ${location.pathname === '/admin/products'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
-                        >
-                            {location.pathname === '/admin/products' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
-                            )}
-                            <Package
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/products' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/products' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Gestão Produtos</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Gestão Produtos
-                                </div>
-                            )}
-                        </Link>
-                        <Link
-                            to="/admin/automations"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative mt-1
-                                ${location.pathname === '/admin/automations'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
-                        >
-                            {location.pathname === '/admin/automations' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
-                            )}
-                            <Bell
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/automations' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/automations' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Automações</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Automações
-                                </div>
-                            )}
-                        </Link>
-                        <Link
-                            to="/admin/video"
-                            className={`flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-300 group relative mt-1
-                                ${location.pathname === '/admin/video'
-                                    ? 'bg-purple-500/10 text-amber-500 font-semibold shadow-inner shadow-purple-500/5'
-                                    : 'text-purple-400 hover:bg-purple-500/10 hover:text-amber-500 font-medium'
-                                }
-                            `}
-                        >
-                            {location.pathname === '/admin/video' && (
-                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-amber-500 rounded-r-full shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
-                            )}
-                            <MonitorPlay
-                                size={20}
-                                className={`transition-all duration-300 ${location.pathname === '/admin/video' ? 'text-amber-500 shadow-glow' : 'group-hover:text-amber-500'}`}
-                                strokeWidth={location.pathname === '/admin/video' ? 2.5 : 2}
-                            />
-                            {!collapsed && <span className="text-sm tracking-wide">Video</span>}
-                            {collapsed && (
-                                <div className="absolute left-16 top-1/2 -translate-y-1/2 bg-[#111] border border-purple-500/50 px-3 py-1.5 rounded-md text-sm text-amber-500 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-2xl">
-                                    Video
-                                </div>
-                            )}
-                        </Link>
+                        </NavLink>
                     </div>
                 )}
             </nav>
 
-            <div className={`${collapsed ? 'p-2' : 'p-4'} bg-sidebar border-t border-border/10 transition-all duration-300 relative`} ref={dropdownRef}>
-                <div
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className={`flex items-center gap-3 p-2 rounded-xl hover:bg-surfaceHover transition-colors cursor-pointer group ${collapsed ? 'justify-center' : ''}`}
-                >
-                    <div className="relative">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-xs font-bold text-white border border-white/10 shadow-lg group-hover:border-primary/50 transition-colors">
+            <div className="border-t border-white/10 p-4">
+                <div className={`rounded-[26px] border border-white/10 bg-white/[0.07] p-3 ${collapsed ? 'space-y-3' : ''}`}>
+                    <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#5EEAD4] via-[#1AA0A4] to-[#0A4B66] text-sm font-bold text-white shadow-[0_16px_32px_rgba(15,118,110,0.3)]">
                             {userInitials}
                         </div>
-                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-background"></div>
+
+                        {!collapsed && (
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-white">{user?.name || 'Membro HUB'}</p>
+                                <p className="truncate text-xs text-white/54">
+                                    {user?.role === 'admin' ? 'Gestão da plataforma' : 'Membro da comunidade'}
+                                </p>
+                            </div>
+                        )}
                     </div>
-                    {!collapsed && (
-                        <div className="flex flex-col overflow-hidden flex-1">
-                            <span className="text-sm font-semibold text-text-primary truncate group-hover:text-primary transition-colors">
-                                {user?.name || 'Usuário'}
-                            </span>
-                            <span className="text-xs text-text-muted truncate">{user?.email || 'user@kogna.co'}</span>
-                        </div>
-                    )}
+
+                    <button
+                        onClick={logout}
+                        className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/[0.12] text-sm font-semibold text-white/[0.76] transition hover:bg-white/10 hover:text-white ${collapsed ? 'w-full' : 'mt-3 w-full'
+                            }`}
+                    >
+                        <LogOut size={16} />
+                        {!collapsed && 'Encerrar sessão'}
+                    </button>
                 </div>
-
-                {/* Dropdown Menu */}
-                {dropdownOpen && !collapsed && (
-                    <div className="absolute bottom-full left-4 right-4 mb-2 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden animate-fade-in">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-surfaceHover hover:text-red-500 transition-colors group"
-                        >
-                            <LogOut size={18} className="group-hover:text-red-500" />
-                            <span className="font-medium">Sair da conta</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* Tooltip for collapsed state */}
-                {collapsed && dropdownOpen && (
-                    <div className="absolute left-full bottom-2 ml-2 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden animate-fade-in min-w-[180px]">
-                        <div className="px-4 py-2 border-b border-border/50">
-                            <p className="text-sm font-semibold text-text-primary truncate">{user?.name || 'Usuário'}</p>
-                            <p className="text-xs text-text-muted truncate">{user?.email}</p>
-                        </div>
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-text-secondary hover:bg-surfaceHover hover:text-red-500 transition-colors group"
-                        >
-                            <LogOut size={18} className="group-hover:text-red-500" />
-                            <span className="font-medium">Sair da conta</span>
-                        </button>
-                    </div>
-                )}
             </div>
-        </aside >
+        </aside>
     );
 }

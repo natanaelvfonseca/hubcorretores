@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
-import { useGuidedTour } from '../guided-tour/GuidedTourProvider';
 
 const MOBILE_MEDIA_QUERY = '(max-width: 1023px)';
 
@@ -16,7 +15,6 @@ export function AppShell() {
         return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
     });
     const location = useLocation();
-    const { isSidebarLocked } = useGuidedTour();
     const isFullScreenPage = location.pathname.includes('/live-chat') || location.pathname.includes('/kanban'); // Future proofing
 
     useEffect(() => {
@@ -36,7 +34,7 @@ export function AppShell() {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
 
-    const effectiveCollapsed = isSidebarLocked ? false : (isMobile ? sidebarCollapsed : false);
+    const effectiveCollapsed = isMobile ? sidebarCollapsed : false;
     const contentMarginClass = isMobile
         ? (effectiveCollapsed ? 'ml-20' : 'ml-72')
         : 'ml-72';
@@ -61,8 +59,8 @@ export function AppShell() {
 
             {/* Background Glow Effect */}
             <div className="absolute inset-0 pointer-events-none z-0">
-                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl opacity-50"></div>
-                <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-3xl opacity-30"></div>
+                <div className="absolute top-[-10%] right-[-5%] h-[520px] w-[520px] rounded-full bg-primary/10 blur-3xl opacity-60"></div>
+                <div className="absolute bottom-[-10%] left-[-5%] h-[480px] w-[480px] rounded-full bg-accent/10 blur-3xl opacity-50"></div>
             </div>
         </div>
     );

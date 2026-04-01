@@ -1,87 +1,87 @@
-import { Lightbulb, User } from 'lucide-react';
+import { BellRing, MoonStar, SunMedium, UserCircle2 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
-import { NotificationDropdown } from '../notification/NotificationDropdown';
 import { useAuth } from '../../context/AuthContext';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { getHubModuleByPath } from '../../data/hubPlatform';
 
 export function Topbar() {
     const { theme, toggleTheme } = useTheme();
-    const { token } = useAuth();
-    const [koins, setKoins] = useState<number | null>(null);
+    const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    useEffect(() => {
-        if (!token) return;
-
-        const fetchCredits = async () => {
-            try {
-                const apiBase = ''; // Relative path
-                const res = await fetch(`${apiBase}/api/credits`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    setKoins(data.koins_balance);
-                }
-            } catch (error) {
-                console.error('Failed to fetch credits', error);
-            }
-        };
-
-        fetchCredits();
-
-        // Polling every 30s to keep it somewhat fresh
-        const interval = setInterval(fetchCredits, 30000);
-        return () => clearInterval(interval);
-    }, [token]);
+    const currentModule = getHubModuleByPath(location.pathname);
+    const formattedDate = useMemo(
+        () =>
+            new Intl.DateTimeFormat('pt-BR', {
+                day: '2-digit',
+                month: 'long',
+                weekday: 'long',
+            }).format(new Date()),
+        [],
+    );
 
     return (
-        <header className="h-16 bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-40 px-6 flex items-center justify-between transition-colors duration-300" data-tour-id="tour-topbar">
-            <div className="flex items-center gap-4 flex-1">
-                {/* Search removed as requested */}
-            </div>
-
-            <div className="flex items-center gap-4">
-                {/* Koins Display */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="10" className="fill-yellow-500 text-yellow-600 dark:text-yellow-400" stroke="currentColor" strokeWidth="1.5" />
-                        <text x="12" y="16.5" textAnchor="middle" fill="currentColor" fontSize="16" fontWeight="bold" className="text-orange-600">K</text>
-                    </svg>
-                    <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">
-                        {koins !== null ? `${koins} Koins` : '...'}
-                    </span>
+        <header className="sticky top-0 z-40 border-b border-border/70 bg-background/82 px-6 py-4 backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-primary/75">
+                        Ecossistema oficial do litoral catarinense
+                    </p>
+                    <div className="mt-2 flex items-center gap-3">
+                        <h1 className="truncate text-2xl font-display text-text-primary">
+                            {currentModule?.navLabel || 'HUB Corretores'}
+                        </h1>
+                        <span className="hidden rounded-full border border-border/80 bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-text-secondary md:inline-flex">
+                            {formattedDate}
+                        </span>
+                    </div>
+                    <p className="mt-2 max-w-2xl truncate text-sm text-text-secondary">
+                        {currentModule?.summary || 'Plataforma proprietária para networking, negócios, vantagens e governança da comunidade.'}
+                    </p>
                 </div>
 
-                <div className="w-px h-6 bg-border mx-1"></div>
+                <div className="flex items-center gap-3">
+                    <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-surface px-4 py-2 text-sm text-text-secondary xl:flex">
+                        <span className="font-semibold text-text-primary">12.800+</span>
+                        profissionais conectados
+                    </div>
 
-                <button
-                    onClick={toggleTheme}
-                    className="p-2 transition-all duration-300 hover:scale-105"
-                    title={theme === 'dark' ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-                >
-                    <Lightbulb
-                        size={22}
-                        className={`transition-all duration-300 ${theme === 'dark'
-                            ? 'text-primary fill-transparent'
-                            : 'text-yellow-500 fill-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]'
-                            }`}
-                        strokeWidth={2}
-                    />
-                </button>
-                <div className="w-px h-6 bg-border mx-1"></div>
+                    <Link
+                        to="/notificacoes"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border/80 bg-surface text-text-secondary transition hover:border-primary/30 hover:text-primary"
+                        title="Central de notificações"
+                    >
+                        <BellRing size={18} />
+                    </Link>
 
-                <NotificationDropdown />
+                    <button
+                        onClick={toggleTheme}
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border/80 bg-surface text-text-secondary transition hover:border-primary/30 hover:text-primary"
+                        title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                    >
+                        {theme === 'dark' ? <SunMedium size={18} /> : <MoonStar size={18} />}
+                    </button>
 
-                <div className="w-px h-6 bg-border mx-1"></div>
-                <button
-                    onClick={() => navigate('/settings?tab=profile')}
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-primary to-primary-light text-white border border-white/10 hover:scale-110 hover:shadow-lg transition-all active:scale-95"
-                    title="Meu Perfil"
-                >
-                    <User size={18} />
-                </button>
+                    <button
+                        onClick={() => navigate('/perfil')}
+                        className="inline-flex items-center gap-3 rounded-2xl border border-border/80 bg-surface px-3 py-2 transition hover:border-primary/30"
+                        title="Abrir perfil"
+                    >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <UserCircle2 size={16} />
+                        </span>
+                        <span className="hidden text-left md:block">
+                            <span className="block text-sm font-semibold text-text-primary">
+                                {user?.name || 'Membro HUB'}
+                            </span>
+                            <span className="block text-[11px] text-text-secondary">
+                                {user?.role === 'admin' ? 'Gestão da plataforma' : 'Comunidade HUB'}
+                            </span>
+                        </span>
+                    </button>
+                </div>
             </div>
         </header>
     );
