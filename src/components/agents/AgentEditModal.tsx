@@ -96,7 +96,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     return (
         <input
             {...props}
-            className={`w-full rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-[#171718] dark:text-white ${props.className || ''}`}
+            className={`w-full rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80 dark:text-white ${props.className || ''}`}
         />
     );
 }
@@ -105,7 +105,7 @@ function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
     return (
         <textarea
             {...props}
-            className={`w-full rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-[#171718] dark:text-white ${props.className || ''}`}
+            className={`w-full rounded-2xl border border-black/[0.08] bg-white px-4 py-3 text-sm leading-6 text-gray-900 outline-none transition focus:border-primary/50 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80 dark:text-white ${props.className || ''}`}
         />
     );
 }
@@ -122,7 +122,7 @@ function Surface({
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.92] p-5 shadow-[0_16px_44px_rgba(15,23,42,0.06)] dark:border-white/[0.08] dark:bg-[#111111]">
+        <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.92] p-5 shadow-[0_16px_44px_rgba(15,23,42,0.06)] dark:border-border/70 dark:bg-surface/92">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
             <h3 className="mt-2 text-xl font-display font-bold tracking-tight text-gray-900 dark:text-white">{title}</h3>
             <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">{description}</p>
@@ -143,7 +143,7 @@ function ObjectionEditor({
     onRemove: () => void;
 }) {
     return (
-        <div className="rounded-[26px] border border-black/[0.06] bg-[#FAFAFA] p-4 dark:border-white/[0.08] dark:bg-[#161618]">
+        <div className="rounded-[26px] border border-black/[0.06] bg-[#FAFAFA] p-4 dark:border-border/70 dark:bg-background/80">
             <div className="mb-4 flex items-center justify-between gap-4">
                 <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Objecao {index + 1}</p>
@@ -153,7 +153,7 @@ function ObjectionEditor({
                     <button
                         type="button"
                         onClick={() => onChange({ ...item, is_active: !item.is_active })}
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${item.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300'}`}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${item.is_active ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-border/70 dark:bg-background/80 dark:text-gray-300'}`}
                     >
                         {item.is_active ? 'Ativa' : 'Inativa'}
                     </button>
@@ -358,12 +358,12 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
 
     return (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-md">
-            <div className="relative flex h-[min(88vh,920px)] w-full max-w-7xl overflow-hidden rounded-[32px] border border-black/[0.06] bg-[#F7F7F8] shadow-[0_28px_90px_rgba(15,23,42,0.26)] dark:border-white/[0.08] dark:bg-[#0F0F10] dark:shadow-[0_28px_90px_rgba(0,0,0,0.56)]">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.05),_transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.16),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_28%)]" />
+            <div className="relative flex h-[min(88vh,920px)] w-full max-w-7xl overflow-hidden rounded-[32px] border border-black/[0.06] bg-[#F7F7F8] shadow-[0_28px_90px_rgba(15,23,42,0.26)] dark:border-border/70 dark:bg-surface/95 dark:shadow-[0_28px_90px_rgba(4,19,31,0.34)]">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.14),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(6,33,51,0.08),_transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.18),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.04),_transparent_28%)]" />
 
-                <aside className="relative z-10 hidden w-[300px] flex-none border-r border-black/[0.06] bg-white/[0.92] px-5 py-5 dark:border-white/[0.08] dark:bg-[#121212] lg:flex lg:flex-col">
-                    <div className="rounded-[28px] border border-black/[0.06] bg-white/[0.75] p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.03]">
-                        <div className="inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.24)]">
+                <aside className="relative z-10 hidden w-[300px] flex-none border-r border-black/[0.06] bg-white/[0.92] px-5 py-5 dark:border-border/70 dark:bg-background/80 lg:flex lg:flex-col">
+                    <div className="rounded-[28px] border border-black/[0.06] bg-white/[0.75] p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] dark:border-border/70 dark:bg-surface/92">
+                        <div className="inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(15,123,140,0.24)]">
                             <Bot size={26} />
                         </div>
                         <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">Central da IA</p>
@@ -380,10 +380,10 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                     key={section.id}
                                     type="button"
                                     onClick={() => setActiveSection(section.id)}
-                                    className={`w-full rounded-[22px] border px-4 py-3 text-left transition ${active ? 'border-primary/25 bg-primary/10 shadow-[0_12px_28px_rgba(245,121,59,0.10)]' : 'border-transparent bg-transparent hover:border-black/[0.06] hover:bg-white/70 dark:hover:border-white/[0.08] dark:hover:bg-white/[0.04]'}`}
+                                    className={`w-full rounded-[22px] border px-4 py-3 text-left transition ${active ? 'border-primary/25 bg-primary/10 shadow-[0_12px_28px_rgba(10,75,102,0.14)]' : 'border-transparent bg-transparent hover:border-black/[0.06] hover:bg-white/70 dark:hover:border-border/70 dark:hover:bg-background/80'}`}
                                 >
                                     <div className="flex items-start gap-3">
-                                        <div className={`rounded-2xl p-2 ${active ? 'bg-primary text-white' : 'border border-black/[0.06] bg-white text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300'}`}>
+                                        <div className={`rounded-2xl p-2 ${active ? 'bg-primary text-white' : 'border border-black/[0.06] bg-white text-gray-500 dark:border-border/70 dark:bg-background/80 dark:text-gray-300'}`}>
                                             <Icon size={16} />
                                         </div>
                                         <div>
@@ -396,7 +396,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                         })}
                     </nav>
 
-                    <div className="mt-auto rounded-[24px] border border-black/[0.06] bg-white/[0.72] p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                    <div className="mt-auto rounded-[24px] border border-black/[0.06] bg-white/[0.72] p-4 dark:border-border/70 dark:bg-surface/92">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Conexao ativa</p>
                         <p className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">
                             {currentConnection?.instance_name || 'Nenhum numero vinculado'}
@@ -407,8 +407,8 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                     </div>
                 </aside>
 
-                <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-                    <header className="border-b border-black/[0.06] bg-white/[0.82] px-5 py-5 backdrop-blur dark:border-white/[0.08] dark:bg-[#161618]/92 sm:px-7">
+                <div className="relative z-10 flex min-w-0 flex-1 flex-col bg-white/[0.55] dark:bg-surface/92">
+                    <header className="border-b border-black/[0.06] bg-white/[0.82] px-5 py-5 backdrop-blur dark:border-border/70 dark:bg-surface/95 sm:px-7">
                         <div className="flex items-start justify-between gap-4">
                             <div className="max-w-3xl">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
@@ -423,7 +423,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-gray-500 transition-colors hover:text-gray-900 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-400 dark:hover:text-white"
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-gray-500 transition-colors hover:text-gray-900 dark:border-border/70 dark:bg-background/80 dark:text-gray-400 dark:hover:text-white"
                             >
                                 <X size={18} />
                             </button>
@@ -435,7 +435,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                     key={section.id}
                                     type="button"
                                     onClick={() => setActiveSection(section.id)}
-                                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeSection === section.id ? 'border-primary/25 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300'}`}
+                                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${activeSection === section.id ? 'border-primary/25 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 dark:border-border/70 dark:bg-background/80 dark:text-gray-300'}`}
                                 >
                                     {section.label}
                                 </button>
@@ -474,7 +474,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                                             key={goal.value}
                                                             type="button"
                                                             onClick={() => setCompanyProfile((current) => ({ ...current, agentObjective: goal.value }))}
-                                                            className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${companyProfile.agentObjective === goal.value ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-300'}`}
+                                                            className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium transition ${companyProfile.agentObjective === goal.value ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-border/70 dark:bg-background/80 dark:text-gray-300'}`}
                                                         >
                                                             {goal.label}
                                                         </button>
@@ -490,7 +490,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                                             key={tone}
                                                             type="button"
                                                             onClick={() => setCompanyProfile((current) => ({ ...current, voiceTone: tone }))}
-                                                            className={`rounded-full border px-3 py-1.5 text-sm transition ${companyProfile.voiceTone === tone ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-300'}`}
+                                                            className={`rounded-full border px-3 py-1.5 text-sm transition ${companyProfile.voiceTone === tone ? 'border-primary/40 bg-primary/10 text-primary' : 'border-black/[0.08] bg-white text-gray-600 hover:border-primary/30 dark:border-border/70 dark:bg-background/80 dark:text-gray-300'}`}
                                                         >
                                                             {tone}
                                                         </button>
@@ -564,7 +564,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                     <Surface eyebrow="Conhecimento" title="Base do agente" description="Adicione materiais de apoio e oferta.">
                                         <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
                                             <div>
-                                                <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[26px] border-2 border-dashed border-black/[0.08] bg-white px-6 py-10 text-center transition hover:border-primary/35 hover:bg-primary/[0.04] dark:border-white/[0.08] dark:bg-[#171718] dark:hover:border-primary/25">
+                                                <label className="group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[26px] border-2 border-dashed border-black/[0.08] bg-white px-6 py-10 text-center transition hover:border-primary/35 hover:bg-primary/[0.04] dark:border-border/70 dark:bg-background/80 dark:hover:border-primary/25">
                                                     <input type="file" multiple accept=".pdf,.txt,.docx,.md" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
                                                     <div className="flex h-14 w-14 items-center justify-center rounded-[20px] bg-primary/10 text-primary">
                                                         {isUploading ? <Loader2 size={22} className="animate-spin" /> : <Upload size={22} />}
@@ -581,12 +581,12 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
 
                                                 <div className="mt-4 space-y-3">
                                                     {files.length === 0 ? (
-                                                        <div className="rounded-2xl border border-dashed border-black/[0.08] bg-white/70 px-4 py-5 text-sm text-gray-500 dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-gray-400">
+                                                        <div className="rounded-2xl border border-dashed border-black/[0.08] bg-white/70 px-4 py-5 text-sm text-gray-500 dark:border-border/70 dark:bg-background/80 dark:text-gray-400">
                                                             Nenhum arquivo carregado ainda.
                                                         </div>
                                                     ) : (
                                                         files.map((file) => (
-                                                            <div key={file.filename} className="flex items-start justify-between gap-3 rounded-[22px] border border-black/[0.06] bg-white px-4 py-3 dark:border-white/[0.08] dark:bg-[#171718]">
+                                                            <div key={file.filename} className="flex items-start justify-between gap-3 rounded-[22px] border border-black/[0.06] bg-white px-4 py-3 dark:border-border/70 dark:bg-background/80">
                                                                 <div className="flex min-w-0 gap-3">
                                                                     <div className="mt-1 flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-primary/10 text-primary">
                                                                         <FileText size={18} />
@@ -597,7 +597,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                                                             {file.uploadedAt ? new Date(file.uploadedAt).toLocaleString('pt-BR') : 'Arquivo enviado'}
                                                                         </p>
                                                                         <div className="mt-2 flex flex-wrap gap-2">
-                                                                            {file.mimeType ? <span className="rounded-full border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300">{file.mimeType}</span> : null}
+                                                                            {file.mimeType ? <span className="rounded-full border border-black/[0.08] bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-500 dark:border-border/70 dark:bg-surface/92 dark:text-gray-300">{file.mimeType}</span> : null}
                                                                             {file.extractedText ? <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">Texto ingerido</span> : null}
                                                                         </div>
                                                                     </div>
@@ -612,7 +612,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                             </div>
 
                                             <div className="space-y-4">
-                                                <div className="rounded-[26px] border border-black/[0.06] bg-white/[0.86] p-5 dark:border-white/[0.08] dark:bg-[#171718]">
+                                                <div className="rounded-[26px] border border-black/[0.06] bg-white/[0.86] p-5 dark:border-border/70 dark:bg-background/80">
                                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Resumo de ingestao</p>
                                                     <p className="mt-3 text-sm leading-7 text-gray-700 dark:text-gray-300">
                                                         {agent.knowledge_summary || 'Use materiais de oferta, contexto, prova e atendimento.'}
@@ -641,7 +641,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                                 </p>
                                                 <a
                                                     href="/whatsapp"
-                                                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 dark:bg-[#171718]"
+                                                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10 dark:bg-background/80"
                                                 >
                                                     <Plus size={14} />
                                                     Criar ou gerenciar conexoes
@@ -649,7 +649,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                             </div>
 
                                             {instances.length === 0 ? (
-                                                <div className="rounded-[24px] border border-dashed border-black/[0.08] bg-white/80 px-4 py-5 text-sm leading-6 text-gray-500 dark:border-white/[0.08] dark:bg-[#171718] dark:text-gray-400">
+                                                <div className="rounded-[24px] border border-dashed border-black/[0.08] bg-white/80 px-4 py-5 text-sm leading-6 text-gray-500 dark:border-border/70 dark:bg-background/80 dark:text-gray-400">
                                                     Nenhuma conexao disponivel ainda. Crie uma linha dedicada e depois volte para vincular este agente.
                                                 </div>
                                             ) : null}
@@ -657,14 +657,14 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                             <button
                                                 type="button"
                                                 onClick={() => setWhatsappInstanceId('')}
-                                                className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${!whatsappInstanceId ? 'border-primary/25 bg-primary/10' : 'border-black/[0.08] bg-white hover:border-primary/20 dark:border-white/[0.08] dark:bg-[#171718]'}`}
+                                                className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${!whatsappInstanceId ? 'border-primary/25 bg-primary/10' : 'border-black/[0.08] bg-white hover:border-primary/20 dark:border-border/70 dark:bg-background/80'}`}
                                             >
                                                 <div className="flex items-center justify-between gap-4">
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-900 dark:text-white">Nenhum numero conectado</p>
                                                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Deixe o agente sem numero ativo.</p>
                                                     </div>
-                                                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${!whatsappInstanceId ? 'border-primary/20 bg-white text-primary' : 'border-black/[0.08] text-gray-500 dark:border-white/[0.08] dark:text-gray-400'}`}>
+                                                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${!whatsappInstanceId ? 'border-primary/20 bg-white text-primary' : 'border-black/[0.08] text-gray-500 dark:border-border/70 dark:text-gray-400'}`}>
                                                         {!whatsappInstanceId ? 'Selecionado' : 'Livre'}
                                                     </span>
                                                 </div>
@@ -679,23 +679,23 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                                         type="button"
                                                         disabled={Boolean(inUseByAnotherAgent)}
                                                         onClick={() => setWhatsappInstanceId(instance.id)}
-                                                        className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${selected ? 'border-primary/25 bg-primary/10 shadow-[0_12px_28px_rgba(245,121,59,0.10)]' : 'border-black/[0.08] bg-white hover:border-primary/20 dark:border-white/[0.08] dark:bg-[#171718]'} ${inUseByAnotherAgent ? 'cursor-not-allowed opacity-55' : ''}`}
+                                                        className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${selected ? 'border-primary/25 bg-primary/10 shadow-[0_12px_28px_rgba(10,75,102,0.14)]' : 'border-black/[0.08] bg-white hover:border-primary/20 dark:border-border/70 dark:bg-background/80'} ${inUseByAnotherAgent ? 'cursor-not-allowed opacity-55' : ''}`}
                                                     >
                                                         <div className="flex items-start justify-between gap-4">
                                                             <div>
                                                                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{instance.instance_name}</p>
                                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${String(instance.status).toUpperCase() === 'CONNECTED' || String(instance.status).toLowerCase() === 'open' ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-300'}`}>
+                                                                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${String(instance.status).toUpperCase() === 'CONNECTED' || String(instance.status).toLowerCase() === 'open' ? 'border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-border/70 dark:bg-surface/92 dark:text-gray-300'}`}>
                                                                         {instance.status}
                                                                     </span>
                                                                     {inUseByAnotherAgent ? (
-                                                                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                                                                        <span className="rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent dark:border-accent/20 dark:bg-accent/10 dark:text-[#E6B170]">
                                                                             Em uso por {instance.connected_agent_name}
                                                                         </span>
                                                                     ) : null}
                                                                 </div>
                                                             </div>
-                                                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${selected ? 'border-primary/20 bg-white text-primary' : 'border-black/[0.08] text-gray-500 dark:border-white/[0.08] dark:text-gray-400'}`}>
+                                                            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${selected ? 'border-primary/20 bg-white text-primary' : 'border-black/[0.08] text-gray-500 dark:border-border/70 dark:text-gray-400'}`}>
                                                                 {selected ? 'Selecionado' : 'Disponivel'}
                                                             </span>
                                                         </div>
@@ -715,17 +715,17 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                             </div>
                                             <div>
                                                 <FieldLabel>Temperatura</FieldLabel>
-                                                <div className="rounded-2xl border border-black/[0.08] bg-white px-4 py-4 dark:border-white/[0.08] dark:bg-[#171718]">
+                                                <div className="rounded-2xl border border-black/[0.08] bg-white px-4 py-4 dark:border-border/70 dark:bg-background/80">
                                                     <div className="mb-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
                                                         <span>Precisao operacional</span>
                                                         <strong className="text-gray-900 dark:text-white">{temperature.toFixed(2)}</strong>
                                                     </div>
-                                                    <input type="range" min="0" max="1" step="0.05" value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="w-full accent-[#F5793B]" />
+                                                    <input type="range" min="0" max="1" step="0.05" value={temperature} onChange={(e) => setTemperature(Number(e.target.value))} className="w-full accent-primary" />
                                                 </div>
                                             </div>
                                             <div className="md:col-span-2">
                                                 <FieldLabel>Prompt atual gerado</FieldLabel>
-                                                <div className="rounded-[24px] border border-black/[0.08] bg-[#111214] p-4 text-xs leading-6 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                                                <div className="rounded-[24px] border border-black/[0.08] bg-[#0B2436] p-4 text-xs leading-6 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] dark:border-border/70 dark:bg-[linear-gradient(135deg,rgba(8,38,58,0.94),rgba(4,25,39,0.98))]">
                                                     <pre className="max-h-[280px] overflow-y-auto whitespace-pre-wrap font-mono">{agent.system_prompt || 'O prompt operacional sera regenerado com base no perfil da empresa ao salvar esta tela.'}</pre>
                                                 </div>
                                             </div>
@@ -736,7 +736,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                         )}
                     </div>
 
-                    <footer className="border-t border-black/[0.06] bg-white/[0.86] px-5 py-4 backdrop-blur dark:border-white/[0.08] dark:bg-[#151517]/92 sm:px-7">
+                    <footer className="border-t border-black/[0.06] bg-white/[0.86] px-5 py-4 backdrop-blur dark:border-border/70 dark:bg-surface/95 sm:px-7">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                                 Salvar atualiza o perfil e a operacao desta IA.
@@ -745,7 +745,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] bg-white px-5 text-sm font-semibold text-gray-700 transition hover:border-primary/20 hover:text-primary dark:border-white/[0.08] dark:bg-[#171718] dark:text-white"
+                                    className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.08] bg-white px-5 text-sm font-semibold text-gray-700 transition hover:border-primary/20 hover:text-primary dark:border-border/70 dark:bg-background/80 dark:text-white"
                                 >
                                     Cancelar
                                 </button>
@@ -753,7 +753,7 @@ export default function AgentEditModal({ agent, initialSection = 'strategy', isO
                                     type="button"
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)] transition hover:brightness-105 disabled:opacity-70"
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.28)] transition hover:brightness-105 disabled:opacity-70"
                                 >
                                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                     Salvar IA

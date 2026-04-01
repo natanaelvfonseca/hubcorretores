@@ -69,7 +69,7 @@ interface FollowupStatusResponse {
 }
 
 const FOLLOWUP_STATUS_LABELS: Record<string, { label: string; className: string }> = {
-    pending: { label: 'Agendado', className: 'border-orange-500/20 bg-orange-500/10 text-orange-500' },
+    pending: { label: 'Agendado', className: 'border-primary/20 bg-primary/10 text-primary' },
     sent: { label: 'Enviado', className: 'border-sky-500/20 bg-sky-500/10 text-sky-500' },
     replied: { label: 'Reativado', className: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500' },
     cancelled: { label: 'Cancelado', className: 'border-slate-500/20 bg-slate-500/10 text-slate-500' },
@@ -240,11 +240,11 @@ export function LeadSummaryDrawer({
                                     Funil: {lead.status}
                                 </span>
                                 {lead.temperature && (
-                                    <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 font-medium text-orange-400">
+                                    <span className="rounded-full border border-accent/20 bg-accent/10 px-3 py-1 font-medium text-accent">
                                         {lead.temperature}
                                     </span>
                                 )}
-                                <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 font-medium text-indigo-300">
+                                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-medium text-primary-light">
                                     Momento: {formatStage(stage)}
                                 </span>
                             </div>
@@ -481,7 +481,7 @@ export function LeadSummaryDrawer({
 
                         <div className="rounded-3xl border border-border bg-surface p-5">
                             <div className="mb-3 flex items-center gap-2">
-                                <Lightbulb size={17} className="text-amber-400" />
+                                <Lightbulb size={17} className="text-accent" />
                                 <h3 className="text-sm font-semibold text-foreground">Proxima acao recomendada</h3>
                             </div>
                             <p className="text-sm leading-7 text-foreground/90">{recommendation}</p>

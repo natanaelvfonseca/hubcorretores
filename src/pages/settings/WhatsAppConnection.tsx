@@ -64,7 +64,7 @@ function HeaderStat({
     value: string | number;
 }) {
     return (
-        <div className="rounded-2xl border border-black/[0.05] bg-white/[0.68] px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)] backdrop-blur dark:border-white/[0.06] dark:bg-white/[0.04]">
+        <div className="rounded-2xl border border-black/[0.05] bg-white/[0.68] px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)] backdrop-blur dark:border-border/70 dark:bg-background/80">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">{label}</p>
             <p className="mt-1 text-lg font-semibold tracking-tight text-text-primary">{value}</p>
         </div>
@@ -86,6 +86,18 @@ function StatusBadge({ connected }: { connected: boolean }) {
         </span>
     );
 }
+
+const whatsappAudience = [
+    'Linhas organizadas por operacao',
+    'Roteamento para agentes',
+    'WhatsApp como apoio estrategico',
+];
+
+const whatsappSpotlight = [
+    'Cada linha ganha contexto, status e papel claro dentro do ecossistema.',
+    'A operacao sai do improviso e entra em uma central proprietaria da HUB.',
+    'Conexoes, QR code e uso por agentes ficam visiveis em um unico painel.',
+];
 
 export function WhatsAppConnection() {
     const { user, token } = useAuth();
@@ -356,8 +368,8 @@ export function WhatsAppConnection() {
     if (loading) {
         return (
             <div className="flex min-h-[60vh] items-center justify-center px-4">
-                <div className="flex w-full max-w-sm flex-col items-center rounded-[28px] border border-black/[0.06] bg-white/80 px-6 py-10 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                <div className="flex w-full max-w-sm flex-col items-center rounded-[28px] border border-black/[0.06] bg-white/80 px-6 py-10 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_24px_80px_rgba(4,19,31,0.24)]">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(15,123,140,0.28)]">
                         <Loader2 size={28} className="animate-spin" />
                     </div>
                     <h2 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
@@ -374,52 +386,71 @@ export function WhatsAppConnection() {
     return (
         <>
             <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] overflow-hidden">
-                    <div className="absolute left-[-8%] top-12 h-56 w-56 rounded-full bg-primary/[0.16] blur-3xl dark:bg-primary/[0.12]" />
-                    <div className="absolute right-[6%] top-0 h-64 w-64 rounded-full bg-orange-300/20 blur-3xl dark:bg-orange-500/10" />
-                </div>
+                <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.2),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(214,140,69,0.18),_transparent_34%),linear-gradient(135deg,rgba(6,30,45,0.98),rgba(9,52,74,0.96))] p-8 text-white shadow-[0_24px_70px_rgba(8,23,38,0.22)] sm:p-10" data-tour-id="tour-whatsapp-main">
+                    <div className="absolute right-[-8%] top-[-12%] h-56 w-56 rounded-full bg-[#6EE7D8]/15 blur-3xl" />
+                    <div className="absolute bottom-[-10%] left-[18%] h-44 w-44 rounded-full bg-[#F8B46A]/18 blur-3xl" />
 
-                <section className="relative overflow-hidden rounded-[32px] border border-black/[0.06] bg-white/[0.85] p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-8" data-tour-id="tour-whatsapp-main">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.13),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.05),_transparent_34%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.18),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.05),_transparent_32%)]" />
-
-                    <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+                    <div className="relative grid gap-7 lg:grid-cols-[1.3fr_0.9fr]">
                         <div className="max-w-3xl">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary dark:border-primary/20 dark:bg-primary/[0.12]">
-                                <Sparkles size={14} />
+                            <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#A4E8E1] backdrop-blur">
+                                <Sparkles size={16} />
                                 Canais de comunicacao
                             </div>
-
-                            <h1 className="mt-4 text-4xl font-display font-bold tracking-[-0.04em] text-text-primary sm:text-5xl">
-                                Conexoes WhatsApp
-                            </h1>
-                            <p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
-                                Centralize numeros, acompanhe o status das linhas e conecte novos canais para suas IAs operarem com mais clareza.
+                            <h1 className="mt-6 text-4xl font-display leading-tight text-white sm:text-5xl">Conexoes WhatsApp</h1>
+                            <p className="mt-5 max-w-3xl text-sm leading-7 text-white/[0.76] sm:text-base">
+                                Centralize numeros, acompanhe o status das linhas e conecte novos canais para suas IAs operarem com mais clareza e governanca.
                             </p>
 
-                            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-4">
-                                <HeaderStat label="Total de linhas" value={instances.length} />
-                                <HeaderStat label="Online" value={onlineCount} />
-                                <HeaderStat label="Offline" value={offlineCount} />
-                                <HeaderStat label="Slots livres" value={availableSlots} />
+                            <div className="mt-8 flex flex-wrap gap-2">
+                                {whatsappAudience.map((item) => (
+                                    <span
+                                        key={item}
+                                        className="rounded-full border border-white/14 bg-white/[0.08] px-4 py-2 text-xs font-semibold text-white/[0.85]"
+                                    >
+                                        {item}
+                                    </span>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="w-full max-w-2xl">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-end">
+                        <div className="rounded-[28px] border border-white/12 bg-white/[0.08] p-6 backdrop-blur">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#9BE8E0]">Promessa do modulo</p>
+                            <div className="mt-5 space-y-4">
+                                {whatsappSpotlight.map((item) => (
+                                    <div key={item} className="flex gap-3 rounded-[22px] border border-white/10 bg-black/10 p-4">
+                                        <CheckCircle2 size={18} className="mt-0.5 text-[#7EE7DA]" />
+                                        <p className="text-sm leading-6 text-white/[0.78]">{item}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mt-8 rounded-[30px] border border-border/70 bg-surface/92 p-7 shadow-[0_20px_45px_rgba(8,23,38,0.06)]">
+                    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Controle de canais</p>
+                            <h2 className="mt-2 text-3xl font-display text-text-primary">Busca, conexao e monitoramento das linhas</h2>
+                            <p className="mt-3 max-w-3xl text-sm leading-7 text-text-secondary">
+                                Acompanhe o estado das linhas, gere novos QR codes e encaminhe cada canal para a IA certa dentro da operacao.
+                            </p>
+
+                            <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
                                 <div className="relative flex-1">
                                     <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
                                     <input
                                         value={searchQuery}
                                         onChange={(event) => setSearchQuery(event.target.value)}
                                         placeholder="Buscar por nome, ID ou status"
-                                        className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white/80 pl-11 pr-4 text-sm text-text-primary shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition-all duration-300 placeholder:text-text-muted focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-white/[0.04] dark:focus:border-primary/40 dark:focus:ring-primary/10"
+                                        className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white/80 pl-11 pr-4 text-sm text-text-primary shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition-all duration-300 placeholder:text-text-muted focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80 dark:focus:border-primary/40 dark:focus:ring-primary/10"
                                     />
                                 </div>
 
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => fetchInstances({ showRefreshing: true })}
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-border/70 dark:bg-background/80 dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                     >
                                         <RefreshCw size={16} className={cn(refreshing && 'animate-spin')} />
                                         Atualizar
@@ -427,7 +458,7 @@ export function WhatsAppConnection() {
 
                                     <button
                                         onClick={openNewConnectionModal}
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)] active:translate-y-0"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)] active:translate-y-0"
                                     >
                                         <Plus size={18} />
                                         Nova conexao
@@ -444,19 +475,26 @@ export function WhatsAppConnection() {
                                     <span className="h-2 w-2 rounded-full bg-rose-500" />
                                     {offlineCount} offline
                                 </span>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-white/70 px-3 py-1 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1">
                                     <Smartphone size={14} className="text-primary" />
                                     {instances.length}/{connectionLimit} em uso no plano
                                 </span>
                             </div>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-4 xl:grid-cols-4">
+                            <HeaderStat label="Total de linhas" value={instances.length} />
+                            <HeaderStat label="Online" value={onlineCount} />
+                            <HeaderStat label="Offline" value={offlineCount} />
+                            <HeaderStat label="Slots livres" value={availableSlots} />
                         </div>
                     </div>
                 </section>
 
                 <section className="mt-8">
                     {instances.length === 0 ? (
-                        <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-12">
-                            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                        <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)] sm:p-12">
+                            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(15,123,140,0.28)]">
                                 <Smartphone size={34} />
                             </div>
                             <h3 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
@@ -467,14 +505,14 @@ export function WhatsAppConnection() {
                             </p>
                             <button
                                 onClick={openNewConnectionModal}
-                                className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
+                                className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)]"
                             >
                                 <Plus size={18} />
                                 Conectar primeiro numero
                             </button>
                         </div>
                     ) : filteredInstances.length === 0 ? (
-                        <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-12">
+                        <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)] sm:p-12">
                             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-primary/10 text-primary dark:bg-primary/[0.12]">
                                 <Search size={28} />
                             </div>
@@ -495,9 +533,9 @@ export function WhatsAppConnection() {
                                 return (
                                     <article
                                         key={instance.id}
-                                        className="group relative overflow-hidden rounded-[26px] border border-black/[0.06] bg-white/[0.9] p-4 shadow-[0_16px_42px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.12)] dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_20px_60px_rgba(0,0,0,0.38)]"
+                                        className="group relative overflow-hidden rounded-[26px] border border-black/[0.06] bg-white/[0.9] p-4 shadow-[0_16px_42px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.12)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)]"
                                     >
-                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.10),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.08),_transparent_28%)] opacity-80 dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.14),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.10),_transparent_30%)]" />
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.12),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.08),_transparent_28%)] opacity-80 dark:bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.16),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(37,211,102,0.10),_transparent_30%)]" />
 
                                         <div className="relative flex h-full flex-col gap-4">
                                             <div className="flex items-start justify-between gap-4">
@@ -522,12 +560,12 @@ export function WhatsAppConnection() {
                                                 </p>
                                             </div>
 
-                                            <div className="rounded-[22px] border border-black/[0.06] bg-white/70 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                            <div className="rounded-[22px] border border-black/[0.06] bg-white/70 p-3 dark:border-border/70 dark:bg-background/80">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">
                                                     Operacao
                                                 </p>
                                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-border/70 dark:bg-background/80">
                                                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                             Status da linha
                                                         </p>
@@ -535,7 +573,7 @@ export function WhatsAppConnection() {
                                                             {connected ? 'Conectada e pronta' : 'Precisa reconectar'}
                                                         </p>
                                                     </div>
-                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                    <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-border/70 dark:bg-background/80">
                                                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                             Criada em
                                                         </p>
@@ -544,7 +582,7 @@ export function WhatsAppConnection() {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="mt-2 rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                                <div className="mt-2 rounded-2xl border border-black/[0.06] bg-background/80 px-3 py-2.5 dark:border-border/70 dark:bg-background/80">
                                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                         IA conectada
                                                     </p>
@@ -574,7 +612,7 @@ export function WhatsAppConnection() {
                                                 <div className="flex flex-col gap-2 sm:flex-row">
                                                     <button
                                                         onClick={() => (connected ? navigate('/brain') : handleReconnect(instance.instance_name))}
-                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(245,121,59,0.34)]"
+                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(15,123,140,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(15,123,140,0.34)]"
                                                     >
                                                         {connected ? <ArrowRight size={16} /> : <QrCode size={16} />}
                                                         {connected ? 'Usar nas IAs' : 'Gerar novo QR'}
@@ -582,7 +620,7 @@ export function WhatsAppConnection() {
 
                                                     <button
                                                         onClick={() => handleCopyId(instance)}
-                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
+                                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-border/70 dark:bg-background/80 dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                                     >
                                                         <Copy size={16} />
                                                         {copiedInstanceId === instance.id ? 'ID copiado' : 'Copiar ID'}
@@ -607,8 +645,8 @@ export function WhatsAppConnection() {
             </div>
             {showLimitModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-                    <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-white/[0.08] dark:bg-[#171717] dark:shadow-[0_24px_90px_rgba(0,0,0,0.55)]">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.10),_transparent_36%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.14),_transparent_38%)]" />
+                    <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-border/70 dark:bg-surface/95 dark:shadow-[0_24px_90px_rgba(4,19,31,0.30)]">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.12),_transparent_36%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.16),_transparent_38%)]" />
 
                         <div className="relative p-6 sm:p-7">
                             <div className="flex items-start justify-between gap-4">
@@ -631,13 +669,13 @@ export function WhatsAppConnection() {
 
                                 <button
                                     onClick={() => setShowLimitModal(false)}
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-text-secondary transition-colors hover:text-text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:text-white"
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-text-secondary transition-colors hover:text-text-primary dark:border-border/70 dark:bg-background/80 dark:hover:text-white"
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <div className="mt-6 rounded-[24px] border border-black/[0.06] bg-white/75 p-5 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                            <div className="mt-6 rounded-[24px] border border-black/[0.06] bg-white/75 p-5 dark:border-border/70 dark:bg-background/80">
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
                                         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">
@@ -664,13 +702,13 @@ export function WhatsAppConnection() {
                             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                                 <button
                                     onClick={() => setShowLimitModal(false)}
-                                    className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-white/[0.08] dark:hover:bg-white/[0.04] dark:hover:text-white"
+                                    className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-border/70 dark:hover:bg-background/80 dark:hover:text-white"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={() => navigate('/billing')}
-                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
+                                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)]"
                                 >
                                     Ir para faturamento
                                 </button>
@@ -681,13 +719,13 @@ export function WhatsAppConnection() {
             )}
             {showNewConnectionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-                    <div className="relative w-full max-w-3xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-white/[0.08] dark:bg-[#171717] dark:shadow-[0_24px_90px_rgba(0,0,0,0.55)]">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_36%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.16),_transparent_38%)]" />
+                    <div className="relative w-full max-w-3xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-border/70 dark:bg-surface/95 dark:shadow-[0_24px_90px_rgba(4,19,31,0.30)]">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.14),_transparent_36%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.18),_transparent_38%)]" />
 
-                        <div className="relative border-b border-black/[0.06] px-6 py-5 dark:border-white/[0.08]">
+                        <div className="relative border-b border-black/[0.06] px-6 py-5 dark:border-border/70">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex min-w-0 items-start gap-4">
-                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-primary text-white shadow-[0_16px_34px_rgba(245,121,59,0.28)]">
+                                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-primary text-white shadow-[0_16px_34px_rgba(15,123,140,0.28)]">
                                         <Smartphone size={24} />
                                     </div>
                                     <div className="min-w-0 pt-1">
@@ -705,7 +743,7 @@ export function WhatsAppConnection() {
 
                                 <button
                                     onClick={closeNewConnectionModal}
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent text-text-muted transition-colors hover:border-black/[0.07] hover:bg-black/[0.03] hover:text-text-primary dark:hover:border-white/[0.08] dark:hover:bg-white/[0.04] dark:hover:text-white"
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-transparent text-text-muted transition-colors hover:border-black/[0.07] hover:bg-black/[0.03] hover:text-text-primary dark:hover:border-border/70 dark:hover:bg-background/80 dark:hover:text-white"
                                 >
                                     <X size={20} />
                                 </button>
@@ -722,7 +760,7 @@ export function WhatsAppConnection() {
 
                             {(connectStatus === 'idle' || connectStatus === 'error') && (
                                 <div className="space-y-5">
-                                    <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.88] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-white/[0.07] dark:bg-white/[0.03] dark:shadow-none sm:p-6">
+                                    <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.88] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-border/70 dark:bg-background/80 dark:shadow-none sm:p-6">
                                         <div className="mb-5">
                                             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
                                                 Identificacao
@@ -745,13 +783,13 @@ export function WhatsAppConnection() {
                                                 placeholder="Ex: Vendas, Suporte, Loja 01"
                                                 value={newLabel}
                                                 onChange={(event) => setNewLabel(event.target.value)}
-                                                className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white px-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/35 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                                className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white px-4 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-primary/35 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80"
                                                 autoFocus
                                             />
                                         </div>
 
                                         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                                            <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                            <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-border/70 dark:bg-background/80">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                     Uso atual
                                                 </p>
@@ -759,7 +797,7 @@ export function WhatsAppConnection() {
                                                     {instances.length}/{connectionLimit} conexoes ativas
                                                 </p>
                                             </div>
-                                            <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                            <div className="rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-border/70 dark:bg-background/80">
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">
                                                     Proximo passo
                                                 </p>
@@ -771,7 +809,7 @@ export function WhatsAppConnection() {
 
                                         <button
                                             onClick={() => handleCreateConnection()}
-                                            className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
+                                            className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)]"
                                         >
                                             <QrCode size={18} />
                                             Gerar QR code
@@ -781,8 +819,8 @@ export function WhatsAppConnection() {
                             )}
 
                             {connectStatus === 'connecting' && (
-                                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[28px] border border-black/[0.06] bg-white/[0.85] px-6 py-12 text-center shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.03]">
-                                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[28px] border border-black/[0.06] bg-white/[0.85] px-6 py-12 text-center shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-border/70 dark:bg-background/80">
+                                    <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(15,123,140,0.28)]">
                                         <Loader2 size={28} className="animate-spin" />
                                     </div>
                                     <h3 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
@@ -796,7 +834,7 @@ export function WhatsAppConnection() {
 
                             {connectStatus === 'qrcode' && qrCode && (
                                 <div className="grid gap-5 lg:grid-cols-[300px,1fr]">
-                                    <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.9] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                    <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.9] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-border/70 dark:bg-background/80">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
@@ -811,13 +849,13 @@ export function WhatsAppConnection() {
                                             </span>
                                         </div>
 
-                                        <div className="mt-5 overflow-hidden rounded-[24px] border border-black/[0.06] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)] dark:border-white/[0.08]">
+                                        <div className="mt-5 overflow-hidden rounded-[24px] border border-black/[0.06] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)] dark:border-border/70">
                                             <img src={qrCode} alt="QR Code" className="h-full w-full object-contain" />
                                         </div>
 
                                         <button
                                             onClick={() => handleCreateConnection(true)}
-                                            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
+                                            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-border/70 dark:bg-surface/92 dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                         >
                                             <RefreshCw size={16} />
                                             Gerar novo QR agora
@@ -825,7 +863,7 @@ export function WhatsAppConnection() {
                                     </section>
 
                                     <div className="space-y-5">
-                                        <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.9] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-white/[0.08] dark:bg-white/[0.03]">
+                                        <section className="rounded-[28px] border border-black/[0.06] bg-white/[0.9] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-border/70 dark:bg-background/80">
                                             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-primary">
                                                 Passo a passo
                                             </p>
@@ -841,7 +879,7 @@ export function WhatsAppConnection() {
                                                 ].map((step, index) => (
                                                     <div
                                                         key={step}
-                                                        className="flex items-start gap-3 rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]"
+                                                        className="flex items-start gap-3 rounded-2xl border border-black/[0.06] bg-background/80 px-4 py-3 dark:border-border/70 dark:bg-surface/92"
                                                     >
                                                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white">
                                                             {index + 1}
@@ -886,10 +924,10 @@ export function WhatsAppConnection() {
                             )}
                         </div>
 
-                        <div className="relative flex justify-end border-t border-black/[0.06] px-6 py-4 dark:border-white/[0.08]">
+                        <div className="relative flex justify-end border-t border-black/[0.06] px-6 py-4 dark:border-border/70">
                             <button
                                 onClick={closeNewConnectionModal}
-                                className="inline-flex h-11 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-white/[0.08] dark:hover:bg-white/[0.04] dark:hover:text-white"
+                                className="inline-flex h-11 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-border/70 dark:hover:bg-background/80 dark:hover:text-white"
                             >
                                 {connectStatus === 'connected' ? 'Fechar' : 'Cancelar'}
                             </button>

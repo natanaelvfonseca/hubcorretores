@@ -5,6 +5,7 @@ import {
     Bot,
     BrainCircuit,
     Building2,
+    CheckCircle2,
     ChevronLeft,
     Cpu,
     Loader2,
@@ -63,20 +64,20 @@ const typeConfig: Record<string, {
         eyebrow: 'Prospeccao',
         description: 'Qualifica e acelera oportunidades.',
         icon: Sparkles,
-        iconWrap: 'bg-orange-500/[0.12] text-orange-600 dark:bg-orange-500/[0.15] dark:text-orange-300',
-        badge: 'border-orange-200/80 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200',
-        gradient: 'from-[#FF7A1A] via-[#FF5B22] to-[#F24E1E]',
-        accent: 'shadow-[0_18px_40px_rgba(255,104,31,0.26)]',
+        iconWrap: 'bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary-light',
+        badge: 'border-primary/15 bg-primary/10 text-primary dark:border-primary/20 dark:bg-primary/12 dark:text-primary-light',
+        gradient: 'from-[#1AA0A4] via-[#0F7B8C] to-[#0A4B66]',
+        accent: 'shadow-[0_18px_40px_rgba(15,123,140,0.26)]',
     },
     vendedor: {
         label: 'Vendedor',
         eyebrow: 'Conversao',
         description: 'Apresenta valor e conduz ao fechamento.',
         icon: Activity,
-        iconWrap: 'bg-amber-500/[0.12] text-amber-600 dark:bg-amber-500/[0.15] dark:text-amber-300',
-        badge: 'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
-        gradient: 'from-[#F6B73C] via-[#F59E0B] to-[#D97706]',
-        accent: 'shadow-[0_18px_40px_rgba(245,158,11,0.24)]',
+        iconWrap: 'bg-sky-500/[0.12] text-sky-700 dark:bg-sky-500/[0.14] dark:text-sky-200',
+        badge: 'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200',
+        gradient: 'from-[#43C6D1] via-[#168CA0] to-[#0A4B66]',
+        accent: 'shadow-[0_18px_40px_rgba(22,140,160,0.24)]',
     },
     suporte: {
         label: 'Suporte',
@@ -124,8 +125,8 @@ const statusConfig: Record<AgentStatus, {
     },
     paused: {
         label: 'Pausado',
-        badge: 'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
-        dot: 'bg-amber-500',
+        badge: 'border-accent/25 bg-accent/10 text-accent dark:border-accent/20 dark:bg-accent/10 dark:text-[#E6B170]',
+        dot: 'bg-accent',
         copy: 'Pausado temporariamente, sem perder configuracoes.',
     },
     inactive: {
@@ -135,6 +136,18 @@ const statusConfig: Record<AgentStatus, {
         copy: 'Precisa ser revisado antes de operar novamente.',
     },
 };
+
+const brainAudience = [
+    'Agentes inteligentes',
+    'Operacao no WhatsApp',
+    'Escala com governanca',
+];
+
+const brainSpotlight = [
+    'Cada agente opera com contexto, memoria e objetivo proprio.',
+    'O WhatsApp entra como canal de execucao, sem virar a base estrutural do produto.',
+    'Criacao, pausa, revisao e conexao ficam organizadas em uma central proprietaria.',
+];
 
 function getTypeMeta(type: string) {
     return typeConfig[type?.toLowerCase()] || typeConfig.custom;
@@ -157,7 +170,7 @@ function HeaderStat({
     value: string | number;
 }) {
     return (
-        <div className="rounded-2xl border border-black/[0.05] bg-white/[0.65] px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)] backdrop-blur dark:border-white/[0.06] dark:bg-white/[0.04]">
+        <div className="rounded-2xl border border-black/[0.05] bg-white/[0.65] px-4 py-3 shadow-[0_6px_18px_rgba(15,23,42,0.04)] backdrop-blur dark:border-border/70 dark:bg-background/80">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-text-muted">{label}</p>
             <p className="mt-1 text-lg font-semibold tracking-tight text-text-primary">{value}</p>
         </div>
@@ -366,50 +379,70 @@ export function MyAIs() {
 
     return (
         <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] overflow-hidden">
-                <div className="absolute left-[-8%] top-12 h-56 w-56 rounded-full bg-primary/[0.16] blur-3xl dark:bg-primary/[0.12]" />
-                <div className="absolute right-[6%] top-0 h-64 w-64 rounded-full bg-orange-300/20 blur-3xl dark:bg-orange-500/10" />
-            </div>
+            <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.2),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(214,140,69,0.18),_transparent_34%),linear-gradient(135deg,rgba(6,30,45,0.98),rgba(9,52,74,0.96))] p-8 text-white shadow-[0_24px_70px_rgba(8,23,38,0.22)] sm:p-10" data-tour-id="tour-brain-main">
+                <div className="absolute right-[-8%] top-[-12%] h-56 w-56 rounded-full bg-[#6EE7D8]/15 blur-3xl" />
+                <div className="absolute bottom-[-10%] left-[18%] h-44 w-44 rounded-full bg-[#F8B46A]/18 blur-3xl" />
 
-            <section className="relative overflow-hidden rounded-[32px] border border-black/[0.06] bg-white/[0.85] p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#111111] dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-8" data-tour-id="tour-brain-main">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.13),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.05),_transparent_34%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.18),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.05),_transparent_32%)]" />
-
-                <div className="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+                <div className="relative grid gap-7 lg:grid-cols-[1.3fr_0.9fr]">
                     <div className="max-w-3xl">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary dark:border-primary/20 dark:bg-primary/[0.12]">
-                            <Sparkles size={14} />
+                        <div className="inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/[0.08] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#A4E8E1] backdrop-blur">
+                            <Sparkles size={16} />
                             Central de agentes
                         </div>
-
-                        <h1 className="mt-4 text-4xl font-display font-bold tracking-[-0.04em] text-text-primary sm:text-5xl">
-                            Minhas IAs
-                        </h1>
-                        <p className="mt-3 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg">
-                            Gerencie os agentes inteligentes da sua organizacao e escale a operacao no WhatsApp.
+                        <h1 className="mt-6 text-4xl font-display leading-tight text-white sm:text-5xl">Minhas IAs</h1>
+                        <p className="mt-5 max-w-3xl text-sm leading-7 text-white/[0.76] sm:text-base">
+                            Gerencie os agentes inteligentes da sua organizacao e escale a operacao no WhatsApp com contexto, memoria e controle em um painel proprietario.
                         </p>
 
-                        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                            <HeaderStat label="Total de agentes" value={agents.length} />
-                            <HeaderStat label="Em operacao" value={activeCount} />
-                            <HeaderStat label="WhatsApp conectado" value={connectedCount} />
+                        <div className="mt-8 flex flex-wrap gap-2">
+                            {brainAudience.map((item) => (
+                                <span
+                                    key={item}
+                                    className="rounded-full border border-white/14 bg-white/[0.08] px-4 py-2 text-xs font-semibold text-white/[0.85]"
+                                >
+                                    {item}
+                                </span>
+                            ))}
                         </div>
                     </div>
 
-                    <div className="w-full max-w-xl">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <div className="rounded-[28px] border border-white/12 bg-white/[0.08] p-6 backdrop-blur">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-[#9BE8E0]">Promessa do modulo</p>
+                        <div className="mt-5 space-y-4">
+                            {brainSpotlight.map((item) => (
+                                <div key={item} className="flex gap-3 rounded-[22px] border border-white/10 bg-black/10 p-4">
+                                    <CheckCircle2 size={18} className="mt-0.5 text-[#7EE7DA]" />
+                                    <p className="text-sm leading-6 text-white/[0.78]">{item}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section className="mt-8 rounded-[30px] border border-border/70 bg-surface/92 p-7 shadow-[0_20px_45px_rgba(8,23,38,0.06)]">
+                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-end">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Controle operacional</p>
+                        <h2 className="mt-2 text-3xl font-display text-text-primary">Criacao, busca e acompanhamento dos agentes</h2>
+                        <p className="mt-3 max-w-3xl text-sm leading-7 text-text-secondary">
+                            Organize a operacao, encontre agentes com rapidez e acompanhe o que esta ativo, pausado ou conectado ao WhatsApp.
+                        </p>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                             <div className="relative flex-1">
                                 <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
                                 <input
                                     value={searchQuery}
                                     onChange={(event) => setSearchQuery(event.target.value)}
                                     placeholder="Buscar por nome, tipo ou conexao"
-                                    className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white/80 pl-11 pr-4 text-sm text-text-primary shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition-all duration-300 placeholder:text-text-muted focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-white/[0.04] dark:focus:border-primary/40 dark:focus:ring-primary/10"
+                                    className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white/80 pl-11 pr-4 text-sm text-text-primary shadow-[0_8px_24px_rgba(15,23,42,0.05)] outline-none transition-all duration-300 placeholder:text-text-muted focus:border-primary/40 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80 dark:focus:border-primary/40 dark:focus:ring-primary/10"
                                 />
                             </div>
 
                             <button
                                 onClick={() => setShowCreateModal(true)}
-                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)] active:translate-y-0"
+                                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)] active:translate-y-0"
                             >
                                 <Plus size={18} />
                                 Criar nova IA
@@ -417,19 +450,25 @@ export function MyAIs() {
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-text-secondary">
-                            <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                                 {activeCount} ativos
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
-                                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1.5">
+                                <span className="h-2 w-2 rounded-full bg-accent" />
                                 {pausedCount} pausados
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.05] bg-white/70 px-3 py-1.5 dark:border-white/[0.07] dark:bg-white/[0.04]">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1.5">
                                 <Smartphone size={14} className="text-primary" />
                                 {connectedCount} conectados ao WhatsApp
                             </span>
                         </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-3">
+                        <HeaderStat label="Total de agentes" value={agents.length} />
+                        <HeaderStat label="Em operacao" value={activeCount} />
+                        <HeaderStat label="WhatsApp conectado" value={connectedCount} />
                     </div>
                 </div>
             </section>
@@ -442,12 +481,12 @@ export function MyAIs() {
                 if (toInstall.length === 0) return null;
 
                 return (
-                    <section className="mt-8 overflow-hidden rounded-[28px] border border-primary/[0.15] bg-white/[0.82] p-6 shadow-[0_16px_50px_rgba(245,121,59,0.08)] backdrop-blur dark:border-primary/[0.15] dark:bg-[#111111] dark:shadow-[0_18px_60px_rgba(0,0,0,0.35)]">
+                    <section className="mt-8 overflow-hidden rounded-[28px] border border-primary/[0.15] bg-white/[0.82] p-6 shadow-[0_16px_50px_rgba(10,75,102,0.10)] backdrop-blur dark:border-primary/[0.15] dark:bg-surface/92 dark:shadow-[0_18px_60px_rgba(4,19,31,0.24)]">
                         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                             <div className="max-w-2xl">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/[0.15] bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
                                     <Sparkles size={14} />
-                                    Curadoria Kogna
+                                    Curadoria HUB
                                 </div>
                                 <h2 className="mt-4 text-2xl font-display font-bold tracking-tight text-text-primary">
                                     {profile.icon} Agentes recomendados para {profile.name}
@@ -462,7 +501,7 @@ export function MyAIs() {
                             {toInstall.map((agent) => (
                                 <div
                                     key={agent.id}
-                                    className="rounded-[24px] border border-black/[0.06] bg-background/75 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-white/[0.06] dark:bg-white/[0.03]"
+                                    className="rounded-[24px] border border-black/[0.06] bg-background/75 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-background/80"
                                 >
                                     <div className="flex items-start gap-4">
                                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-2xl shadow-[0_12px_28px_rgba(15,23,42,0.08)] dark:bg-white/[0.06]">
@@ -502,7 +541,7 @@ export function MyAIs() {
 
             <section className="mt-8">
                 {isLoading ? (
-                    <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-black/[0.06] bg-white/70 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                    <div className="flex min-h-[320px] items-center justify-center rounded-[28px] border border-black/[0.06] bg-white/70 dark:border-border/70 dark:bg-surface/92">
                         <Loader2 className="animate-spin text-primary" size={38} />
                     </div>
                 ) : filteredAgents.length > 0 ? (
@@ -516,7 +555,7 @@ export function MyAIs() {
                             return (
                                 <article
                                     key={agent.id}
-                                    className="group relative overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/[0.92] p-6 shadow-[0_16px_45px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] dark:hover:border-primary/25 dark:hover:shadow-[0_24px_70px_rgba(0,0,0,0.48)]"
+                                    className="group relative overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/[0.92] p-6 shadow-[0_16px_45px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:shadow-[0_26px_70px_rgba(15,23,42,0.12)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)] dark:hover:border-primary/25 dark:hover:shadow-[0_24px_70px_rgba(4,19,31,0.30)]"
                                 >
                                     <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
                                     <div className="absolute right-0 top-0 h-32 w-32 translate-x-10 -translate-y-10 rounded-full bg-primary/[0.12] blur-3xl transition-opacity duration-300 group-hover:opacity-100 dark:bg-primary/10" />
@@ -530,7 +569,7 @@ export function MyAIs() {
                                                     typeMeta.accent
                                                 )}>
                                                     <Bot size={28} />
-                                                    <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-slate-700 shadow-sm dark:border-[#111111] dark:bg-[#1B1B1B] dark:text-white">
+                                                    <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-slate-700 shadow-sm dark:border-border/70 dark:bg-surfaceHover dark:text-white">
                                                         <TypeIcon size={12} />
                                                     </div>
                                                 </div>
@@ -565,7 +604,7 @@ export function MyAIs() {
                                                 {openMenuId === agent.id && (
                                                     <>
                                                         <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                                                        <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-2xl border border-black/[0.08] bg-white/95 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)] backdrop-blur dark:border-white/[0.08] dark:bg-[#171717] dark:shadow-[0_20px_45px_rgba(0,0,0,0.45)]">
+                                                        <div className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-2xl border border-black/[0.08] bg-white/95 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)] backdrop-blur dark:border-border/70 dark:bg-surface/95 dark:shadow-[0_20px_45px_rgba(4,19,31,0.28)]">
                                                             <button
                                                                 onClick={() => handleTogglePause(agent)}
                                                                 className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:hover:bg-white/[0.05] dark:hover:text-white"
@@ -586,7 +625,7 @@ export function MyAIs() {
                                             </div>
                                         </div>
 
-                                        <div className="rounded-[24px] border border-black/[0.05] bg-background/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                                        <div className="rounded-[24px] border border-black/[0.05] bg-background/70 p-4 dark:border-border/70 dark:bg-background/80">
                                             <div className="flex items-start gap-3">
                                                 <div className={cn(
                                                     'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
@@ -642,7 +681,7 @@ export function MyAIs() {
                                                     setEditingSection('strategy');
                                                     setEditingAgent(agent);
                                                 }}
-                                                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
+                                                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-black/[0.08] bg-white px-4 text-sm font-semibold text-text-primary shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:text-primary dark:border-border/70 dark:bg-background/80 dark:text-white dark:hover:border-primary/30 dark:hover:text-primary-light"
                                             >
                                                 <Cpu size={16} />
                                                 Configurar
@@ -655,8 +694,8 @@ export function MyAIs() {
                         })}
                     </div>
                 ) : agents.length === 0 ? (
-                    <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-12">
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(245,121,59,0.28)]">
+                    <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)] sm:p-12">
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[26px] bg-gradient-primary text-white shadow-[0_18px_40px_rgba(15,123,140,0.28)]">
                             <Bot size={34} />
                         </div>
                         <h3 className="mt-6 text-2xl font-display font-bold tracking-tight text-text-primary">
@@ -668,14 +707,14 @@ export function MyAIs() {
                         </p>
                         <button
                             onClick={() => setShowCreateModal(true)}
-                            className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)]"
+                            className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)]"
                         >
                             <Plus size={18} />
                             Criar minha primeira IA
                         </button>
                     </div>
                 ) : (
-                    <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-[#101010] dark:shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-12">
+                    <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white/80 p-8 text-center shadow-[0_16px_45px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-surface/92 dark:shadow-[0_20px_60px_rgba(4,19,31,0.22)] sm:p-12">
                         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[24px] bg-primary/10 text-primary dark:bg-primary/[0.12]">
                             <Search size={28} />
                         </div>
@@ -691,10 +730,10 @@ export function MyAIs() {
 
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-                    <div className="relative w-full max-w-2xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-white/[0.08] dark:bg-[#171717] dark:shadow-[0_24px_90px_rgba(0,0,0,0.55)]">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.12),_transparent_35%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(245,121,59,0.16),_transparent_36%)]" />
+                    <div className="relative w-full max-w-2xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.24)] dark:border-border/70 dark:bg-surface/95 dark:shadow-[0_24px_90px_rgba(4,19,31,0.30)]">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.14),_transparent_35%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(26,160,164,0.18),_transparent_36%)]" />
 
-                        <div className="relative border-b border-black/[0.06] px-6 py-5 dark:border-white/[0.08]">
+                        <div className="relative border-b border-black/[0.06] px-6 py-5 dark:border-border/70">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     {createStep === 'form' && (
@@ -703,7 +742,7 @@ export function MyAIs() {
                                                 setCreateStep('choose');
                                                 setCreateMode(null);
                                             }}
-                                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-text-secondary transition-colors hover:text-text-primary dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:text-white"
+                                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-black/[0.07] bg-white/75 text-text-secondary transition-colors hover:text-text-primary dark:border-border/70 dark:bg-background/80 dark:hover:text-white"
                                         >
                                             <ChevronLeft size={18} />
                                         </button>
@@ -742,7 +781,7 @@ export function MyAIs() {
                                         setCreateMode('scratch');
                                         setCreateStep('form');
                                     }}
-                                    className="w-full rounded-[24px] border border-black/[0.07] bg-white/80 p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-white/[0.08] dark:bg-white/[0.03]"
+                                    className="w-full rounded-[24px] border border-black/[0.07] bg-white/80 p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-border/70 dark:bg-background/80"
                                 >
                                     <div className="flex items-start gap-4">
                                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-900">
@@ -779,11 +818,11 @@ export function MyAIs() {
                                         }
                                     }}
                                     disabled={isLoadingCompanyData}
-                                    className="w-full rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_22px_48px_rgba(245,121,59,0.14)] disabled:opacity-70"
+                                    className="w-full rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5 text-left transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_22px_48px_rgba(10,75,102,0.18)] disabled:opacity-70"
                                 >
                                     <div className="flex items-start justify-between gap-4">
                                         <div className="flex items-start gap-4">
-                                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_14px_32px_rgba(245,121,59,0.28)]">
+                                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_14px_32px_rgba(15,123,140,0.28)]">
                                                 {isLoadingCompanyData ? <Loader2 size={20} className="animate-spin" /> : <Wand2 size={20} />}
                                             </div>
                                             <div>
@@ -800,7 +839,7 @@ export function MyAIs() {
                                 </button>
 
                                 {hasCompanyData === false && (
-                                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                                    <div className="rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3 text-sm text-accent dark:border-accent/20 dark:bg-accent/10 dark:text-[#E6B170]">
                                         Nenhum dado da empresa encontrado. Complete o onboarding primeiro ou crie do zero.
                                     </div>
                                 )}
@@ -832,7 +871,7 @@ export function MyAIs() {
                                         value={newName}
                                         onChange={(event) => setNewName(event.target.value)}
                                         placeholder="Ex: Vendedor Senior"
-                                        className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white px-4 text-sm text-text-primary outline-none transition-all focus:border-primary/35 focus:ring-4 focus:ring-primary/10 dark:border-white/[0.08] dark:bg-white/[0.04]"
+                                        className="h-12 w-full rounded-2xl border border-black/[0.07] bg-white px-4 text-sm text-text-primary outline-none transition-all focus:border-primary/35 focus:ring-4 focus:ring-primary/10 dark:border-border/70 dark:bg-background/80"
                                     />
                                 </div>
 
@@ -851,8 +890,8 @@ export function MyAIs() {
                                                     className={cn(
                                                         'rounded-[22px] border p-4 text-left transition-all duration-300',
                                                         active
-                                                            ? 'border-primary/35 bg-primary/10 shadow-[0_16px_34px_rgba(245,121,59,0.12)]'
-                                                            : 'border-black/[0.07] bg-white/80 hover:border-primary/20 hover:bg-primary/5 dark:border-white/[0.08] dark:bg-white/[0.03]'
+                                                            ? 'border-primary/35 bg-primary/10 shadow-[0_16px_34px_rgba(10,75,102,0.16)]'
+                                                            : 'border-black/[0.07] bg-white/80 hover:border-primary/20 hover:bg-primary/5 dark:border-border/70 dark:bg-background/80'
                                                     )}
                                                 >
                                                     <div className="flex items-start gap-3">
@@ -893,14 +932,14 @@ export function MyAIs() {
                                             setCreateStep('choose');
                                             setCreateMode(null);
                                         }}
-                                        className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-white/[0.08] dark:hover:bg-white/[0.04] dark:hover:text-white"
+                                        className="inline-flex h-12 items-center justify-center rounded-2xl border border-black/[0.07] px-5 text-sm font-semibold text-text-secondary transition-colors hover:bg-black/[0.03] hover:text-text-primary dark:border-border/70 dark:hover:bg-background/80 dark:hover:text-white"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isCreating}
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(245,121,59,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(245,121,59,0.4)] disabled:cursor-not-allowed disabled:opacity-70"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,123,140,0.34)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(15,123,140,0.4)] disabled:cursor-not-allowed disabled:opacity-70"
                                     >
                                         {isCreating && <Loader2 className="animate-spin" size={18} />}
                                         Criar IA

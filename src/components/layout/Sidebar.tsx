@@ -64,7 +64,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                 {hubNavSections.map((section) => (
                     <div key={section.title}>
                         {!collapsed && (
-                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/38">
+                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
                                 {section.title}
                             </p>
                         )}
@@ -120,7 +120,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                 {user?.role === 'admin' && (
                     <div className="pt-2">
                         {!collapsed && (
-                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white/38">
+                            <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
                                 Gestão
                             </p>
                         )}

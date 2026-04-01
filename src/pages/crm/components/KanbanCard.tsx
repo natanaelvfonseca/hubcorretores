@@ -19,15 +19,15 @@ import { Lead } from '../types';
 const apiBase = import.meta.env.VITE_API_BASE_URL || '';
 
 const INTENT_CONFIG = {
-    HOT: { label: 'QUENTE', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/25', ring: '#fb923c', cardBorder: 'border-orange-500/35' },
-    WARM: { label: 'MORNO', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/25', ring: '#facc15', cardBorder: 'border-yellow-500/30' },
-    COLD: { label: 'FRIO', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/25', ring: '#60a5fa', cardBorder: 'border-border/50' },
+    HOT: { label: 'QUENTE', color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/25', ring: '#D8893C', cardBorder: 'border-accent/35' },
+    WARM: { label: 'MORNO', color: 'text-primary-light', bg: 'bg-primary-light/10', border: 'border-primary-light/25', ring: '#1AA0A4', cardBorder: 'border-primary-light/30' },
+    COLD: { label: 'FRIO', color: 'text-sky-400', bg: 'bg-sky-500/10', border: 'border-sky-500/25', ring: '#60a5fa', cardBorder: 'border-border/50' },
 } as const;
 
 const FOLLOWUP_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
     pending: {
         label: 'FOLLOW-UP AGENDADO',
-        className: 'border-orange-500/25 bg-orange-500/10 text-orange-500',
+        className: 'border-primary/25 bg-primary/10 text-primary',
     },
     sent: {
         label: 'FOLLOW-UP ENVIADO',
@@ -220,10 +220,10 @@ export function KanbanCard({
                             {intelligence && !intentCfg && (
                                 <div
                                     className={`flex flex-shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold tracking-wide ${intelligence.temperature === 'quente'
-                                        ? 'border border-orange-500/25 bg-orange-500/10 text-orange-400'
+                                        ? 'border border-accent/25 bg-accent/10 text-accent'
                                         : intelligence.temperature === 'morno'
-                                            ? 'border border-yellow-500/25 bg-yellow-500/10 text-yellow-400'
-                                            : 'border border-blue-500/25 bg-blue-500/10 text-blue-400'
+                                            ? 'border border-primary-light/25 bg-primary-light/10 text-primary-light'
+                                            : 'border border-sky-500/25 bg-sky-500/10 text-sky-400'
                                         }`}
                                 >
                                     <Brain size={10} />
@@ -251,7 +251,7 @@ export function KanbanCard({
                             {lead.hasAiSummary && (
                                 <span
                                     title="A IA ja gerou um resumo operacional para este lead"
-                                    className="inline-flex items-center justify-center rounded-full border border-amber-500/25 bg-amber-500/10 p-1 text-amber-400"
+                                    className="inline-flex items-center justify-center rounded-full border border-accent/25 bg-accent/10 p-1 text-accent"
                                 >
                                     <Lightbulb size={11} />
                                 </span>
@@ -285,7 +285,7 @@ export function KanbanCard({
                         {intelligence && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                                 {intelligence.intent && (
-                                    <span className="rounded-full border border-purple-500/20 bg-purple-500/10 px-1.5 py-0.5 text-[9px] font-medium text-purple-400">
+                                    <span className="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-primary-light">
                                         {intelligence.intent}
                                     </span>
                                 )}
@@ -296,7 +296,7 @@ export function KanbanCard({
                                 )}
                                 {intelligence.top_objection && (
                                     <span
-                                        className="max-w-[100px] truncate rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-medium text-amber-400"
+                                        className="max-w-[100px] truncate rounded-full border border-accent/20 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium text-accent"
                                         title={intelligence.top_objection}
                                     >
                                         Objecao: {intelligence.top_objection}

@@ -11,13 +11,13 @@ interface PipelineFlowProps {
 }
 
 const STAGE_COLORS = [
-    '#6366f1', // indigo
-    '#8b5cf6', // violet
-    '#a855f7', // purple
-    '#ec4899', // pink
-    '#f43f5e', // rose
-    '#f97316', // orange
-    '#eab308', // yellow
+    '#062133', // marine deep
+    '#0A4B66', // marine
+    '#0F7B8C', // primary
+    '#1AA0A4', // primary light
+    '#43C6D1', // coastal cyan
+    '#D8893C', // accent
+    '#7CB7A3', // sea mist
     '#22c55e', // green
 ];
 
