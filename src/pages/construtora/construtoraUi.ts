@@ -1,6 +1,8 @@
 import type {
+    AlertTone,
     ConstrutoraLeadScore,
     ConstrutoraLeadStatus,
+    LeadJourneyStatus,
 } from '../../data/construtoraMockData';
 
 export function formatPercentage(value: number) {
@@ -18,12 +20,34 @@ export function formatCurrency(value: number) {
     }).format(value);
 }
 
+export function formatDecimal(value: number) {
+    return value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+    });
+}
+
 export function scoreLabel(score: ConstrutoraLeadScore) {
     return score.charAt(0).toUpperCase() + score.slice(1);
 }
 
 export function statusLabel(status: ConstrutoraLeadStatus) {
     return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+export function journeyStatusLabel(status: LeadJourneyStatus) {
+    switch (status) {
+        case 'novo':
+            return 'Novo';
+        case 'em_atendimento':
+            return 'Em atendimento';
+        case 'visitou':
+            return 'Visitou';
+        case 'proposta':
+            return 'Proposta';
+        case 'fechado':
+            return 'Fechado';
+    }
 }
 
 export const scoreStyles: Record<ConstrutoraLeadScore, string> = {
@@ -36,4 +60,18 @@ export const statusStyles: Record<ConstrutoraLeadStatus, string> = {
     quente: 'border-orange-200/90 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200',
     morno: 'border-yellow-200/90 bg-yellow-50 text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-200',
     frio: 'border-sky-200/90 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200',
+};
+
+export const journeyStatusStyles: Record<LeadJourneyStatus, string> = {
+    novo: 'border-slate-200/90 bg-slate-50 text-slate-700 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-200',
+    em_atendimento: 'border-cyan-200/90 bg-cyan-50 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200',
+    visitou: 'border-indigo-200/90 bg-indigo-50 text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-200',
+    proposta: 'border-amber-200/90 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
+    fechado: 'border-emerald-200/90 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
+};
+
+export const alertToneStyles: Record<AlertTone, string> = {
+    atencao: 'border-amber-200/90 bg-amber-50/90 text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100',
+    urgente: 'border-rose-200/90 bg-rose-50/90 text-rose-900 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-100',
+    oportunidade: 'border-emerald-200/90 bg-emerald-50/90 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-100',
 };

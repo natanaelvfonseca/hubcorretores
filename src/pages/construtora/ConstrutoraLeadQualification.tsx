@@ -8,6 +8,8 @@ import { cn } from '../../utils/cn';
 import { LeadConversationModal } from './components/LeadConversationModal';
 import {
     formatCurrency,
+    journeyStatusLabel,
+    journeyStatusStyles,
     scoreLabel,
     scoreStyles,
     statusLabel,
@@ -29,7 +31,6 @@ export function ConstrutoraLeadQualification() {
         [selectedEmpreendimentoId],
     );
 
-    const maxOriginTotal = Math.max(...data.leadMetrics.origens.map((item) => item.total), 1);
     const metricCards = [
         {
             label: 'Tempo medio ate qualificacao',
@@ -100,14 +101,15 @@ export function ConstrutoraLeadQualification() {
                             <div key={item.origem} className="space-y-2">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="font-semibold text-text-primary">{item.origem}</span>
-                                    <span className="text-text-secondary">{item.total} leads</span>
+                                    <span className="text-text-secondary">{item.percentual}%</span>
                                 </div>
                                 <div className="h-2 rounded-full bg-surface-hover/90">
                                     <div
                                         className="h-full rounded-full bg-[linear-gradient(90deg,#0F7B8C,#1AA0A4,#D8893C)]"
-                                        style={{ width: `${(item.total / maxOriginTotal) * 100}%` }}
+                                        style={{ width: `${item.percentual}%` }}
                                     />
                                 </div>
+                                <p className="text-xs text-text-muted">{item.total} leads</p>
                             </div>
                         ))}
                     </div>
@@ -159,6 +161,9 @@ export function ConstrutoraLeadQualification() {
                                     </span>
                                     <span className="rounded-full border border-border/80 bg-surface px-3 py-1 text-xs font-semibold text-text-secondary">
                                         {lead.regiao}
+                                    </span>
+                                    <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', journeyStatusStyles[lead.jornada_status])}>
+                                        {journeyStatusLabel(lead.jornada_status)}
                                     </span>
                                     <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', scoreStyles[lead.score])}>
                                         Score {scoreLabel(lead.score)}

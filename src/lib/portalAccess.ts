@@ -1,6 +1,7 @@
 import {
     BarChart3,
     Building2,
+    KanbanSquare,
     LayoutDashboard,
     Users,
     type LucideIcon,
@@ -38,6 +39,14 @@ const construtoraNavItems: PortalNavItem[] = [
         eyebrow: 'Visao geral',
         summary: 'Boas-vindas ao painel da Construtora Alpha. Aqui voce acompanha a demanda, o atendimento e as vendas em tempo real.',
         icon: LayoutDashboard,
+    },
+    {
+        id: 'construtora-crm',
+        path: '/crm-construtora',
+        navLabel: 'CRM',
+        eyebrow: 'Pipeline de vendas',
+        summary: 'Acompanhe onde cada oportunidade esta no processo comercial, do primeiro contato ate a venda fechada.',
+        icon: KanbanSquare,
     },
     {
         id: 'construtora-leads',

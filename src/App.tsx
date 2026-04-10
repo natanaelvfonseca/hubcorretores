@@ -17,6 +17,7 @@ import { WhatsAppConnection } from './pages/settings/WhatsAppConnection';
 import { ConstrutoraLeadQualification } from './pages/construtora/ConstrutoraLeadQualification';
 import { ConstrutoraEmpreendimentos } from './pages/construtora/ConstrutoraEmpreendimentos';
 import { ConstrutoraCorretores } from './pages/construtora/ConstrutoraCorretores';
+import { ConstrutoraCRM } from './pages/construtora/ConstrutoraCRM';
 
 declare global {
     interface Window {
@@ -68,6 +69,7 @@ function App() {
                         >
                             <Route index element={<Navigate to="/dashboard" replace />} />
                             <Route path="dashboard" element={<HubDashboard />} />
+                            <Route path="crm-construtora" element={<ConstrutoraCRM />} />
                             <Route path="qualificacao-leads" element={<ConstrutoraLeadQualification />} />
                             <Route path="empreendimentos" element={<ConstrutoraEmpreendimentos />} />
                             <Route path="corretores" element={<ConstrutoraCorretores />} />

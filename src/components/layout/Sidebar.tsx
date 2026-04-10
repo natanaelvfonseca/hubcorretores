@@ -54,11 +54,9 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                     )}
                 </div>
 
-                {!collapsed && (
+                {!collapsed && !isConstrutora && (
                     <p className="mt-4 text-xs leading-6 text-white/55">
-                        {isConstrutora
-                            ? 'Boas-vindas ao painel da Construtora Alpha. Aqui voce acompanha a demanda, o atendimento e as vendas em tempo real.'
-                            : 'Ecossistema imobiliario regional com curadoria, networking e negocios organizados.'}
+                        Ecossistema imobiliario regional com curadoria, networking e negocios organizados.
                     </p>
                 )}
             </div>

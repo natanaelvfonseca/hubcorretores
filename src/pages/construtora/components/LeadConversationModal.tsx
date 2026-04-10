@@ -11,6 +11,34 @@ function formatMessageTime(value: string) {
     }).format(new Date(value));
 }
 
+function getFallbackConversation(leadName: string, interesse: string, empreendimento: string) {
+    return {
+        thread: {
+            resumo: `Conversa simulada com ${leadName} sobre ${interesse} no ${empreendimento}.`,
+        },
+        messages: [
+            {
+                id: 'fallback_msg_001',
+                autor: 'lead' as const,
+                texto: `Oi, tenho interesse em ${interesse} no ${empreendimento}.`,
+                enviado_em: '2026-04-10T09:10:00-03:00',
+            },
+            {
+                id: 'fallback_msg_002',
+                autor: 'atendimento' as const,
+                texto: 'Perfeito. Posso te mostrar valores, disponibilidade e as melhores condicoes.',
+                enviado_em: '2026-04-10T09:12:00-03:00',
+            },
+            {
+                id: 'fallback_msg_003',
+                autor: 'lead' as const,
+                texto: 'Quero entender as opcoes e os proximos passos para avancar.',
+                enviado_em: '2026-04-10T09:14:00-03:00',
+            },
+        ],
+    };
+}
+
 interface LeadConversationModalProps {
     data: ConstrutoraPresentationData;
     activeLeadId: string | null;
@@ -25,7 +53,10 @@ export function LeadConversationModal({
     const activeLead = activeLeadId
         ? data.leads.find((lead) => lead.id === activeLeadId) ?? null
         : null;
-    const activeConversation = activeLead ? data.conversationsByLeadId[activeLead.id] : null;
+    const activeConversation = activeLead
+        ? data.conversationsByLeadId[activeLead.id] ??
+        getFallbackConversation(activeLead.nome, activeLead.interesse, data.activeEmpreendimento.nome)
+        : null;
 
     if (!activeLead || !activeConversation) {
         return null;

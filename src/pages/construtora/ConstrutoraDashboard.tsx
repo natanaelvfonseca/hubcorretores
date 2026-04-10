@@ -1,11 +1,55 @@
-import { ArrowRight, Building2, Filter, Flame, MessageSquare, Target, TrendingUp } from 'lucide-react';
+import {
+    AlertTriangle,
+    ArrowRight,
+    Building2,
+    CircleDollarSign,
+    Filter,
+    Flame,
+    MessageSquare,
+    ShieldCheck,
+    Sparkles,
+    Target,
+    Timer,
+    TrendingUp,
+    Trophy,
+    Users,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getConstrutoraPresentationData } from '../../data/construtoraMockData';
 import { isConstrutoraUser } from '../../lib/portalAccess';
 import { cn } from '../../utils/cn';
-import { formatPercentage } from './construtoraUi';
+import {
+    alertToneStyles,
+    formatCurrency,
+    formatDecimal,
+    formatPercentage,
+} from './construtoraUi';
+
+const rankingStyles = {
+    1: {
+        surface:
+            'border-amber-200/80 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.25),transparent_40%),linear-gradient(180deg,rgba(255,252,242,0.96),rgba(255,247,214,0.96))] shadow-[0_24px_60px_rgba(217,119,6,0.18)] dark:border-amber-500/20 dark:bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.28),transparent_40%),linear-gradient(180deg,rgba(69,39,6,0.96),rgba(31,23,10,0.96))]',
+        badge: 'bg-gradient-to-br from-[#F5C14D] via-[#D8893C] to-[#A45C23] text-white',
+        glow: 'bg-[#F5C14D]/35',
+        place: '1o lugar',
+    },
+    2: {
+        surface:
+            'border-slate-200/80 bg-[radial-gradient(circle_at_top,rgba(203,213,225,0.24),transparent_40%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(240,244,248,0.96))] shadow-[0_20px_50px_rgba(100,116,139,0.12)] dark:border-slate-500/20 dark:bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.18),transparent_40%),linear-gradient(180deg,rgba(28,37,49,0.96),rgba(15,23,42,0.96))]',
+        badge: 'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600 text-slate-950',
+        glow: 'bg-slate-300/25',
+        place: '2o lugar',
+    },
+    3: {
+        surface:
+            'border-orange-200/80 bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.2),transparent_40%),linear-gradient(180deg,rgba(255,250,245,0.96),rgba(254,235,214,0.96))] shadow-[0_20px_50px_rgba(194,65,12,0.12)] dark:border-orange-500/20 dark:bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.18),transparent_40%),linear-gradient(180deg,rgba(67,29,8,0.96),rgba(30,20,13,0.96))]',
+        badge: 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-700 text-white',
+        glow: 'bg-orange-300/20',
+        place: '3o lugar',
+    },
+} as const;
 
 export function ConstrutoraDashboard() {
     const { user } = useAuth();
@@ -72,7 +116,7 @@ export function ConstrutoraDashboard() {
                         </h1>
 
                         <p className="mt-5 max-w-3xl text-sm leading-7 text-white/[0.82] sm:text-base">
-                            Acompanhamento completo da geracao de leads, atendimento e vendas dos seus empreendimentos.
+                            Boas-vindas ao painel da Construtora Alpha. Aqui voce acompanha a demanda, o atendimento e as vendas em tempo real.
                         </p>
 
                         <p className="mt-4 max-w-3xl text-sm leading-7 text-white/[0.72]">
@@ -136,6 +180,50 @@ export function ConstrutoraDashboard() {
                 </div>
             </section>
 
+            <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                <article className="relative overflow-hidden rounded-[30px] border border-emerald-200/70 bg-[radial-gradient(circle_at_top_left,_rgba(52,211,153,0.25),_transparent_34%),linear-gradient(135deg,#062E2B,#0B4E47)] p-6 text-white shadow-[0_24px_70px_rgba(5,46,40,0.26)] sm:p-7">
+                    <div className="absolute right-6 top-6 rounded-full border border-white/10 bg-white/10 p-3 text-emerald-100">
+                        <Sparkles size={22} />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-emerald-100/80">Previsao de vendas</p>
+                    <p className="mt-4 text-4xl font-display">{data.salesForecast.vendasPrevistas30Dias}</p>
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-white/78">{data.salesForecast.resumo}</p>
+                </article>
+
+                <article className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <CircleDollarSign size={20} />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Custo por venda</p>
+                            <h2 className="mt-2 text-2xl font-display text-text-primary">Investimento e retorno</h2>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-[24px] border border-border/70 bg-background/80 p-5">
+                            <p className="text-sm font-semibold text-text-secondary">Investimento</p>
+                            <p className="mt-2 text-3xl font-display text-text-primary">
+                                {formatCurrency(data.salesCost.investimento)}
+                            </p>
+                        </div>
+                        <div className="rounded-[24px] border border-border/70 bg-background/80 p-5">
+                            <p className="text-sm font-semibold text-text-secondary">Vendas</p>
+                            <p className="mt-2 text-3xl font-display text-text-primary">
+                                {data.salesCost.vendas.toLocaleString('pt-BR')}
+                            </p>
+                        </div>
+                        <div className="rounded-[24px] border border-emerald-200/80 bg-emerald-50/90 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Custo por venda</p>
+                            <p className="mt-2 text-3xl font-display text-emerald-900 dark:text-emerald-100">
+                                {formatCurrency(data.salesCost.custoPorVenda)}
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
             <section className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
                 <div className="flex flex-col gap-2">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Funil de vendas</p>
@@ -169,6 +257,152 @@ export function ConstrutoraDashboard() {
                             </div>
                         </article>
                     ))}
+                </div>
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[0.95fr_0.95fr_1.1fr]">
+                <article className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                            <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Qualidade do atendimento</p>
+                            <h2 className="mt-2 text-2xl font-display text-text-primary">Velocidade e experiencia</h2>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 space-y-3">
+                        {[
+                            {
+                                label: 'Tempo medio de resposta',
+                                value: `${data.serviceQuality.tempoMedioRespostaMin} minutos`,
+                                icon: Timer,
+                            },
+                            {
+                                label: 'Leads respondidos',
+                                value: `${data.serviceQuality.leadsRespondidosPercentual}%`,
+                                icon: Users,
+                            },
+                            {
+                                label: 'Nota media de atendimento',
+                                value: `${formatDecimal(data.serviceQuality.notaMediaAtendimento)}/10`,
+                                icon: Sparkles,
+                            },
+                        ].map((metric) => {
+                            const Icon = metric.icon;
+
+                            return (
+                                <div
+                                    key={metric.label}
+                                    className="flex items-center justify-between gap-4 rounded-[22px] border border-border/70 bg-background/80 p-4"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                            <Icon size={18} />
+                                        </div>
+                                        <p className="text-sm font-semibold text-text-secondary">{metric.label}</p>
+                                    </div>
+                                    <p className="text-lg font-semibold text-text-primary">{metric.value}</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </article>
+
+                <article className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Origem dos leads</p>
+                    <h2 className="mt-2 text-2xl font-display text-text-primary">Canais que mais trazem oportunidades</h2>
+
+                    <div className="mt-6 space-y-4">
+                        {data.originBreakdown.map((item) => (
+                            <div key={item.origem} className="space-y-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="font-semibold text-text-primary">{item.origem}</span>
+                                    <span className="text-text-secondary">{item.percentual}%</span>
+                                </div>
+                                <div className="h-3 rounded-full bg-surface-hover/90">
+                                    <div
+                                        className="h-full rounded-full bg-[linear-gradient(90deg,#0F7B8C,#1AA0A4,#D8893C)]"
+                                        style={{ width: `${item.percentual}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </article>
+
+                <article className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                <AlertTriangle size={20} />
+                            </div>
+                        <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Alertas</p>
+                            <h2 className="mt-2 text-2xl font-display text-text-primary">Pontos que pedem atencao</h2>
+                        </div>
+                    </div>
+
+                    <div className="mt-6 space-y-3">
+                        {data.alerts.map((alert) => (
+                            <div
+                                key={alert.id}
+                                className={cn('rounded-[24px] border p-4', alertToneStyles[alert.tone])}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 rounded-full bg-black/5 p-2 dark:bg-white/10">
+                                        {alert.tone === 'urgente' ? <AlertTriangle size={16} /> : <Sparkles size={16} />}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold">{alert.title}</p>
+                                        <p className="mt-2 text-sm leading-6 opacity-80">{alert.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </article>
+            </section>
+
+            <section className="rounded-[30px] border border-border/70 bg-surface/92 p-6 shadow-[0_18px_50px_rgba(8,23,38,0.06)] sm:p-7">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                        <Trophy size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-primary/75">Top Corretores</p>
+                        <h2 className="mt-2 text-2xl font-display text-text-primary">Quem esta puxando as vendas</h2>
+                    </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                    {data.topCorretores.map((corretor) => {
+                        const style = rankingStyles[corretor.posicao];
+
+                        return (
+                            <article
+                                key={corretor.corretor_id}
+                                className={cn('relative overflow-hidden rounded-[30px] border p-6', style.surface)}
+                            >
+                                <div className={cn('absolute -right-4 -top-4 h-24 w-24 rounded-full blur-3xl', style.glow, corretor.posicao === 1 ? 'animate-pulse' : '')} />
+                                <div className="relative">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className={cn('inline-flex rounded-full px-4 py-2 text-sm font-semibold shadow-[0_12px_24px_rgba(8,23,38,0.16)]', style.badge)}>
+                                            {style.place}
+                                        </span>
+                                        <span className="rounded-full border border-black/5 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-text-secondary dark:border-white/10 dark:bg-white/5">
+                                            {corretor.vendas} vendas
+                                        </span>
+                                    </div>
+
+                                    <h3 className="mt-6 text-3xl font-display text-text-primary">{corretor.nome}</h3>
+                                    <p className="mt-3 text-sm leading-7 text-text-secondary">
+                                        Destaque comercial no empreendimento {data.activeEmpreendimento.nome}.
+                                    </p>
+                                </div>
+                            </article>
+                        );
+                    })}
                 </div>
             </section>
         </div>
