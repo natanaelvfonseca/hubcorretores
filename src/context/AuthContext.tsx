@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 import { useNavigate } from 'react-router-dom';
 import {
     CONSTRUTORA_LOGIN_EMAIL,
-    CONSTRUTORA_LOGIN_PASSWORD,
+    CONSTRUTORA_LOGIN_PASSWORDS,
     CONSTRUTORA_LOGIN_TOKEN,
     construtoraAlphaUser,
 } from '../data/construtoraMockData';
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (email: string, pass: string) => {
         if (email.trim().toLowerCase() === CONSTRUTORA_LOGIN_EMAIL) {
-            if (pass !== CONSTRUTORA_LOGIN_PASSWORD) {
+            if (!CONSTRUTORA_LOGIN_PASSWORDS.includes(pass)) {
                 return { success: false, error: 'E-mail ou senha incorretos' };
             }
 

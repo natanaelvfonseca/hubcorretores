@@ -132,6 +132,7 @@ export interface ConstrutoraPresentationData {
 
 export const CONSTRUTORA_LOGIN_EMAIL = 'alpha@demo.com';
 export const CONSTRUTORA_LOGIN_PASSWORD = 'Alpha@123';
+export const CONSTRUTORA_LOGIN_PASSWORDS = [CONSTRUTORA_LOGIN_PASSWORD, 'demo'];
 export const CONSTRUTORA_LOGIN_TOKEN = 'construtora-alpha-session';
 
 export const construtoraAlphaUser: ConstrutoraMockUser = {
