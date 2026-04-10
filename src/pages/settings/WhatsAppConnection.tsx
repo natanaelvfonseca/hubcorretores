@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
     AlertCircle,
     ArrowRight,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
+import { isConstrutoraUser } from '../../lib/portalAccess';
 
 const API_URL = '/api';
 
@@ -120,6 +121,10 @@ export function WhatsAppConnection() {
 
     const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
     const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    if (isConstrutoraUser(user)) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const connectionLimit = user?.organization?.whatsapp_connections_limit || 1;
 

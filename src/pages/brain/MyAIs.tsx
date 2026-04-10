@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import {
     Activity,
     ArrowRight,
@@ -28,6 +29,7 @@ import AgentEditModal from '../../components/agents/AgentEditModal';
 import { agentTemplates } from '../../data/agentTemplates';
 import { getProfileBySlug } from '../../data/industryProfiles';
 import type { CompanyProfileData } from '../../lib/companyProfile';
+import { isConstrutoraUser } from '../../lib/portalAccess';
 
 interface Agent {
     id: string;
@@ -179,6 +181,10 @@ function HeaderStat({
 
 export function MyAIs() {
     const { user, token } = useAuth();
+
+    if (isConstrutoraUser(user)) {
+        return <Navigate to="/dashboard" replace />;
+    }
     const [agents, setAgents] = useState<Agent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);

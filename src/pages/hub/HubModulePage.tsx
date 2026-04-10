@@ -1,15 +1,18 @@
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { getHubModuleById, hubModules } from '../../data/hubPlatform';
+import { canAccessHubModule } from '../../lib/portalAccess';
 
 interface HubModulePageProps {
     sectionId: string;
 }
 
 export function HubModulePage({ sectionId }: HubModulePageProps) {
+    const { user } = useAuth();
     const module = getHubModuleById(sectionId);
 
-    if (!module) {
+    if (!module || !canAccessHubModule(user, sectionId)) {
         return <Navigate to="/dashboard" replace />;
     }
 

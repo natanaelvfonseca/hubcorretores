@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { hubNavSections, hubModuleMap } from '../../data/hubPlatform';
+import { hubModuleMap } from '../../data/hubPlatform';
+import { getVisibleHubNavSections, isConstrutoraUser } from '../../lib/portalAccess';
 import { BrandLogo } from '../branding/BrandLogo';
 
 interface SidebarProps {
@@ -17,6 +18,8 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
     const { user, logout } = useAuth();
+    const isConstrutora = isConstrutoraUser(user);
+    const navSections = getVisibleHubNavSections(user);
     const userInitials = user?.name
         ? user.name
             .split(' ')
@@ -55,13 +58,15 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
 
                 {!collapsed && (
                     <p className="mt-4 text-xs leading-6 text-white/55">
-                        Ecossistema imobiliário regional com curadoria, networking e negócios organizados.
+                        {isConstrutora
+                            ? 'Painel executivo com demanda, qualificacao por IA e performance comercial por empreendimento.'
+                            : 'Ecossistema imobiliario regional com curadoria, networking e negocios organizados.'}
                     </p>
                 )}
             </div>
 
             <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5 scrollbar-hide">
-                {hubNavSections.map((section) => (
+                {navSections.map((section) => (
                     <div key={section.title}>
                         {!collapsed && (
                             <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
@@ -121,7 +126,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                     <div className="pt-2">
                         {!collapsed && (
                             <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
-                                Gestão
+                                Gestao
                             </p>
                         )}
 
@@ -146,7 +151,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                                         <div>
                                             <p className="font-semibold">Painel administrativo</p>
                                             <p className={`text-[11px] ${isActive ? 'text-[#A36A3A]' : 'text-[#F6D7B5]/70'}`}>
-                                                Curadoria, parceiros e governança
+                                                Curadoria, parceiros e governanca
                                             </p>
                                         </div>
                                     )}
@@ -168,7 +173,11 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                             <div className="min-w-0 flex-1">
                                 <p className="truncate text-sm font-semibold text-white">{user?.name || 'Membro HUB'}</p>
                                 <p className="truncate text-xs text-white/54">
-                                    {user?.role === 'admin' ? 'Gestão da plataforma' : 'Membro da comunidade'}
+                                    {user?.role === 'admin'
+                                        ? 'Gestao da plataforma'
+                                        : isConstrutora
+                                            ? 'Conta premium da construtora'
+                                            : 'Membro da comunidade'}
                                 </p>
                             </div>
                         )}
@@ -180,7 +189,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                             }`}
                     >
                         <LogOut size={16} />
-                        {!collapsed && 'Encerrar sessão'}
+                        {!collapsed && 'Encerrar sessao'}
                     </button>
                 </div>
             </div>

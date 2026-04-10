@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    CONSTRUTORA_DEMO_EMAIL,
+    CONSTRUTORA_DEMO_TOKEN,
+    construtoraAlphaDemoUser,
+} from '../data/construtoraMockData';
 
-interface User {
+export interface User {
     id: string;
     email: string;
     name: string;
@@ -13,6 +18,11 @@ interface User {
     };
     koins_balance?: number;
     role: 'user' | 'admin';
+    accountType?: 'member' | 'construtora';
+    accountStatus?: 'premium' | 'active';
+    companyType?: string;
+    construtora_id?: string;
+    accessible_empreendimento_ids?: string[];
 }
 
 interface AuthContextType {
@@ -42,6 +52,21 @@ function readJwtExpiration(token: string): number | null {
     }
 }
 
+function isMockSessionToken(token: string) {
+    return token === CONSTRUTORA_DEMO_TOKEN;
+}
+
+function readStoredMockUser() {
+    try {
+        const storedUser = localStorage.getItem('kogna_user');
+        if (!storedUser) return construtoraAlphaDemoUser;
+
+        return JSON.parse(storedUser) as User;
+    } catch {
+        return construtoraAlphaDemoUser;
+    }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -52,6 +77,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Note: Hydration is now handled by refreshUser on mount
 
     const login = async (email: string, pass: string) => {
+        if (email.trim().toLowerCase() === CONSTRUTORA_DEMO_EMAIL) {
+            localStorage.setItem('kogna_token', CONSTRUTORA_DEMO_TOKEN);
+            localStorage.setItem('kogna_user', JSON.stringify(construtoraAlphaDemoUser));
+            setToken(CONSTRUTORA_DEMO_TOKEN);
+            setUser(construtoraAlphaDemoUser);
+            navigate('/dashboard');
+            return { success: true };
+        }
+
         try {
             const apiBase = ''; // Hardcoded for local dev for now
             const res = await fetch(`${apiBase}/api/login`, {
@@ -136,6 +170,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshUser = async () => {
         const storedToken = localStorage.getItem('kogna_token');
         if (!storedToken) {
+            setLoading(false);
+            return;
+        }
+
+        if (isMockSessionToken(storedToken)) {
+            const storedMockUser = readStoredMockUser();
+            setUser(storedMockUser);
+            setToken(storedToken);
             setLoading(false);
             return;
         }

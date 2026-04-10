@@ -7,11 +7,17 @@ import {
     hubSnapshotMetrics,
     hubSupportSignals,
 } from '../../data/hubPlatform';
+import { isConstrutoraUser } from '../../lib/portalAccess';
+import { ConstrutoraDashboard } from '../construtora/ConstrutoraDashboard';
 
 const featuredModules = hubModules.filter((module) => module.id !== 'dashboard');
 
 export function HubDashboard() {
     const { user } = useAuth();
+
+    if (isConstrutoraUser(user)) {
+        return <ConstrutoraDashboard />;
+    }
 
     return (
         <div className="space-y-8 pb-6">

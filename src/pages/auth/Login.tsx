@@ -1,8 +1,9 @@
-import { ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
+import { ArrowRight, Building2, Loader2, Lock, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { BrandLogo } from '../../components/branding/BrandLogo';
+import { CONSTRUTORA_DEMO_EMAIL } from '../../data/construtoraMockData';
 
 export function Login() {
     const { login } = useAuth();
@@ -24,6 +25,18 @@ export function Login() {
         }
     };
 
+    const handleDemoAccess = async () => {
+        setLoading(true);
+        setError(null);
+
+        const result = await login(CONSTRUTORA_DEMO_EMAIL, 'demo');
+
+        if (!result.success) {
+            setError(result.error || 'Erro ao acessar o ambiente demo');
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.14),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(214,140,69,0.16),_transparent_28%),linear-gradient(180deg,#f5f8fa_0%,#edf4f5_100%)] px-4 py-8">
             <div className="absolute left-[-6%] top-[-8%] h-[420px] w-[420px] rounded-full bg-primary/10 blur-3xl" />
@@ -37,14 +50,14 @@ export function Login() {
 
                         <div className="mt-14 max-w-xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#9FE7E0]">
-                                Plataforma proprietária
+                                Plataforma proprietaria
                             </p>
                             <h1 className="mt-5 text-4xl font-display leading-tight sm:text-5xl">
-                                O novo centro oficial da comunidade imobiliária do litoral catarinense.
+                                O novo centro oficial da comunidade imobiliaria do litoral catarinense.
                             </h1>
                             <p className="mt-5 text-sm leading-7 text-white/[0.78] sm:text-base">
-                                Networking, oportunidades, diretórios, benefícios e agenda regional em uma experiência
-                                premium, profissional e feita para gerar conexões reais de negócio.
+                                Networking, oportunidades, diretorios, beneficios e agenda regional em uma experiencia
+                                premium, profissional e feita para gerar conexoes reais de negocio.
                             </p>
                         </div>
 
@@ -63,7 +76,7 @@ export function Login() {
 
                         <div className="mt-10 rounded-[28px] border border-white/12 bg-black/[0.12] p-5">
                             <p className="text-sm leading-7 text-white/[0.78]">
-                                O WhatsApp continua importante para follow-up e agilidade, mas a inteligência da
+                                O WhatsApp continua importante para follow-up e agilidade, mas a inteligencia da
                                 comunidade passa a morar dentro da plataforma.
                             </p>
                         </div>
@@ -76,7 +89,7 @@ export function Login() {
                             </p>
                             <h2 className="mt-3 text-4xl font-display text-text-primary">Entrar no HUB</h2>
                             <p className="mt-3 text-sm leading-7 text-text-secondary">
-                                Use seu acesso para entrar no ecossistema oficial de corretores, imobiliárias,
+                                Use seu acesso para entrar no ecossistema oficial de corretores, imobiliarias,
                                 construtoras e parceiros do Litoral SC.
                             </p>
 
@@ -129,11 +142,42 @@ export function Login() {
 
                             <div className="mt-8 rounded-[24px] border border-border/70 bg-background/70 p-5">
                                 <p className="text-sm leading-7 text-text-secondary">
-                                    Ainda não tem acesso?
+                                    Ainda nao tem acesso?
                                     <Link to="/register" className="ml-2 font-semibold text-primary transition hover:text-primary-light">
                                         Ativar meu perfil
                                     </Link>
                                 </p>
+                            </div>
+
+                            <div className="mt-4 rounded-[26px] border border-primary/15 bg-[linear-gradient(135deg,rgba(15,123,140,0.08),rgba(216,137,60,0.08))] p-5">
+                                <div className="flex items-start gap-3">
+                                    <div className="rounded-2xl bg-primary/12 p-3 text-primary">
+                                        <Building2 size={18} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/70">
+                                            Demo construtora
+                                        </p>
+                                        <h3 className="mt-2 text-xl font-display text-text-primary">Construtora Alpha</h3>
+                                        <p className="mt-2 text-sm leading-6 text-text-secondary">
+                                            Ambiente executivo com geracao de demanda, qualificacao por IA, performance
+                                            dos corretores e visao filtrada por empreendimento.
+                                        </p>
+                                        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-text-muted">
+                                            {CONSTRUTORA_DEMO_EMAIL}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDemoAccess}
+                                    disabled={loading}
+                                    className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[20px] border border-primary/15 bg-white/80 px-4 text-sm font-semibold text-primary transition hover:border-primary/30 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Entrar como Construtora Alpha
+                                    <ArrowRight size={16} />
+                                </button>
                             </div>
                         </div>
                     </section>

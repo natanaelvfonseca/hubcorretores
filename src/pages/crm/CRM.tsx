@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { KanbanBoard } from './components/KanbanBoard';
 import { LeadModal } from './components/CreateLeadModal';
 import { LeadSummaryDrawer } from './components/LeadSummaryDrawer';
@@ -6,15 +7,20 @@ import { ErrorBoundary } from '../../components/common/ErrorBoundary';
 import { Lead } from './types';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import { isConstrutoraUser } from '../../lib/portalAccess';
 
 export function CRM() {
-    const { token } = useAuth();
+    const { token, user } = useAuth();
     const { showToast } = useNotifications();
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editingLead, setEditingLead] = useState<Lead | null>(null);
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [actionLoading, setActionLoading] = useState(false);
+
+    if (isConstrutoraUser(user)) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const handleCloseModal = () => {
         setCreateModalOpen(false);
