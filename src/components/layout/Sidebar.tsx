@@ -6,8 +6,7 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { hubModuleMap } from '../../data/hubPlatform';
-import { getVisibleHubNavSections, isConstrutoraUser } from '../../lib/portalAccess';
+import { getVisibleNavigation, isConstrutoraUser } from '../../lib/portalAccess';
 import { BrandLogo } from '../branding/BrandLogo';
 
 interface SidebarProps {
@@ -19,7 +18,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
     const { user, logout } = useAuth();
     const isConstrutora = isConstrutoraUser(user);
-    const navSections = getVisibleHubNavSections(user);
+    const navSections = getVisibleNavigation(user);
     const userInitials = user?.name
         ? user.name
             .split(' ')
@@ -31,8 +30,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
 
     return (
         <aside
-            className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(3,18,29,0.98),rgba(6,38,57,0.98))] shadow-[0_24px_70px_rgba(4,19,31,0.26)] transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'
-                }`}
+            className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(3,18,29,0.98),rgba(6,38,57,0.98))] shadow-[0_24px_70px_rgba(4,19,31,0.26)] transition-all duration-300 ${collapsed ? 'w-20' : 'w-72'}`}
         >
             <div className="border-b border-white/10 px-5 py-5">
                 <div className="flex items-center justify-between gap-3">
@@ -59,7 +57,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                 {!collapsed && (
                     <p className="mt-4 text-xs leading-6 text-white/55">
                         {isConstrutora
-                            ? 'Painel executivo com demanda, qualificacao por IA e performance comercial por empreendimento.'
+                            ? 'Boas-vindas ao painel da Construtora Alpha. Aqui voce acompanha a demanda, o atendimento e as vendas em tempo real.'
                             : 'Ecossistema imobiliario regional com curadoria, networking e negocios organizados.'}
                     </p>
                 )}
@@ -75,8 +73,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                         )}
 
                         <div className="space-y-1.5">
-                            {section.items.map((itemId) => {
-                                const item = hubModuleMap[itemId];
+                            {section.items.map((item) => {
                                 const Icon = item.icon;
 
                                 return (
@@ -93,8 +90,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                                         {({ isActive }) => (
                                             <>
                                                 <span
-                                                    className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-[#E8F3F4] text-primary' : 'bg-white/[0.08] text-white/[0.72] group-hover:bg-white/[0.12] group-hover:text-white'
-                                                        }`}
+                                                    className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-[#E8F3F4] text-primary' : 'bg-white/[0.08] text-white/[0.72] group-hover:bg-white/[0.12] group-hover:text-white'}`}
                                                 >
                                                     <Icon size={18} />
                                                 </span>
@@ -122,7 +118,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                     </div>
                 ))}
 
-                {user?.role === 'admin' && (
+                {user?.role === 'admin' && !isConstrutora && (
                     <div className="pt-2">
                         {!collapsed && (
                             <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-white">
@@ -142,8 +138,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                             {({ isActive }) => (
                                 <>
                                     <span
-                                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-white/80 text-[#A66328]' : 'bg-[#D8893C]/[0.14] text-[#F6D7B5]'
-                                            }`}
+                                        className={`flex h-10 w-10 items-center justify-center rounded-2xl transition ${isActive ? 'bg-white/80 text-[#A66328]' : 'bg-[#D8893C]/[0.14] text-[#F6D7B5]'}`}
                                     >
                                         <ShieldCheck size={18} />
                                     </span>
@@ -176,7 +171,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                                     {user?.role === 'admin'
                                         ? 'Gestao da plataforma'
                                         : isConstrutora
-                                            ? 'Conta premium da construtora'
+                                            ? 'Painel da construtora'
                                             : 'Membro da comunidade'}
                                 </p>
                             </div>
@@ -185,8 +180,7 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
 
                     <button
                         onClick={logout}
-                        className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/[0.12] text-sm font-semibold text-white/[0.76] transition hover:bg-white/10 hover:text-white ${collapsed ? 'w-full' : 'mt-3 w-full'
-                            }`}
+                        className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/[0.12] text-sm font-semibold text-white/[0.76] transition hover:bg-white/10 hover:text-white ${collapsed ? 'w-full' : 'mt-3 w-full'}`}
                     >
                         <LogOut size={16} />
                         {!collapsed && 'Encerrar sessao'}

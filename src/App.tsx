@@ -14,6 +14,9 @@ import { HubAdminPanel } from './pages/hub/HubAdminPanel';
 import { MyAIs } from './pages/brain/MyAIs';
 import { CRM } from './pages/crm/CRM';
 import { WhatsAppConnection } from './pages/settings/WhatsAppConnection';
+import { ConstrutoraLeadQualification } from './pages/construtora/ConstrutoraLeadQualification';
+import { ConstrutoraEmpreendimentos } from './pages/construtora/ConstrutoraEmpreendimentos';
+import { ConstrutoraCorretores } from './pages/construtora/ConstrutoraCorretores';
 
 declare global {
     interface Window {
@@ -65,6 +68,9 @@ function App() {
                         >
                             <Route index element={<Navigate to="/dashboard" replace />} />
                             <Route path="dashboard" element={<HubDashboard />} />
+                            <Route path="qualificacao-leads" element={<ConstrutoraLeadQualification />} />
+                            <Route path="empreendimentos" element={<ConstrutoraEmpreendimentos />} />
+                            <Route path="corretores" element={<ConstrutoraCorretores />} />
                             <Route path="networking" element={<HubModulePage sectionId="networking" />} />
                             <Route path="oportunidades" element={<HubModulePage sectionId="oportunidades" />} />
                             <Route path="imoveis" element={<HubModulePage sectionId="imoveis" />} />

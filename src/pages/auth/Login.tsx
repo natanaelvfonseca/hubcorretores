@@ -1,9 +1,8 @@
-import { ArrowRight, Building2, Loader2, Lock, Mail } from 'lucide-react';
+import { ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { BrandLogo } from '../../components/branding/BrandLogo';
-import { CONSTRUTORA_DEMO_EMAIL } from '../../data/construtoraMockData';
 
 export function Login() {
     const { login } = useAuth();
@@ -21,18 +20,6 @@ export function Login() {
 
         if (!result.success) {
             setError(result.error || 'Erro ao acessar a plataforma');
-            setLoading(false);
-        }
-    };
-
-    const handleDemoAccess = async () => {
-        setLoading(true);
-        setError(null);
-
-        const result = await login(CONSTRUTORA_DEMO_EMAIL, 'demo');
-
-        if (!result.success) {
-            setError(result.error || 'Erro ao acessar o ambiente demo');
             setLoading(false);
         }
     };
@@ -76,8 +63,8 @@ export function Login() {
 
                         <div className="mt-10 rounded-[28px] border border-white/12 bg-black/[0.12] p-5">
                             <p className="text-sm leading-7 text-white/[0.78]">
-                                O WhatsApp continua importante para follow-up e agilidade, mas a inteligencia da
-                                comunidade passa a morar dentro da plataforma.
+                                Uma plataforma para acompanhar relacionamento, atendimento e oportunidades com mais
+                                clareza no dia a dia.
                             </p>
                         </div>
                     </section>
@@ -89,8 +76,7 @@ export function Login() {
                             </p>
                             <h2 className="mt-3 text-4xl font-display text-text-primary">Entrar no HUB</h2>
                             <p className="mt-3 text-sm leading-7 text-text-secondary">
-                                Use seu acesso para entrar no ecossistema oficial de corretores, imobiliarias,
-                                construtoras e parceiros do Litoral SC.
+                                Use seu e-mail e senha para acessar sua area e acompanhar tudo em um unico lugar.
                             </p>
 
                             <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
@@ -147,37 +133,6 @@ export function Login() {
                                         Ativar meu perfil
                                     </Link>
                                 </p>
-                            </div>
-
-                            <div className="mt-4 rounded-[26px] border border-primary/15 bg-[linear-gradient(135deg,rgba(15,123,140,0.08),rgba(216,137,60,0.08))] p-5">
-                                <div className="flex items-start gap-3">
-                                    <div className="rounded-2xl bg-primary/12 p-3 text-primary">
-                                        <Building2 size={18} />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/70">
-                                            Demo construtora
-                                        </p>
-                                        <h3 className="mt-2 text-xl font-display text-text-primary">Construtora Alpha</h3>
-                                        <p className="mt-2 text-sm leading-6 text-text-secondary">
-                                            Ambiente executivo com geracao de demanda, qualificacao por IA, performance
-                                            dos corretores e visao filtrada por empreendimento.
-                                        </p>
-                                        <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] text-text-muted">
-                                            {CONSTRUTORA_DEMO_EMAIL}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={handleDemoAccess}
-                                    disabled={loading}
-                                    className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[20px] border border-primary/15 bg-white/80 px-4 text-sm font-semibold text-primary transition hover:border-primary/30 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    Entrar como Construtora Alpha
-                                    <ArrowRight size={16} />
-                                </button>
                             </div>
                         </div>
                     </section>

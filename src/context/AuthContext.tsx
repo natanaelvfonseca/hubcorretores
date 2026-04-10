@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CONSTRUTORA_DEMO_EMAIL,
-    CONSTRUTORA_DEMO_TOKEN,
-    construtoraAlphaDemoUser,
+    CONSTRUTORA_LOGIN_EMAIL,
+    CONSTRUTORA_LOGIN_PASSWORD,
+    CONSTRUTORA_LOGIN_TOKEN,
+    construtoraAlphaUser,
 } from '../data/construtoraMockData';
 
 export interface User {
@@ -53,17 +54,17 @@ function readJwtExpiration(token: string): number | null {
 }
 
 function isMockSessionToken(token: string) {
-    return token === CONSTRUTORA_DEMO_TOKEN;
+    return token === CONSTRUTORA_LOGIN_TOKEN;
 }
 
 function readStoredMockUser() {
     try {
         const storedUser = localStorage.getItem('kogna_user');
-        if (!storedUser) return construtoraAlphaDemoUser;
+        if (!storedUser) return construtoraAlphaUser;
 
         return JSON.parse(storedUser) as User;
     } catch {
-        return construtoraAlphaDemoUser;
+        return construtoraAlphaUser;
     }
 }
 
@@ -77,11 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Note: Hydration is now handled by refreshUser on mount
 
     const login = async (email: string, pass: string) => {
-        if (email.trim().toLowerCase() === CONSTRUTORA_DEMO_EMAIL) {
-            localStorage.setItem('kogna_token', CONSTRUTORA_DEMO_TOKEN);
-            localStorage.setItem('kogna_user', JSON.stringify(construtoraAlphaDemoUser));
-            setToken(CONSTRUTORA_DEMO_TOKEN);
-            setUser(construtoraAlphaDemoUser);
+        if (email.trim().toLowerCase() === CONSTRUTORA_LOGIN_EMAIL) {
+            if (pass !== CONSTRUTORA_LOGIN_PASSWORD) {
+                return { success: false, error: 'E-mail ou senha incorretos' };
+            }
+
+            localStorage.setItem('kogna_token', CONSTRUTORA_LOGIN_TOKEN);
+            localStorage.setItem('kogna_user', JSON.stringify(construtoraAlphaUser));
+            setToken(CONSTRUTORA_LOGIN_TOKEN);
+            setUser(construtoraAlphaUser);
             navigate('/dashboard');
             return { success: true };
         }

@@ -1,11 +1,9 @@
-import { BellRing, Building2, MoonStar, SunMedium, UserCircle2 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { BellRing, MoonStar, SunMedium, UserCircle2 } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAuth } from '../../context/AuthContext';
-import { getHubModuleByPath } from '../../data/hubPlatform';
-import { getConstrutoraDashboardSnapshot } from '../../data/construtoraMockData';
-import { isConstrutoraUser } from '../../lib/portalAccess';
+import { getPortalItemByPath, isConstrutoraUser } from '../../lib/portalAccess';
 
 export function Topbar() {
     const { theme, toggleTheme } = useTheme();
@@ -13,8 +11,7 @@ export function Topbar() {
     const navigate = useNavigate();
     const location = useLocation();
     const isConstrutora = isConstrutoraUser(user);
-    const currentModule = getHubModuleByPath(location.pathname);
-    const construtoraSnapshot = isConstrutora ? getConstrutoraDashboardSnapshot() : null;
+    const currentItem = getPortalItemByPath(user, location.pathname);
     const formattedDate = useMemo(
         () =>
             new Intl.DateTimeFormat('pt-BR', {
@@ -25,49 +22,28 @@ export function Topbar() {
         [],
     );
 
-    const headerEyebrow = isConstrutora
-        ? 'Visao executiva da construtora'
-        : 'Ecossistema oficial do litoral catarinense';
-    const headerTitle = isConstrutora
-        ? 'Painel Construtora'
-        : currentModule?.navLabel || 'HUB Corretores';
-    const headerSummary = isConstrutora
-        ? `Dados filtrados por ${construtoraSnapshot?.activeEmpreendimento.nome || 'empreendimento'} com foco em demanda, leads qualificados e vendas.`
-        : currentModule?.summary || 'Plataforma proprietaria para networking, negocios, vantagens e governanca da comunidade.';
-
     return (
         <header className="sticky top-0 z-40 border-b border-border/70 bg-background/82 px-6 py-4 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-primary/75">
-                        {headerEyebrow}
+                        {isConstrutora ? 'Painel da construtora' : 'Ecossistema oficial do litoral catarinense'}
                     </p>
                     <div className="mt-2 flex items-center gap-3">
                         <h1 className="truncate text-2xl font-display text-text-primary">
-                            {headerTitle}
+                            {currentItem?.navLabel || 'HUB Corretores'}
                         </h1>
                         <span className="hidden rounded-full border border-border/80 bg-surface px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-text-secondary md:inline-flex">
                             {formattedDate}
                         </span>
-                        {isConstrutora && construtoraSnapshot && (
-                            <span className="hidden rounded-full border border-primary/15 bg-primary/[0.08] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary xl:inline-flex">
-                                {construtoraSnapshot.activeEmpreendimento.nome}
-                            </span>
-                        )}
                     </div>
                     <p className="mt-2 max-w-2xl truncate text-sm text-text-secondary">
-                        {headerSummary}
+                        {currentItem?.summary || 'Plataforma proprietaria para networking, negocios, vantagens e governanca da comunidade.'}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {isConstrutora ? (
-                        <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-surface px-4 py-2 text-sm text-text-secondary xl:flex">
-                            <Building2 size={16} className="text-primary" />
-                            <span className="font-semibold text-text-primary">Escopo restrito</span>
-                            {construtoraSnapshot?.activeEmpreendimento.id}
-                        </div>
-                    ) : (
+                    {!isConstrutora && (
                         <>
                             <div className="hidden items-center gap-2 rounded-full border border-border/80 bg-surface px-4 py-2 text-sm text-text-secondary xl:flex">
                                 <span className="font-semibold text-text-primary">12.800+</span>
