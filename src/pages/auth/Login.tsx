@@ -38,7 +38,7 @@ export function Login() {
                         <div className="absolute right-0 top-24 h-1 w-28 bg-brand-orange" />
                         <img className="h-auto w-52 object-contain" src={brand.logos.white} alt={brand.name} />
 
-                        <div className="mt-10 max-w-xl">
+                        <div className="mt-4 max-w-xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange">
                                 PLATAFORMA OFICIAL
                             </p>
