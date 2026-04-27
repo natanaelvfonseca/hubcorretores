@@ -3,7 +3,7 @@ import { ArrowRight, Loader2, Lock, Mail, Phone, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { BrandLogo } from '../../components/branding/BrandLogo';
+import { brand } from '../../config/brand';
 
 export function Register() {
     const { register } = useAuth();
@@ -39,17 +39,20 @@ export function Register() {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.14),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(214,140,69,0.16),_transparent_28%),linear-gradient(180deg,#f5f8fa_0%,#edf4f5_100%)] px-4 py-8">
-            <div className="absolute left-[-4%] top-[-10%] h-[420px] w-[420px] rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute bottom-[-12%] right-[-4%] h-[420px] w-[420px] rounded-full bg-accent/[0.15] blur-3xl" />
+        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.10),_transparent_34%),linear-gradient(180deg,#ffffff_0%,#f6f8fa_100%)] px-4 py-8">
+            <div className="absolute left-[-4%] top-[-10%] h-[420px] w-[420px] rounded-full bg-brand-orange/20 blur-3xl" />
+            <div className="absolute bottom-[-12%] right-[-4%] h-[420px] w-[420px] rounded-full bg-brand-blue/10 blur-3xl" />
 
             <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center">
-                <div className="grid w-full gap-6 overflow-hidden rounded-[36px] border border-white/70 bg-white/[0.78] shadow-[0_30px_80px_rgba(8,23,38,0.12)] backdrop-blur-xl lg:grid-cols-[1fr_1fr]">
-                    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(94,234,212,0.18),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(248,180,106,0.22),_transparent_26%),linear-gradient(135deg,#062133,#0b3a55)] p-8 text-white sm:p-10">
-                        <BrandLogo className="text-white" markWidth={34} markHeight={42} wordSize={30} />
+                <div className="grid w-full gap-6 overflow-hidden rounded-[36px] border border-white/80 bg-white/95 shadow-brand-lg backdrop-blur-xl lg:grid-cols-[1fr_1fr]">
+                    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10">
+                        <div className="absolute left-10 top-10 h-16 w-16 rounded-full border border-brand-orange/35" />
+                        <div className="absolute bottom-14 right-12 h-24 w-24 rounded-full border border-white/10" />
+                        <div className="absolute right-0 top-24 h-1 w-28 bg-brand-orange" />
+                        <img className="h-auto w-52 object-contain" src={brand.logos.white} alt={brand.name} />
 
                         <div className="mt-14 max-w-xl">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#9FE7E0]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange">
                                 ATIVAÇÃO DE ACESSO
                             </p>
                             <h1 className="mt-5 text-4xl font-display leading-tight sm:text-5xl">
@@ -67,7 +70,7 @@ export function Register() {
                                 'Acesso às oportunidades, pedidos, diretórios, mural, segmentos, agenda e benefícios em um único lugar.',
                                 'Menos dependência dos grupos de WhatsApp e mais controle sobre conexões, negócios e relacionamento.',
                             ].map((item) => (
-                                <div key={item} className="rounded-[24px] border border-white/12 bg-white/[0.08] p-4 text-sm leading-7 text-white/[0.78] backdrop-blur">
+                                <div key={item} className="rounded-[24px] border border-white/15 bg-white/10 p-4 text-sm leading-7 text-white/[0.78] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur">
                                     {item}
                                 </div>
                             ))}
@@ -76,10 +79,10 @@ export function Register() {
 
                     <section className="p-8 sm:p-10">
                         <div className="max-w-md">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-primary/70">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange-dark">
                                 Novo membro
                             </p>
-                            <h2 className="mt-3 text-4xl font-display text-text-primary">Ativar meu perfil</h2>
+                            <h2 className="mt-3 text-4xl font-display text-brand-text">Ativar meu perfil</h2>
                             <p className="mt-3 text-sm leading-7 text-text-secondary">
                                 Preencha seus dados de acesso para entrar na plataforma proprietária da comunidade.
                             </p>
@@ -110,13 +113,13 @@ export function Register() {
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-text-secondary">WhatsApp de apoio</label>
                                     <div className="group relative">
-                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-primary" size={18} />
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-brand-orange" size={18} />
                                         <input
                                             type="text"
                                             value={whatsapp}
                                             onChange={(event) => setWhatsapp(event.target.value.replace(/\D/g, ''))}
                                             required
-                                            className="h-14 w-full rounded-[22px] border border-border/80 bg-background/80 pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary/35 focus:bg-white"
+                                            className="h-14 w-full rounded-[22px] border border-brand-border bg-brand-bg/70 pl-11 pr-4 text-sm text-brand-text outline-none transition focus:border-brand-orange focus:bg-white focus:shadow-[0_0_0_4px_rgba(249,161,43,0.16)]"
                                             placeholder="DDD + número"
                                         />
                                     </div>
@@ -142,17 +145,17 @@ export function Register() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-[22px] bg-gradient-to-r from-primary via-[#1697a2] to-[#0a4b66] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,118,110,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-[22px] bg-gradient-to-r from-brand-orange to-brand-orange-dark px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(249,161,43,0.30)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(249,161,43,0.38)] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {loading ? <Loader2 size={18} className="animate-spin" /> : 'Criar acesso'}
                                     {!loading && <ArrowRight size={18} />}
                                 </button>
                             </form>
 
-                            <div className="mt-8 rounded-[24px] border border-border/70 bg-background/70 p-5">
+                            <div className="mt-8 rounded-[24px] border border-brand-border bg-brand-bg/70 p-5">
                                 <p className="text-sm leading-7 text-text-secondary">
                                     Já tem acesso?
-                                    <Link to="/login" className="ml-2 font-semibold text-primary transition hover:text-primary-light">
+                                    <Link to="/login" className="ml-2 font-semibold text-brand-orange-dark transition hover:text-brand-orange">
                                         Entrar agora
                                     </Link>
                                 </p>
@@ -179,7 +182,7 @@ function Field({ label, icon, value, onChange, placeholder, type = 'text' }: Fie
         <div>
             <label className="mb-2 block text-sm font-semibold text-text-secondary">{label}</label>
             <div className="group relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-primary">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-brand-orange">
                     {icon}
                 </span>
                 <input
@@ -188,7 +191,7 @@ function Field({ label, icon, value, onChange, placeholder, type = 'text' }: Fie
                     onChange={(event) => onChange(event.target.value)}
                     required
                     minLength={type === 'password' ? 6 : undefined}
-                    className="h-14 w-full rounded-[22px] border border-border/80 bg-background/80 pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary/35 focus:bg-white"
+                    className="h-14 w-full rounded-[22px] border border-brand-border bg-brand-bg/70 pl-11 pr-4 text-sm text-brand-text outline-none transition focus:border-brand-orange focus:bg-white focus:shadow-[0_0_0_4px_rgba(249,161,43,0.16)]"
                     placeholder={placeholder}
                 />
             </div>
