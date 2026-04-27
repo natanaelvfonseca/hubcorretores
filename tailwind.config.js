@@ -33,6 +33,19 @@ export default {
           muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
         },
         border: 'rgb(var(--color-border) / <alpha-value>)',
+        brand: {
+          orange: '#F9A12B',
+          'orange-dark': '#E88D18',
+          blue: '#244F9E',
+          'blue-dark': '#183B7A',
+          navy: '#082B3A',
+          'navy-dark': '#051C28',
+          bg: '#F6F8FA',
+          surface: '#FFFFFF',
+          border: '#DCE6EF',
+          text: '#102433',
+          muted: '#607586',
+        },
       },
       fontFamily: {
         sans: ['Manrope', 'sans-serif'],
@@ -44,6 +57,15 @@ export default {
       },
       boxShadow: {
         'glow-primary': '0 0 24px rgba(15, 118, 110, 0.24)',
+        'brand-sm': '0 4px 16px rgba(8, 43, 58, 0.08)',
+        'brand-md': '0 12px 32px rgba(8, 43, 58, 0.12)',
+        'brand-lg': '0 24px 64px rgba(8, 43, 58, 0.18)',
+      },
+      borderRadius: {
+        'brand-sm': '10px',
+        'brand-md': '16px',
+        'brand-lg': '24px',
+        'brand-xl': '32px',
       },
       animation: {
         blob: "blob 7s infinite",
