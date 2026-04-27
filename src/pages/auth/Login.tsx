@@ -31,14 +31,14 @@ export function Login() {
 
             <div className="relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-4rem)]">
                 <div className="grid w-full gap-0 overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-brand-lg backdrop-blur-xl sm:rounded-[32px] lg:grid-cols-2">
-                    <section className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10 lg:block">
+                    <section className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10 lg:flex lg:min-h-[640px] lg:flex-col lg:justify-center">
                         <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
                         <div className="absolute left-10 top-10 h-16 w-16 rounded-full border border-brand-orange/35" />
                         <div className="absolute bottom-14 right-12 h-24 w-24 rounded-full border border-white/10" />
                         <div className="absolute right-0 top-24 h-1 w-28 bg-brand-orange" />
-                        <img className="h-auto w-56 object-contain" src={brand.logos.white} alt={brand.name} />
+                        <img className="h-auto w-52 object-contain" src={brand.logos.white} alt={brand.name} />
 
-                        <div className="mt-14 max-w-xl">
+                        <div className="mt-10 max-w-xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange">
                                 PLATAFORMA OFICIAL
                             </p>
@@ -51,7 +51,7 @@ export function Login() {
                             </p>
                         </div>
 
-                        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+                        <div className="mt-8 grid gap-4 sm:grid-cols-3">
                             {[
                                 { value: '12.800+', label: 'Profissionais conectados' },
                                 { value: '150+', label: 'Parceiros no ecossistema' },
@@ -66,8 +66,8 @@ export function Login() {
 
                     </section>
 
-                    <section className="p-6 sm:p-10">
-                        <div className="mx-auto max-w-md">
+                    <section className="flex p-6 sm:p-10 lg:min-h-[640px] lg:items-center">
+                        <div className="mx-auto w-full max-w-md lg:max-w-[360px]">
                             <div className="mb-7 flex items-center justify-center lg:hidden">
                                 <img className="h-auto w-52 object-contain" src={brand.logos.blue} alt={brand.name} />
                             </div>
