@@ -2,7 +2,7 @@ import { ArrowRight, Loader2, Lock, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { BrandLogo } from '../../components/branding/BrandLogo';
+import { brand } from '../../config/brand';
 
 export function Login() {
     const { login } = useAuth();
@@ -25,18 +25,21 @@ export function Login() {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(20,184,166,0.14),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(214,140,69,0.16),_transparent_28%),linear-gradient(180deg,#f5f8fa_0%,#edf4f5_100%)] px-4 py-8">
-            <div className="absolute left-[-6%] top-[-8%] h-[420px] w-[420px] rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute bottom-[-12%] right-[-2%] h-[420px] w-[420px] rounded-full bg-accent/[0.15] blur-3xl" />
+        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.14),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.10),_transparent_34%),linear-gradient(180deg,#ffffff_0%,#f6f8fa_100%)] px-4 py-6 sm:py-8">
+            <div className="absolute left-[-10%] top-[-12%] h-[380px] w-[380px] rounded-full bg-brand-orange/20 blur-3xl" />
+            <div className="absolute bottom-[-14%] right-[-8%] h-[420px] w-[420px] rounded-full bg-brand-blue/10 blur-3xl" />
 
             <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center">
-                <div className="grid w-full gap-6 overflow-hidden rounded-[36px] border border-white/70 bg-white/[0.78] shadow-[0_30px_80px_rgba(8,23,38,0.12)] backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
-                    <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(94,234,212,0.18),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(248,180,106,0.22),_transparent_26%),linear-gradient(135deg,#062133,#0b3a55)] p-8 text-white sm:p-10">
+                <div className="grid w-full gap-0 overflow-hidden rounded-[32px] border border-white/80 bg-white/90 shadow-brand-lg backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
+                    <section className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10 lg:block">
                         <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
-                        <BrandLogo className="text-white" markWidth={34} markHeight={42} wordSize={30} />
+                        <div className="absolute left-10 top-10 h-16 w-16 rounded-full border border-brand-orange/35" />
+                        <div className="absolute bottom-14 right-12 h-24 w-24 rounded-full border border-white/10" />
+                        <div className="absolute right-0 top-24 h-1 w-28 bg-brand-orange" />
+                        <img className="h-auto w-56 object-contain" src={brand.logos.white} alt={brand.name} />
 
                         <div className="mt-14 max-w-xl">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#9FE7E0]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange">
                                 Plataforma proprietaria
                             </p>
                             <h1 className="mt-5 text-4xl font-display leading-tight sm:text-5xl">
@@ -54,14 +57,15 @@ export function Login() {
                                 { value: '150+', label: 'parceiros no clube' },
                                 { value: 'HUB', label: 'como base oficial' },
                             ].map((item) => (
-                                <div key={item.label} className="rounded-[24px] border border-white/12 bg-white/[0.08] p-4 backdrop-blur">
-                                    <p className="text-2xl font-display text-white">{item.value}</p>
-                                    <p className="mt-2 text-xs uppercase tracking-[0.22em] text-white/[0.62]">{item.label}</p>
+                                <div key={item.label} className="rounded-brand-lg border border-white/15 bg-white/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur">
+                                    <p className="text-2xl font-display text-brand-orange">{item.value}</p>
+                                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/[0.65]">{item.label}</p>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="mt-10 rounded-[28px] border border-white/12 bg-black/[0.12] p-5">
+                        <div className="mt-10 rounded-brand-lg border border-white/15 bg-white/[0.07] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
+                            <div className="mb-4 h-1 w-16 rounded-full bg-brand-orange" />
                             <p className="text-sm leading-7 text-white/[0.78]">
                                 Uma plataforma para acompanhar relacionamento, atendimento e oportunidades com mais
                                 clareza no dia a dia.
@@ -69,12 +73,19 @@ export function Login() {
                         </div>
                     </section>
 
-                    <section className="p-8 sm:p-10">
-                        <div className="max-w-md">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-primary/70">
+                    <section className="p-6 sm:p-10">
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-8 flex items-center justify-center lg:hidden">
+                                <img className="h-auto w-52 object-contain" src={brand.logos.blue} alt={brand.name} />
+                            </div>
+                            <div className="mb-8 hidden lg:block">
+                                <img className="h-auto w-40 object-contain" src={brand.logos.blue} alt={brand.name} />
+                            </div>
+
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange-dark">
                                 Acesso de membros
                             </p>
-                            <h2 className="mt-3 text-4xl font-display text-text-primary">Entrar no HUB</h2>
+                            <h2 className="mt-3 text-4xl font-display text-brand-text">Entrar no HUB</h2>
                             <p className="mt-3 text-sm leading-7 text-text-secondary">
                                 Use seu e-mail e senha para acessar sua area e acompanhar tudo em um unico lugar.
                             </p>
@@ -89,13 +100,13 @@ export function Login() {
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-text-secondary">E-mail</label>
                                     <div className="group relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-primary" size={18} />
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-brand-orange" size={18} />
                                         <input
                                             type="email"
                                             value={email}
                                             onChange={(event) => setEmail(event.target.value)}
                                             required
-                                            className="h-14 w-full rounded-[22px] border border-border/80 bg-background/80 pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary/35 focus:bg-white"
+                                            className="h-14 w-full rounded-brand-md border border-brand-border bg-brand-bg/70 pl-11 pr-4 text-sm text-brand-text outline-none transition focus:border-brand-orange focus:bg-white focus:shadow-[0_0_0_4px_rgba(249,161,43,0.16)]"
                                             placeholder="seu@email.com"
                                         />
                                     </div>
@@ -104,13 +115,13 @@ export function Login() {
                                 <div>
                                     <label className="mb-2 block text-sm font-semibold text-text-secondary">Senha</label>
                                     <div className="group relative">
-                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-primary" size={18} />
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted transition group-focus-within:text-brand-orange" size={18} />
                                         <input
                                             type="password"
                                             value={password}
                                             onChange={(event) => setPassword(event.target.value)}
                                             required
-                                            className="h-14 w-full rounded-[22px] border border-border/80 bg-background/80 pl-11 pr-4 text-sm text-text-primary outline-none transition focus:border-primary/35 focus:bg-white"
+                                            className="h-14 w-full rounded-brand-md border border-brand-border bg-brand-bg/70 pl-11 pr-4 text-sm text-brand-text outline-none transition focus:border-brand-orange focus:bg-white focus:shadow-[0_0_0_4px_rgba(249,161,43,0.16)]"
                                             placeholder="Digite sua senha"
                                         />
                                     </div>
@@ -119,17 +130,17 @@ export function Login() {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-[22px] bg-gradient-to-r from-primary via-[#1697a2] to-[#0a4b66] px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(15,118,110,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-brand-md bg-gradient-to-r from-brand-orange to-brand-orange-dark px-5 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(249,161,43,0.30)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(249,161,43,0.38)] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {loading ? <Loader2 size={18} className="animate-spin" /> : 'Entrar na plataforma'}
                                     {!loading && <ArrowRight size={18} />}
                                 </button>
                             </form>
 
-                            <div className="mt-8 rounded-[24px] border border-border/70 bg-background/70 p-5">
+                            <div className="mt-8 rounded-brand-lg border border-brand-border bg-brand-bg/70 p-5">
                                 <p className="text-sm leading-7 text-text-secondary">
                                     Ainda nao tem acesso?
-                                    <Link to="/register" className="ml-2 font-semibold text-primary transition hover:text-primary-light">
+                                    <Link to="/register" className="ml-2 font-semibold text-brand-orange-dark transition hover:text-brand-orange">
                                         Ativar meu perfil
                                     </Link>
                                 </p>
