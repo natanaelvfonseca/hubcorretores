@@ -64,12 +64,6 @@ export function Login() {
                             ))}
                         </div>
 
-                        <div className="mt-10 rounded-brand-lg border border-white/15 bg-white/[0.07] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
-                            <div className="mb-4 h-1 w-16 rounded-full bg-brand-orange" />
-                            <p className="text-sm leading-7 text-white/[0.78]">
-                                Negócios, conexões e oportunidades centralizados em uma plataforma própria.
-                            </p>
-                        </div>
                     </section>
 
                     <section className="p-6 sm:p-10">
