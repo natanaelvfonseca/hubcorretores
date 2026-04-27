@@ -50,22 +50,22 @@ export function Register() {
 
                         <div className="mt-14 max-w-xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#9FE7E0]">
-                                Ativação de acesso
+                                ATIVAÇÃO DE ACESSO
                             </p>
                             <h1 className="mt-5 text-4xl font-display leading-tight sm:text-5xl">
-                                Entre para a plataforma que profissionaliza a maior comunidade imobiliária do Brasil.
+                                Ative seu acesso ao HUB oficial da maior comunidade imobiliária do Brasil.
                             </h1>
                             <p className="mt-5 text-sm leading-7 text-white/[0.78] sm:text-base">
-                                Seu cadastro cria a porta de entrada para networking, negócios, benefícios e
-                                participação institucional dentro do HUB Corretores do Litoral SC.
+                                Entre para a plataforma que centraliza oportunidades, conexões, parceiros e negócios do
+                                Corretores Litoral SC em um ambiente próprio, organizado e profissional.
                             </p>
                         </div>
 
                         <div className="mt-10 space-y-4">
                             {[
-                                'Perfil profissional com presença e posicionamento claros.',
-                                'Acesso às frentes de oportunidades, diretórios, mural, segmentos e agenda.',
-                                'Comunicação integrada com apoio do WhatsApp, sem depender dele como base do negócio.',
+                                'Sua presença profissional em uma base oficial, com mais visibilidade e credibilidade dentro da comunidade.',
+                                'Acesso às oportunidades, pedidos, diretórios, mural, segmentos, agenda e benefícios em um único lugar.',
+                                'Menos dependência dos grupos de WhatsApp e mais controle sobre conexões, negócios e relacionamento.',
                             ].map((item) => (
                                 <div key={item} className="rounded-[24px] border border-white/12 bg-white/[0.08] p-4 text-sm leading-7 text-white/[0.78] backdrop-blur">
                                     {item}
