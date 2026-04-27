@@ -30,7 +30,7 @@ export function Login() {
             <div className="hidden sm:absolute sm:bottom-[-14%] sm:right-[-8%] sm:block sm:h-[420px] sm:w-[420px] sm:rounded-full sm:bg-brand-blue/10 sm:blur-3xl" />
 
             <div className="relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-4rem)]">
-                <div className="grid w-full gap-0 overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-brand-lg backdrop-blur-xl sm:rounded-[32px] lg:grid-cols-[1.05fr_0.95fr]">
+                <div className="grid w-full gap-0 overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-brand-lg backdrop-blur-xl sm:rounded-[32px] lg:grid-cols-2">
                     <section className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10 lg:block">
                         <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
                         <div className="absolute left-10 top-10 h-16 w-16 rounded-full border border-brand-orange/35" />
