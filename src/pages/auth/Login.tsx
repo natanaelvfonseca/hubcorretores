@@ -25,12 +25,12 @@ export function Login() {
     };
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.14),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.10),_transparent_34%),linear-gradient(180deg,#ffffff_0%,#f6f8fa_100%)] px-4 py-6 sm:py-8">
-            <div className="absolute left-[-10%] top-[-12%] h-[380px] w-[380px] rounded-full bg-brand-orange/20 blur-3xl" />
-            <div className="absolute bottom-[-14%] right-[-8%] h-[420px] w-[420px] rounded-full bg-brand-blue/10 blur-3xl" />
+        <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.10),_transparent_34%),linear-gradient(180deg,#ffffff_0%,#f6f8fa_100%)] px-4 py-6 sm:py-8">
+            <div className="absolute left-[-18%] top-[-12%] h-[320px] w-[320px] rounded-full bg-brand-orange/20 blur-3xl sm:left-[-10%] sm:h-[380px] sm:w-[380px]" />
+            <div className="hidden sm:absolute sm:bottom-[-14%] sm:right-[-8%] sm:block sm:h-[420px] sm:w-[420px] sm:rounded-full sm:bg-brand-blue/10 sm:blur-3xl" />
 
-            <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center">
-                <div className="grid w-full gap-0 overflow-hidden rounded-[32px] border border-white/80 bg-white/90 shadow-brand-lg backdrop-blur-xl lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center sm:min-h-[calc(100vh-4rem)]">
+                <div className="grid w-full gap-0 overflow-hidden rounded-[28px] border border-white/80 bg-white/95 shadow-brand-lg backdrop-blur-xl sm:rounded-[32px] lg:grid-cols-[1.05fr_0.95fr]">
                     <section className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(249,161,43,0.24),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(36,79,158,0.28),_transparent_30%),linear-gradient(135deg,#051C28_0%,#082B3A_58%,#183B7A_100%)] p-8 text-white sm:p-10 lg:block">
                         <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
                         <div className="absolute left-10 top-10 h-16 w-16 rounded-full border border-brand-orange/35" />
@@ -40,22 +40,22 @@ export function Login() {
 
                         <div className="mt-14 max-w-xl">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange">
-                                Plataforma proprietaria
+                                PLATAFORMA OFICIAL
                             </p>
                             <h1 className="mt-5 text-4xl font-display leading-tight sm:text-5xl">
-                                O novo centro oficial da comunidade imobiliaria do litoral catarinense.
+                                O hub oficial de oportunidades do mercado imobiliário no litoral.
                             </h1>
                             <p className="mt-5 text-sm leading-7 text-white/[0.78] sm:text-base">
-                                Networking, oportunidades, diretorios, beneficios e agenda regional em uma experiencia
-                                premium, profissional e feita para gerar conexoes reais de negocio.
+                                Conecte corretores, parceiros e oportunidades em um só lugar, com mais organização,
+                                agilidade e clareza para gerar negócios.
                             </p>
                         </div>
 
                         <div className="mt-10 grid gap-4 sm:grid-cols-3">
                             {[
-                                { value: '12.800+', label: 'profissionais conectados' },
-                                { value: '150+', label: 'parceiros no clube' },
-                                { value: 'HUB', label: 'como base oficial' },
+                                { value: '12.800+', label: 'Profissionais conectados' },
+                                { value: '150+', label: 'Parceiros no ecossistema' },
+                                { value: 'HUB', label: 'Base oficial da comunidade' },
                             ].map((item) => (
                                 <div key={item.label} className="rounded-brand-lg border border-white/15 bg-white/10 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur">
                                     <p className="text-2xl font-display text-brand-orange">{item.value}</p>
@@ -67,30 +67,26 @@ export function Login() {
                         <div className="mt-10 rounded-brand-lg border border-white/15 bg-white/[0.07] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]">
                             <div className="mb-4 h-1 w-16 rounded-full bg-brand-orange" />
                             <p className="text-sm leading-7 text-white/[0.78]">
-                                Uma plataforma para acompanhar relacionamento, atendimento e oportunidades com mais
-                                clareza no dia a dia.
+                                Negócios, conexões e oportunidades centralizados em uma plataforma própria.
                             </p>
                         </div>
                     </section>
 
                     <section className="p-6 sm:p-10">
                         <div className="mx-auto max-w-md">
-                            <div className="mb-8 flex items-center justify-center lg:hidden">
+                            <div className="mb-7 flex items-center justify-center lg:hidden">
                                 <img className="h-auto w-52 object-contain" src={brand.logos.blue} alt={brand.name} />
-                            </div>
-                            <div className="mb-8 hidden lg:block">
-                                <img className="h-auto w-40 object-contain" src={brand.logos.blue} alt={brand.name} />
                             </div>
 
                             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-brand-orange-dark">
-                                Acesso de membros
+                                ACESSO DE MEMBROS
                             </p>
-                            <h2 className="mt-3 text-4xl font-display text-brand-text">Entrar no HUB</h2>
+                            <h2 className="mt-3 text-4xl font-display text-brand-text sm:text-4xl">Entrar no HUB</h2>
                             <p className="mt-3 text-sm leading-7 text-text-secondary">
-                                Use seu e-mail e senha para acessar sua area e acompanhar tudo em um unico lugar.
+                                Acesse sua conta para acompanhar oportunidades, conexões e novidades da comunidade.
                             </p>
 
-                            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+                            <form className="mt-7 space-y-5 sm:mt-8" onSubmit={handleSubmit}>
                                 {error && (
                                     <div className="rounded-[20px] border border-red-500/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-600">
                                         {error}
