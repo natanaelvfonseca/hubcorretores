@@ -1,15 +1,17 @@
 import {
     BarChart3,
     Building2,
+    Gift,
+    Home,
     KanbanSquare,
     LayoutDashboard,
+    Sparkles,
+    UserCircle2,
     Users,
     type LucideIcon,
 } from 'lucide-react';
 import {
     getHubModuleByPath,
-    hubModuleMap,
-    hubNavSections,
     type HubModuleDefinition,
 } from '../data/hubPlatform';
 
@@ -78,30 +80,69 @@ const construtoraNavMap = Object.fromEntries(
     construtoraNavItems.map((item) => [item.id, item]),
 ) as Record<string, PortalNavItem>;
 
+const brokerMvpNavItems: PortalNavItem[] = [
+    {
+        id: 'broker-home',
+        path: '/dashboard',
+        navLabel: 'Início',
+        eyebrow: 'Central prática',
+        summary: 'Publique oportunidades, encontre imóveis e acompanhe os movimentos da comunidade.',
+        icon: Home,
+    },
+    {
+        id: 'broker-opportunities',
+        path: '/oportunidades',
+        navLabel: 'Oportunidades',
+        eyebrow: 'Negócios',
+        summary: 'Demandas, parcerias, permutas e negócios organizados em cards filtráveis.',
+        icon: Sparkles,
+    },
+    {
+        id: 'broker-properties',
+        path: '/imoveis',
+        navLabel: 'Imóveis',
+        eyebrow: 'Vitrine',
+        summary: 'Imóveis disponíveis, reservados e vendidos com dados rápidos de parceria.',
+        icon: Building2,
+    },
+    {
+        id: 'broker-members',
+        path: '/membros',
+        navLabel: 'Membros',
+        eyebrow: 'Rede',
+        summary: 'Corretores, imobiliárias, construtoras e parceiros em uma busca simples.',
+        icon: Users,
+    },
+    {
+        id: 'broker-benefits',
+        path: '/beneficios',
+        navLabel: 'Benefícios',
+        eyebrow: 'Parceiros',
+        summary: 'Vantagens e parceiros úteis para a rotina comercial do corretor.',
+        icon: Gift,
+    },
+    {
+        id: 'broker-profile',
+        path: '/perfil',
+        navLabel: 'Meu Perfil',
+        eyebrow: 'Identidade',
+        summary: 'Dados profissionais, WhatsApp, CRECI, especialidades e links rápidos.',
+        icon: UserCircle2,
+    },
+];
+
 export function isConstrutoraUser(user?: PortalAwareUser | null) {
     return user?.accountType === 'construtora';
 }
 
-function getHubNavigation(): PortalNavSection[] {
-    return hubNavSections.map((section) => ({
-        title: section.title,
-        items: section.items.map((itemId) => {
-            const item = hubModuleMap[itemId];
-            return {
-                id: item.id,
-                path: item.path,
-                navLabel: item.navLabel,
-                eyebrow: item.eyebrow,
-                summary: item.summary,
-                icon: item.icon,
-            };
-        }),
-    }));
-}
-
 export function getVisibleNavigation(user?: PortalAwareUser | null): PortalNavSection[] {
     if (!isConstrutoraUser(user)) {
-        return getHubNavigation();
+        return [
+            {
+                title: 'Hub',
+                items: brokerMvpNavItems,
+            },
+        ];
     }
 
     return [

@@ -11,6 +11,13 @@ import { AdminRoute } from './components/auth/AdminRoute';
 import { HubDashboard } from './pages/hub/HubDashboard';
 import { HubModulePage } from './pages/hub/HubModulePage';
 import { HubAdminPanel } from './pages/hub/HubAdminPanel';
+import {
+    BrokerBenefits,
+    BrokerMembers,
+    BrokerOpportunities,
+    BrokerProfile,
+    BrokerProperties,
+} from './pages/hub/BrokerMvp';
 import { MyAIs } from './pages/brain/MyAIs';
 import { CRM } from './pages/crm/CRM';
 import { WhatsAppConnection } from './pages/settings/WhatsAppConnection';
@@ -74,8 +81,10 @@ function App() {
                             <Route path="empreendimentos" element={<ConstrutoraEmpreendimentos />} />
                             <Route path="corretores" element={<ConstrutoraCorretores />} />
                             <Route path="networking" element={<HubModulePage sectionId="networking" />} />
-                            <Route path="oportunidades" element={<HubModulePage sectionId="oportunidades" />} />
-                            <Route path="imoveis" element={<HubModulePage sectionId="imoveis" />} />
+                            <Route path="oportunidades" element={<BrokerOpportunities />} />
+                            <Route path="imoveis" element={<BrokerProperties />} />
+                            <Route path="membros" element={<BrokerMembers />} />
+                            <Route path="beneficios" element={<BrokerBenefits />} />
                             <Route path="diretorio" element={<HubModulePage sectionId="diretorio" />} />
                             <Route path="clube" element={<HubModulePage sectionId="clube" />} />
                             <Route path="agenda" element={<HubModulePage sectionId="agenda" />} />
@@ -87,7 +96,7 @@ function App() {
                             <Route path="crm" element={<CRM />} />
                             <Route path="whatsapp" element={<WhatsAppConnection />} />
                             <Route path="notificacoes" element={<HubModulePage sectionId="notificacoes" />} />
-                            <Route path="perfil" element={<HubModulePage sectionId="perfil" />} />
+                            <Route path="perfil" element={<BrokerProfile />} />
                             <Route path="configuracoes" element={<HubModulePage sectionId="configuracoes" />} />
                             <Route
                                 path="admin/dashboard"
