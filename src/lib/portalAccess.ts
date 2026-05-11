@@ -1,5 +1,6 @@
 import {
     BarChart3,
+    Bookmark,
     Building2,
     Gift,
     Home,
@@ -120,6 +121,14 @@ const brokerMvpNavItems: PortalNavItem[] = [
         eyebrow: 'Parceiros',
         summary: 'Vantagens e parceiros úteis para a rotina comercial do corretor.',
         icon: Gift,
+    },
+    {
+        id: 'broker-saved',
+        path: '/salvos',
+        navLabel: 'Salvos',
+        eyebrow: 'Favoritos',
+        summary: 'Oportunidades salvas para consultar e acionar depois.',
+        icon: Bookmark,
     },
     {
         id: 'broker-profile',

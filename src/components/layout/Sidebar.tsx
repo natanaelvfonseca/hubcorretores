@@ -54,11 +54,6 @@ export function Sidebar({ collapsed, setCollapsed, isMobile }: SidebarProps) {
                     )}
                 </div>
 
-                {!collapsed && !isConstrutora && (
-                    <p className="mt-4 text-xs leading-6 text-white/55">
-                        Ecossistema imobiliario regional com curadoria, networking e negocios organizados.
-                    </p>
-                )}
             </div>
 
             <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5 scrollbar-hide">
