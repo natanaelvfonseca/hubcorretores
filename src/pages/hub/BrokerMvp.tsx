@@ -811,23 +811,43 @@ function OpportunityCard({
     saved,
     onOpen,
     onSave,
+    featured = false,
 }: {
     item: Opportunity;
     saved: boolean;
     onOpen: (item: Opportunity) => void;
     onSave: (id: string) => void;
+    featured?: boolean;
 }) {
     return (
-        <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+        <article className={cn(
+            'relative overflow-hidden rounded-[26px] bg-surface/95',
+            featured
+                ? 'border border-amber-300/80 shadow-[0_24px_70px_rgba(217,119,6,0.18)] ring-4 ring-amber-100/70'
+                : 'border border-border/70 shadow-[0_14px_36px_rgba(8,23,38,0.05)]',
+        )}>
+            {featured ? (
+                <>
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#F59E0B,#14B8A6,#F59E0B)]" />
+                    <div className="absolute right-[-42px] top-5 z-10 rotate-45 bg-amber-500 px-12 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_24px_rgba(180,83,9,0.24)]">
+                        Destaque
+                    </div>
+                </>
+            ) : null}
             {item.images[0] ? (
                 <button type="button" onClick={() => onOpen(item)} className="block aspect-[16/8] w-full overflow-hidden bg-surface-hover">
                     <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]" />
                 </button>
             ) : null}
 
-            <div className="p-5">
+            <div className={cn('p-5', featured && 'bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.10),transparent_42%)]')}>
                 <button type="button" onClick={() => onOpen(item)} className="block w-full text-left">
                     <div className="flex flex-wrap items-center gap-2">
+                        {featured ? (
+                            <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                Oportunidade em destaque
+                            </span>
+                        ) : null}
                         <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                             {item.category}
                         </span>
@@ -1053,9 +1073,6 @@ function OpportunityCreateModal({
                             onChange={(category) => onChange({ ...draft, category })}
                             options={opportunityCategories.map((category) => ({ value: category, label: category }))}
                         />
-                        <div className="md:col-span-2 -mt-2 rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3 text-sm leading-6 text-text-secondary">
-                            Se escolher Imovel disponivel, a publicacao aparece tambem em Imoveis. Se escolher Veiculo disponivel, aparece tambem em Veiculos. Todas continuam no mural de Oportunidades.
-                        </div>
                         <SelectField
                             label="Cidade"
                             value={draft.city}
@@ -1661,6 +1678,33 @@ export function BrokerHome() {
 
     return (
         <div className="space-y-7 pb-6">
+            <section className="relative overflow-hidden rounded-[34px] border border-amber-200/80 bg-[linear-gradient(135deg,rgba(255,251,235,0.98),rgba(240,253,250,0.96))] p-5 shadow-[0_28px_70px_rgba(146,64,14,0.13)] sm:p-6">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-amber-700">Vitrine comercial</p>
+                        <h2 className="mt-2 text-3xl font-display text-text-primary">Oportunidades em Destaque</h2>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
+                            Espaco nobre da tela inicial para negocios que precisam aparecer primeiro na comunidade.
+                        </p>
+                    </div>
+                    <Link to="/oportunidades" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                        Ver todas <ArrowRight size={16} />
+                    </Link>
+                </div>
+                <div className="grid gap-4 xl:grid-cols-2">
+                    {opportunities.slice(0, 2).map((item) => (
+                        <OpportunityCard
+                            key={item.id}
+                            item={item}
+                            saved={savedIds.includes(item.id)}
+                            onOpen={setSelectedOpportunity}
+                            onSave={toggleSaved}
+                            featured
+                        />
+                    ))}
+                </div>
+            </section>
+
             <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(135deg,rgba(4,19,31,0.98),rgba(8,72,88,0.94))] p-7 text-white shadow-[0_28px_70px_rgba(8,23,38,0.24)] sm:p-9">
                 <div className="relative max-w-4xl">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#A5E8E0]">Hub Corretores do Litoral SC</p>
@@ -1710,23 +1754,6 @@ export function BrokerHome() {
             </section>
 
             <section className="grid gap-5 xl:grid-cols-2">
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-2xl font-display text-text-primary">Oportunidades mais quentes</h2>
-                        <Link to="/oportunidades" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
-                            Ver todas <ArrowRight size={16} />
-                        </Link>
-                    </div>
-                    {opportunities.slice(0, 2).map((item) => (
-                        <OpportunityCard
-                            key={item.id}
-                            item={item}
-                            saved={savedIds.includes(item.id)}
-                            onOpen={setSelectedOpportunity}
-                            onSave={toggleSaved}
-                        />
-                    ))}
-                </div>
                 <div className="space-y-4">
                     <div className="flex items-center justify-between gap-3">
                         <h2 className="text-2xl font-display text-text-primary">Imoveis recentes</h2>
