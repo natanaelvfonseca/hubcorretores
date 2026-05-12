@@ -981,7 +981,7 @@ export function BrokerHome() {
                         Publique oportunidades, encontre imoveis e conecte-se com corretores do litoral em um so lugar.
                     </p>
                     <div className="mt-7 flex flex-wrap gap-3">
-                        <Link to="/oportunidades" className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#062133]">
+                        <Link to="/meus-negocios" className="inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-[#062133]">
                             <Plus size={17} />
                             Publicar Oportunidade
                         </Link>
@@ -1059,11 +1059,9 @@ export function BrokerHome() {
 }
 
 export function BrokerOpportunities() {
-    const { user, blocked } = useBrokerAccessGuard();
-    const { opportunities, savedIds, addOpportunity, toggleSaved } = useOpportunitiesStore();
+    const { blocked } = useBrokerAccessGuard();
+    const { opportunities, savedIds, toggleSaved } = useOpportunitiesStore();
     const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [draft, setDraft] = useState<OpportunityDraft>(emptyOpportunityDraft);
     const [searchQuery, setSearchQuery] = useState('');
     const [cityFilter, setCityFilter] = useState('all');
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -1096,26 +1094,12 @@ export function BrokerOpportunities() {
         return <Navigate to="/dashboard" replace />;
     }
 
-    const handleSubmit = () => {
-        if (!draft.title.trim() || !draft.description.trim()) {
-            window.alert('Preencha titulo e descricao para publicar a oportunidade.');
-            return;
-        }
-
-        const created = addOpportunity(draft, user?.name || 'Membro Hub', user?.id);
-        setDraft(emptyOpportunityDraft);
-        setShowCreateModal(false);
-        setSelectedOpportunity(created);
-    };
-
     return (
         <div className="space-y-6 pb-6">
             <PageHeader
                 eyebrow="Negocios da comunidade"
                 title="Oportunidades"
-                description="Publique demandas, encontre parceiros e acompanhe oportunidades sem depender da memoria dos grupos."
-                action="Publicar Oportunidade"
-                onAction={() => setShowCreateModal(true)}
+                description="Mural geral da comunidade para encontrar demandas, parceiros e oportunidades publicadas pelos membros."
             />
 
             <section className="rounded-[26px] border border-border/70 bg-surface/95 p-5">
@@ -1167,13 +1151,6 @@ export function BrokerOpportunities() {
                 </section>
             ) : null}
 
-            <OpportunityCreateModal
-                open={showCreateModal}
-                draft={draft}
-                onClose={() => setShowCreateModal(false)}
-                onChange={setDraft}
-                onSubmit={handleSubmit}
-            />
             <OpportunityModal
                 item={selectedOpportunity}
                 saved={selectedOpportunity ? savedIds.includes(selectedOpportunity.id) : false}
@@ -1242,6 +1219,7 @@ export function BrokerMyBusiness() {
     const {
         opportunities,
         savedIds,
+        addOpportunity,
         updateOpportunity,
         deleteOpportunity,
         markOpportunityClosed,
@@ -1249,6 +1227,7 @@ export function BrokerMyBusiness() {
     } = useOpportunitiesStore();
     const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
     const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [draft, setDraft] = useState<OpportunityDraft>(emptyOpportunityDraft);
     const myOpportunities = opportunities.filter((item) => userOwnsOpportunity(item, user));
     const communityClosedCount = myOpportunities.filter((item) => item.status === 'Resolvida' && item.closedByCommunity).length;
@@ -1263,9 +1242,16 @@ export function BrokerMyBusiness() {
         setDraft(draftFromOpportunity(item));
     };
 
-    const closeEdit = () => {
+    const closeOpportunityForm = () => {
+        setEditingOpportunity(null);
+        setShowCreateModal(false);
+        setDraft(emptyOpportunityDraft);
+    };
+
+    const startCreate = () => {
         setEditingOpportunity(null);
         setDraft(emptyOpportunityDraft);
+        setShowCreateModal(true);
     };
 
     const saveEdit = () => {
@@ -1276,7 +1262,18 @@ export function BrokerMyBusiness() {
         }
 
         updateOpportunity(editingOpportunity.id, draft);
-        closeEdit();
+        closeOpportunityForm();
+    };
+
+    const publishOpportunity = () => {
+        if (!draft.title.trim() || !draft.description.trim()) {
+            window.alert('Preencha titulo e descricao para publicar.');
+            return;
+        }
+
+        const created = addOpportunity(draft, user?.name || 'Membro Hub', user?.id);
+        closeOpportunityForm();
+        setSelectedOpportunity(created);
     };
 
     const removeItem = (item: Opportunity) => {
@@ -1294,7 +1291,9 @@ export function BrokerMyBusiness() {
             <PageHeader
                 eyebrow="Area individual"
                 title="Meus Negocios"
-                description="Controle suas oportunidades publicadas, atualize status, edite informacoes e registre negocios fechados pela comunidade."
+                description="Central para publicar, editar, apagar e fechar suas oportunidades. Tudo que voce publica aqui aparece automaticamente no mural."
+                action="Publicar Oportunidade"
+                onAction={startCreate}
             />
 
             <section className="grid gap-4 md:grid-cols-3">
@@ -1364,20 +1363,20 @@ export function BrokerMyBusiness() {
             ) : (
                 <section className="rounded-[26px] border border-dashed border-border/80 bg-surface/90 p-8 text-center">
                     <p className="text-lg font-semibold text-text-primary">Voce ainda nao publicou oportunidades</p>
-                    <p className="mt-2 text-sm text-text-secondary">Publique pelo mural de oportunidades e controle tudo por aqui.</p>
-                    <Link to="/oportunidades" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-white">
+                    <p className="mt-2 text-sm text-text-secondary">Publique sua primeira oportunidade por aqui e ela aparece automaticamente no mural geral.</p>
+                    <button type="button" onClick={startCreate} className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-white">
                         Publicar oportunidade
-                    </Link>
+                    </button>
                 </section>
             )}
 
             <OpportunityCreateModal
-                open={Boolean(editingOpportunity)}
-                editing
+                open={showCreateModal || Boolean(editingOpportunity)}
+                editing={Boolean(editingOpportunity)}
                 draft={draft}
-                onClose={closeEdit}
+                onClose={closeOpportunityForm}
                 onChange={setDraft}
-                onSubmit={saveEdit}
+                onSubmit={editingOpportunity ? saveEdit : publishOpportunity}
             />
             <OpportunityModal
                 item={selectedOpportunity}
