@@ -1188,7 +1188,7 @@ export function BrokerOpportunities() {
                 </div>
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-2">
+            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
                 {filteredOpportunities.map((item) => (
                     <OpportunityCard
                         key={item.id}
