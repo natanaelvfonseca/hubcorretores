@@ -19,6 +19,8 @@ import {
     BrokerProfile,
     BrokerProperties,
     BrokerSavedOpportunities,
+    BrokerServices,
+    BrokerVehicles,
 } from './pages/hub/BrokerMvp';
 import { MyAIs } from './pages/brain/MyAIs';
 import { CRM } from './pages/crm/CRM';
@@ -85,6 +87,8 @@ function App() {
                             <Route path="networking" element={<HubModulePage sectionId="networking" />} />
                             <Route path="oportunidades" element={<BrokerOpportunities />} />
                             <Route path="imoveis" element={<BrokerProperties />} />
+                            <Route path="veiculos" element={<BrokerVehicles />} />
+                            <Route path="servicos" element={<BrokerServices />} />
                             <Route path="meus-negocios" element={<BrokerMyBusiness />} />
                             <Route path="membros" element={<BrokerMembers />} />
                             <Route path="beneficios" element={<BrokerBenefits />} />

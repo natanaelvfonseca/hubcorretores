@@ -25,6 +25,7 @@ import { cn } from '../../utils/cn';
 
 type OpportunityStatus = 'Aberta' | 'Em negociacao' | 'Resolvida';
 type PropertyStatus = 'Disponivel' | 'Reservado' | 'Vendido';
+type VehicleStatus = 'Disponivel' | 'Em negociacao' | 'Vendido' | 'Reservado';
 
 interface Opportunity {
     id: string;
@@ -80,6 +81,44 @@ const opportunityCategories = [
 const cities = ['Balneario Camboriu', 'Itapema', 'Camboriu', 'Porto Belo', 'Bombinhas'];
 const urgencies = ['Alta', 'Media', 'Baixa'];
 const opportunityStatuses: OpportunityStatus[] = ['Aberta', 'Em negociacao', 'Resolvida'];
+const vehicleTypes = ['Carro', 'Moto', 'Caminhonete', 'Caminhao', 'Van', 'Jet ski', 'Lancha', 'Barco', 'Motorhome', 'Maquina / equipamento', 'Outro'];
+const vehicleModalities = ['Venda', 'Troca', 'Permuta', 'Repasse', 'Aceita imovel', 'Aceita veiculo', 'Outro'];
+const vehicleStatuses: VehicleStatus[] = ['Disponivel', 'Em negociacao', 'Vendido', 'Reservado'];
+const valueRanges = ['Ate R$ 100 mil', 'R$ 100 mil a R$ 200 mil', 'Acima de R$ 200 mil'];
+const serviceCategories = [
+    'Fotografo imobiliario',
+    'Videomaker',
+    'Despachante',
+    'Correspondente bancario',
+    'Financiamento',
+    'Consorcio',
+    'Seguro',
+    'Advogado',
+    'Contador',
+    'Marketing',
+    'Trafego pago',
+    'Social media',
+    'Designer',
+    'Reforma',
+    'Pintura',
+    'Limpeza',
+    'Mudanca',
+    'Vistoria',
+    'Laudo tecnico',
+    'Avaliacao de imovel',
+    'Moveis planejados',
+    'Arquitetura',
+    'Engenharia',
+    'Energia solar',
+    'Seguranca eletronica',
+    'Automacao residencial',
+    'Jardinagem',
+    'Piscina',
+    'Dedetizacao',
+    'Outros',
+];
+const serviceAttendance = ['Presencial', 'Online', 'Presencial e online'];
+const serviceSeals = ['Verificado', 'Parceiro homologado', 'Indicado pela comunidade', 'Novo parceiro'];
 
 const defaultOpportunities: Opportunity[] = [
     {
@@ -183,6 +222,104 @@ const properties: Array<{
     },
 ];
 
+const vehicles: Array<{
+    title: string;
+    type: string;
+    brandModel: string;
+    year: string;
+    city: string;
+    value: string;
+    valueNumber: number;
+    modality: string;
+    status: VehicleStatus;
+    description: string;
+    badge: string;
+    advertiser: string;
+    phone: string;
+    photo: string;
+}> = [
+    {
+        title: 'BMW 320i 2021',
+        type: 'Carro',
+        brandModel: 'BMW 320i',
+        year: '2021',
+        city: 'Balneario Camboriu',
+        value: 'R$ 189.000',
+        valueNumber: 189000,
+        modality: 'Venda / Aceita imovel',
+        status: 'Disponivel',
+        description: 'Sedan premium em excelente estado, aceita composicao com imovel na regiao.',
+        badge: 'Verificado',
+        advertiser: 'Marina Souza',
+        phone: '5547999990001',
+        photo: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+        title: 'Jet ski Sea-Doo GTI 130',
+        type: 'Jet ski',
+        brandModel: 'Sea-Doo GTI 130',
+        year: '2020',
+        city: 'Itapema',
+        value: 'R$ 72.000',
+        valueNumber: 72000,
+        modality: 'Venda / Troca',
+        status: 'Disponivel',
+        description: 'Jet ski revisado, pronto para temporada, avalia troca por veiculo.',
+        badge: 'Parceiro',
+        advertiser: 'Litoral Prime Imoveis',
+        phone: '5547999990002',
+        photo: 'https://images.unsplash.com/photo-1569263979104-865ab7cd8d13?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+        title: 'Lancha Fibrafort Focker 240',
+        type: 'Lancha',
+        brandModel: 'Fibrafort Focker 240',
+        year: '2018',
+        city: 'Porto Belo',
+        value: 'R$ 215.000',
+        valueNumber: 215000,
+        modality: 'Permuta',
+        status: 'Em negociacao',
+        description: 'Lancha cabinada com documentacao em dia, foco em permuta por imovel.',
+        badge: 'Verificado',
+        advertiser: 'Construtora Atlantico',
+        phone: '5547999990003',
+        photo: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+        title: 'Moto BMW GS 1250',
+        type: 'Moto',
+        brandModel: 'BMW GS 1250',
+        year: '2022',
+        city: 'Camboriu',
+        value: 'R$ 96.000',
+        valueNumber: 96000,
+        modality: 'Venda',
+        status: 'Disponivel',
+        description: 'Moto equipada para viagem, baixa quilometragem e unico dono.',
+        badge: 'Verificado',
+        advertiser: 'Rafael Mendes',
+        phone: '5547999990004',
+        photo: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80',
+    },
+    {
+        title: 'Caminhonete Hilux SRX 2022',
+        type: 'Caminhonete',
+        brandModel: 'Toyota Hilux SRX',
+        year: '2022',
+        city: 'Itajai',
+        value: 'R$ 245.000',
+        valueNumber: 245000,
+        modality: 'Troca / Aceita imovel',
+        status: 'Reservado',
+        description: 'Caminhonete completa, possibilidade de troca com volta em imovel.',
+        badge: 'Parceiro',
+        advertiser: 'Clara Martins',
+        phone: '5547999990005',
+        photo: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80',
+    },
+];
+
 const members = [
     {
         name: 'Marina Souza',
@@ -239,13 +376,80 @@ const benefits = [
     },
 ];
 
+const services = [
+    {
+        name: 'FotoPrime Imobiliaria',
+        category: 'Fotografo imobiliario',
+        region: 'Balneario Camboriu, Itapema e Itajai',
+        city: 'Balneario Camboriu',
+        attendance: 'Presencial',
+        seal: 'Parceiro homologado',
+        condition: 'Condicao especial para membros do Hub',
+        description: 'Fotos profissionais, video curto e entrega otimizada para portais e redes sociais.',
+        rating: 'Destaque regional',
+        phone: '5547999990011',
+    },
+    {
+        name: 'Credito Litoral',
+        category: 'Correspondente bancario',
+        region: 'Santa Catarina',
+        city: 'Itapema',
+        attendance: 'Presencial e online',
+        seal: 'Verificado',
+        condition: 'Analise de financiamento para clientes indicados',
+        description: 'Simulacoes, aprovacao de credito e acompanhamento de financiamento imobiliario.',
+        rating: 'Resposta rapida',
+        phone: '5547999990012',
+    },
+    {
+        name: 'Juridico Imob SC',
+        category: 'Advogado',
+        region: 'Litoral SC',
+        city: 'Camboriu',
+        attendance: 'Online',
+        seal: 'Indicado pela comunidade',
+        condition: 'Consultoria inicial para membros',
+        description: 'Contratos, due diligence, analise de risco e apoio juridico para negociacoes.',
+        rating: 'Indicado por corretores',
+        phone: '5547999990013',
+    },
+    {
+        name: 'Studio 360 Imoveis',
+        category: 'Videomaker',
+        region: 'Balneario Camboriu',
+        city: 'Balneario Camboriu',
+        attendance: 'Presencial',
+        seal: 'Verificado',
+        condition: 'Pacotes para imoveis de alto padrao',
+        description: 'Videos verticais, tours, reels e captacao para lancamentos e revendas premium.',
+        rating: 'Alto padrao',
+        phone: '5547999990014',
+    },
+    {
+        name: 'Planejados Costa Verde',
+        category: 'Moveis planejados',
+        region: 'Itapema, Porto Belo e Bombinhas',
+        city: 'Porto Belo',
+        attendance: 'Presencial',
+        seal: 'Novo parceiro',
+        condition: 'Orcamento prioritario para indicacoes do Hub',
+        description: 'Projetos de moveis planejados para apartamentos decorados, investidores e clientes finais.',
+        rating: 'Novo no Hub',
+        phone: '5547999990015',
+    },
+];
+
 const statusStyles: Record<string, string> = {
     Aberta: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    'Em negociacao': 'border-amber-200 bg-amber-50 text-amber-700',
     Resolvida: 'border-slate-200 bg-slate-50 text-slate-600',
     Disponivel: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    'Em negociacao': 'border-amber-200 bg-amber-50 text-amber-700',
     Reservado: 'border-amber-200 bg-amber-50 text-amber-700',
     Vendido: 'border-slate-200 bg-slate-50 text-slate-600',
+    Verificado: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    'Parceiro homologado': 'border-primary/20 bg-primary/10 text-primary',
+    'Indicado pela comunidade': 'border-amber-200 bg-amber-50 text-amber-700',
+    'Novo parceiro': 'border-sky-200 bg-sky-50 text-sky-700',
 };
 
 function readStoredOpportunities(): Opportunity[] {
@@ -930,6 +1134,87 @@ function PropertyCard({ item }: { item: (typeof properties)[number] }) {
     );
 }
 
+function VehicleCard({ item }: { item: (typeof vehicles)[number] }) {
+    return (
+        <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+            <div className="aspect-[16/9] overflow-hidden bg-surface-hover">
+                <img src={item.photo} alt={item.title} className="h-full w-full object-cover" />
+            </div>
+            <div className="p-5">
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>
+                        {item.status}
+                    </span>
+                    <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                        {item.type}
+                    </span>
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        {item.badge}
+                    </span>
+                </div>
+                <h2 className="mt-4 text-xl font-display text-text-primary">{item.title}</h2>
+                <p className="mt-2 text-sm font-semibold text-text-secondary">{item.brandModel} · {item.year}</p>
+                <p className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
+                    <MapPin size={15} className="text-primary" />
+                    {item.city}
+                </p>
+                <p className="mt-4 text-2xl font-display text-text-primary">{item.value}</p>
+                <p className="mt-2 text-sm font-semibold text-primary">{item.modality}</p>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-secondary">{item.description}</p>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Anunciante: {item.advertiser}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                    <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho interessado</button>
+                    <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
+                        <MessageCircle size={16} />
+                        WhatsApp
+                    </a>
+                    <button className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
+                    <button className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">
+                        <Bookmark size={16} />
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </article>
+    );
+}
+
+function ServiceCard({ item }: { item: (typeof services)[number] }) {
+    return (
+        <article className="rounded-[26px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.seal])}>
+                    {item.seal}
+                </span>
+                <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    {item.category}
+                </span>
+            </div>
+            <h2 className="mt-4 text-xl font-display text-text-primary">{item.name}</h2>
+            <p className="mt-2 text-sm font-semibold text-text-secondary">{item.region}</p>
+            <p className="mt-2 text-sm text-text-secondary">{item.attendance}</p>
+            <p className="mt-4 text-sm leading-7 text-text-secondary">{item.description}</p>
+            <div className="mt-4 rounded-2xl border border-border/70 bg-background/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Condicao para membros</p>
+                <p className="mt-2 text-sm font-semibold text-text-primary">{item.condition}</p>
+            </div>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary">{item.rating}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+                <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Solicitar orçamento</button>
+                <a href={whatsAppLink(item.phone, item.name)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
+                    <MessageCircle size={16} />
+                    WhatsApp
+                </a>
+                <button className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
+                <button className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">
+                    <Bookmark size={16} />
+                    Salvar
+                </button>
+            </div>
+        </article>
+    );
+}
+
 function useBrokerAccessGuard() {
     const { user } = useAuth();
     return { user, blocked: isConstrutoraUser(user) };
@@ -1049,22 +1334,24 @@ export function BrokerHome() {
                 </div>
             </section>
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                 {[
-                    { label: 'Oportunidades abertas', value: opportunities.filter((item) => item.status === 'Aberta').length.toString(), icon: Sparkles },
-                    { label: 'Imoveis divulgados', value: '124', icon: Home },
-                    { label: 'Membros ativos', value: '12.800+', icon: Users },
-                    { label: 'Beneficios parceiros', value: '150+', icon: Gift },
+                    { label: 'Oportunidades abertas', value: opportunities.filter((item) => item.status === 'Aberta').length.toString(), icon: Sparkles, path: '/oportunidades' },
+                    { label: 'Imoveis publicados', value: properties.length.toString(), icon: Home, path: '/imoveis' },
+                    { label: 'Veiculos disponiveis', value: vehicles.filter((item) => item.status === 'Disponivel').length.toString(), icon: Sparkles, path: '/veiculos' },
+                    { label: 'Servicos parceiros', value: services.length.toString(), icon: Gift, path: '/servicos' },
+                    { label: 'Membros ativos', value: '12.800+', icon: Users, path: '/membros' },
+                    { label: 'Beneficios disponiveis', value: benefits.length.toString(), icon: Gift, path: '/beneficios' },
                 ].map((item) => {
                     const Icon = item.icon;
                     return (
-                        <article key={item.label} className="rounded-[26px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+                        <Link key={item.label} to={item.path} className="rounded-[26px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)] transition hover:-translate-y-0.5 hover:border-primary/25">
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                                 <Icon size={20} />
                             </div>
                             <p className="mt-5 text-3xl font-display text-text-primary">{item.value}</p>
                             <p className="mt-1 text-sm font-semibold text-text-secondary">{item.label}</p>
-                        </article>
+                        </Link>
                     );
                 })}
             </section>
@@ -1101,6 +1388,24 @@ export function BrokerHome() {
                         </Link>
                     </div>
                     {properties.slice(0, 2).map((item) => <PropertyCard key={item.title} item={item} />)}
+                </div>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-2xl font-display text-text-primary">Veiculos disponiveis</h2>
+                        <Link to="/veiculos" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                            Ver todos <ArrowRight size={16} />
+                        </Link>
+                    </div>
+                    {vehicles.slice(0, 2).map((item) => <VehicleCard key={item.title} item={item} />)}
+                </div>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <h2 className="text-2xl font-display text-text-primary">Servicos parceiros</h2>
+                        <Link to="/servicos" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
+                            Ver todos <ArrowRight size={16} />
+                        </Link>
+                    </div>
+                    {services.slice(0, 2).map((item) => <ServiceCard key={item.name} item={item} />)}
                 </div>
             </section>
 
@@ -1476,6 +1781,151 @@ export function BrokerProperties() {
             </section>
             <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {properties.map((item) => <PropertyCard key={item.title} item={item} />)}
+            </section>
+        </div>
+    );
+}
+
+export function BrokerVehicles() {
+    const { blocked } = useBrokerAccessGuard();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [cityFilter, setCityFilter] = useState('all');
+    const [valueFilter, setValueFilter] = useState('all');
+    const [modalityFilter, setModalityFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    const filteredVehicles = useMemo(() => {
+        const query = normalizeText(searchQuery);
+
+        return vehicles.filter((item) => {
+            const matchesSearch = !query || [
+                item.title,
+                item.type,
+                item.brandModel,
+                item.city,
+                item.modality,
+                item.description,
+                item.advertiser,
+            ].join(' ').toLowerCase().includes(query);
+            const matchesValue = valueFilter === 'all'
+                || (valueFilter === 'Ate R$ 100 mil' && item.valueNumber <= 100000)
+                || (valueFilter === 'R$ 100 mil a R$ 200 mil' && item.valueNumber > 100000 && item.valueNumber <= 200000)
+                || (valueFilter === 'Acima de R$ 200 mil' && item.valueNumber > 200000);
+
+            return (
+                matchesSearch &&
+                (typeFilter === 'all' || item.type === typeFilter) &&
+                (cityFilter === 'all' || item.city === cityFilter) &&
+                matchesValue &&
+                (modalityFilter === 'all' || item.modality.includes(modalityFilter)) &&
+                (statusFilter === 'all' || item.status === statusFilter)
+            );
+        });
+    }, [cityFilter, modalityFilter, searchQuery, statusFilter, typeFilter, valueFilter]);
+
+    if (blocked) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return (
+        <div className="space-y-6 pb-6">
+            <PageHeader
+                eyebrow="Vitrine de bens moveis"
+                title="Veiculos da comunidade"
+                description="Encontre veiculos, embarcacoes e oportunidades de troca ou permuta dentro da rede Corretores do Litoral SC."
+                action="Publicar Veiculo"
+                onAction={() => window.alert('Cadastro de veiculos preparado para a proxima etapa do MVP.')}
+            />
+
+            <section className="rounded-[26px] border border-primary/15 bg-primary/[0.06] p-5">
+                <p className="text-sm leading-7 text-text-secondary">
+                    De carros e motos a jet skis, lanchas e equipamentos: organize aqui o que antes se perdia nos grupos.
+                </p>
+            </section>
+
+            <section className="rounded-[26px] border border-border/70 bg-surface/95 p-5">
+                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr_0.8fr_0.8fr]">
+                    <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por modelo, cidade, modalidade ou anunciante" />
+                    <SelectField label="Tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: 'all', label: 'Todos' }, ...vehicleTypes.map((type) => ({ value: type, label: type }))]} />
+                    <SelectField label="Cidade" value={cityFilter} onChange={setCityFilter} options={[{ value: 'all', label: 'Todas' }, ...['Balneario Camboriu', 'Itapema', 'Porto Belo', 'Camboriu', 'Itajai'].map((city) => ({ value: city, label: city }))]} />
+                    <SelectField label="Valor" value={valueFilter} onChange={setValueFilter} options={[{ value: 'all', label: 'Todos' }, ...valueRanges.map((range) => ({ value: range, label: range }))]} />
+                    <SelectField label="Modalidade" value={modalityFilter} onChange={setModalityFilter} options={[{ value: 'all', label: 'Todas' }, ...vehicleModalities.map((modality) => ({ value: modality, label: modality }))]} />
+                    <SelectField label="Status" value={statusFilter} onChange={setStatusFilter} options={[{ value: 'all', label: 'Todos' }, ...vehicleStatuses.map((status) => ({ value: status, label: status }))]} />
+                </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {filteredVehicles.map((item) => <VehicleCard key={item.title} item={item} />)}
+            </section>
+        </div>
+    );
+}
+
+export function BrokerServices() {
+    const { blocked } = useBrokerAccessGuard();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [cityFilter, setCityFilter] = useState('all');
+    const [attendanceFilter, setAttendanceFilter] = useState('all');
+    const [sealFilter, setSealFilter] = useState('all');
+
+    const filteredServices = useMemo(() => {
+        const query = normalizeText(searchQuery);
+
+        return services.filter((item) => {
+            const matchesSearch = !query || [
+                item.name,
+                item.category,
+                item.region,
+                item.attendance,
+                item.description,
+                item.condition,
+                item.seal,
+            ].join(' ').toLowerCase().includes(query);
+
+            return (
+                matchesSearch &&
+                (categoryFilter === 'all' || item.category === categoryFilter) &&
+                (cityFilter === 'all' || item.city === cityFilter || item.region.includes(cityFilter)) &&
+                (attendanceFilter === 'all' || item.attendance === attendanceFilter) &&
+                (sealFilter === 'all' || item.seal === sealFilter)
+            );
+        });
+    }, [attendanceFilter, categoryFilter, cityFilter, searchQuery, sealFilter]);
+
+    if (blocked) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return (
+        <div className="space-y-6 pb-6">
+            <PageHeader
+                eyebrow="Diretorio pratico"
+                title="Servicos e parceiros"
+                description="Encontre prestadores, fornecedores e parceiros confiaveis para acelerar negocios dentro da comunidade."
+                action="Cadastrar Servico"
+                onAction={() => window.alert('Cadastro de servicos preparado para a proxima etapa do MVP.')}
+            />
+
+            <section className="rounded-[26px] border border-primary/15 bg-primary/[0.06] p-5">
+                <p className="text-sm leading-7 text-text-secondary">
+                    Servicos que ajudam corretores, imobiliarias, construtoras e clientes a resolverem o que trava uma negociacao.
+                </p>
+            </section>
+
+            <section className="rounded-[26px] border border-border/70 bg-surface/95 p-5">
+                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.9fr_0.8fr_0.8fr_0.8fr]">
+                    <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por parceiro, servico, cidade ou condicao" />
+                    <SelectField label="Categoria" value={categoryFilter} onChange={setCategoryFilter} options={[{ value: 'all', label: 'Todas' }, ...serviceCategories.map((category) => ({ value: category, label: category }))]} />
+                    <SelectField label="Regiao" value={cityFilter} onChange={setCityFilter} options={[{ value: 'all', label: 'Todas' }, ...cities.map((city) => ({ value: city, label: city }))]} />
+                    <SelectField label="Atendimento" value={attendanceFilter} onChange={setAttendanceFilter} options={[{ value: 'all', label: 'Todos' }, ...serviceAttendance.map((attendance) => ({ value: attendance, label: attendance }))]} />
+                    <SelectField label="Selo" value={sealFilter} onChange={setSealFilter} options={[{ value: 'all', label: 'Todos' }, ...serviceSeals.map((seal) => ({ value: seal, label: seal }))]} />
+                </div>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                {filteredServices.map((item) => <ServiceCard key={item.name} item={item} />)}
             </section>
         </div>
     );

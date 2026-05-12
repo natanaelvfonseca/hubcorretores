@@ -3,6 +3,7 @@ import {
     Bookmark,
     Briefcase,
     Building2,
+    Car,
     Gift,
     Home,
     KanbanSquare,
@@ -10,6 +11,7 @@ import {
     Sparkles,
     UserCircle2,
     Users,
+    Wrench,
     type LucideIcon,
 } from 'lucide-react';
 import {
@@ -108,12 +110,28 @@ const brokerMvpNavItems: PortalNavItem[] = [
         icon: Building2,
     },
     {
+        id: 'broker-vehicles',
+        path: '/veiculos',
+        navLabel: 'Veículos',
+        eyebrow: 'Transporte',
+        summary: 'Veículos, embarcações e bens móveis disponíveis para venda, troca ou permuta.',
+        icon: Car,
+    },
+    {
         id: 'broker-my-business',
         path: '/meus-negocios',
         navLabel: 'Meus Negócios',
         eyebrow: 'Controle',
         summary: 'Edite, remova e marque o fechamento das suas oportunidades.',
         icon: Briefcase,
+    },
+    {
+        id: 'broker-services',
+        path: '/servicos',
+        navLabel: 'Serviços',
+        eyebrow: 'Parceiros',
+        summary: 'Prestadores, fornecedores e parceiros úteis para acelerar negócios.',
+        icon: Wrench,
     },
     {
         id: 'broker-members',
@@ -149,6 +167,10 @@ const brokerMvpNavItems: PortalNavItem[] = [
     },
 ];
 
+const brokerMvpNavMap = Object.fromEntries(
+    brokerMvpNavItems.map((item) => [item.path, item]),
+) as Record<string, PortalNavItem>;
+
 export function isConstrutoraUser(user?: PortalAwareUser | null) {
     return user?.accountType === 'construtora';
 }
@@ -157,8 +179,27 @@ export function getVisibleNavigation(user?: PortalAwareUser | null): PortalNavSe
     if (!isConstrutoraUser(user)) {
         return [
             {
-                title: 'Hub',
-                items: brokerMvpNavItems,
+                title: 'Negócios',
+                items: brokerMvpNavItems.filter((item) => [
+                    '/dashboard',
+                    '/oportunidades',
+                    '/imoveis',
+                    '/veiculos',
+                    '/meus-negocios',
+                ].includes(item.path)),
+            },
+            {
+                title: 'Rede',
+                items: brokerMvpNavItems.filter((item) => [
+                    '/servicos',
+                    '/membros',
+                    '/beneficios',
+                    '/salvos',
+                ].includes(item.path)),
+            },
+            {
+                title: 'Conta',
+                items: brokerMvpNavItems.filter((item) => item.path === '/perfil'),
             },
         ];
     }
@@ -179,7 +220,7 @@ export function getPortalItemByPath(
         return construtoraNavItems.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`));
     }
 
-    return getHubModuleByPath(pathname);
+    return brokerMvpNavMap[pathname] || getHubModuleByPath(pathname);
 }
 
 export function canAccessHubModule(user: PortalAwareUser | null | undefined, moduleId: string) {
