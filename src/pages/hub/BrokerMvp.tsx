@@ -58,6 +58,9 @@ type SelectOption = {
 
 const OPPORTUNITIES_STORAGE_KEY = 'hub_broker_opportunities';
 const SAVED_OPPORTUNITIES_STORAGE_KEY = 'hub_broker_saved_opportunities';
+const MAX_STORED_IMAGE_WIDTH = 900;
+const MAX_STORED_IMAGE_HEIGHT = 900;
+const STORED_IMAGE_QUALITY = 0.68;
 
 const opportunityCategories = [
     'Cliente comprador',
@@ -259,11 +262,75 @@ function readSavedOpportunityIds(): string[] {
 }
 
 function saveOpportunities(items: Opportunity[]) {
-    localStorage.setItem(OPPORTUNITIES_STORAGE_KEY, JSON.stringify(items));
+    try {
+        localStorage.setItem(OPPORTUNITIES_STORAGE_KEY, JSON.stringify(items));
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+            const compactItems = items.map((item) => ({
+                ...item,
+                images: item.images.slice(0, 1),
+            }));
+
+            try {
+                localStorage.setItem(OPPORTUNITIES_STORAGE_KEY, JSON.stringify(compactItems));
+                return;
+            } catch {
+                localStorage.setItem(
+                    OPPORTUNITIES_STORAGE_KEY,
+                    JSON.stringify(compactItems.map((item) => ({ ...item, images: [] }))),
+                );
+                return;
+            }
+        }
+
+        throw error;
+    }
 }
 
 function saveSavedOpportunityIds(ids: string[]) {
-    localStorage.setItem(SAVED_OPPORTUNITIES_STORAGE_KEY, JSON.stringify(ids));
+    try {
+        localStorage.setItem(SAVED_OPPORTUNITIES_STORAGE_KEY, JSON.stringify(ids));
+    } catch {
+        // Saved ids are a convenience cache. If the browser refuses storage, keep the UI alive.
+    }
+}
+
+function resizeImageForStorage(file: File) {
+    return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const image = new Image();
+
+            image.onload = () => {
+                const ratio = Math.min(
+                    MAX_STORED_IMAGE_WIDTH / image.width,
+                    MAX_STORED_IMAGE_HEIGHT / image.height,
+                    1,
+                );
+                const width = Math.max(1, Math.round(image.width * ratio));
+                const height = Math.max(1, Math.round(image.height * ratio));
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+
+                if (!context) {
+                    reject(new Error('Nao foi possivel processar a imagem.'));
+                    return;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(image, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', STORED_IMAGE_QUALITY));
+            };
+
+            image.onerror = () => reject(new Error('Imagem invalida.'));
+            image.src = String(reader.result);
+        };
+
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
 }
 
 function formatDate(value: string) {
@@ -559,17 +626,17 @@ function OpportunityCreateModal({
     const handleImages = async (files: FileList | null) => {
         if (!files?.length) return;
 
-        const selected = Array.from(files).slice(0, Math.max(4 - draft.images.length, 0));
-        const encoded = await Promise.all(
-            selected.map((file) => new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(String(reader.result));
-                reader.onerror = () => reject(reader.error);
-                reader.readAsDataURL(file);
-            })),
-        );
+        const availableSlots = Math.max(4 - draft.images.length, 0);
+        const selected = Array.from(files)
+            .filter((file) => file.type.startsWith('image/'))
+            .slice(0, availableSlots);
 
-        onChange({ ...draft, images: [...draft.images, ...encoded].slice(0, 4) });
+        try {
+            const encoded = await Promise.all(selected.map((file) => resizeImageForStorage(file)));
+            onChange({ ...draft, images: [...draft.images, ...encoded].slice(0, 4) });
+        } catch {
+            window.alert('Nao foi possivel processar uma das imagens. Tente outra foto.');
+        }
     };
 
     return (
