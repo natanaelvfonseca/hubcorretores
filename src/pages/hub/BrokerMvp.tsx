@@ -63,6 +63,9 @@ type SelectOption = {
 
 const OPPORTUNITIES_STORAGE_KEY = 'hub_broker_opportunities';
 const SAVED_OPPORTUNITIES_STORAGE_KEY = 'hub_broker_saved_opportunities';
+const SAVED_PROPERTIES_STORAGE_KEY = 'hub_broker_saved_properties';
+const SAVED_VEHICLES_STORAGE_KEY = 'hub_broker_saved_vehicles';
+const SAVED_SERVICES_STORAGE_KEY = 'hub_broker_saved_services';
 const MAX_STORED_IMAGE_WIDTH = 900;
 const MAX_STORED_IMAGE_HEIGHT = 900;
 const STORED_IMAGE_QUALITY = 0.68;
@@ -181,6 +184,7 @@ const emptyOpportunityDraft: OpportunityDraft = {
 };
 
 const properties: Array<{
+    id: string;
     title: string;
     city: string;
     district: string;
@@ -189,8 +193,12 @@ const properties: Array<{
     status: PropertyStatus;
     partnership: string;
     photo: string;
+    description: string;
+    advertiser: string;
+    phone: string;
 }> = [
     {
+        id: 'property-apartamento-vista-mar',
         title: 'Apartamento 3 suites vista mar',
         city: 'Balneario Camboriu',
         district: 'Barra Sul',
@@ -199,8 +207,12 @@ const properties: Array<{
         status: 'Disponivel',
         partnership: 'Parceria 50/50',
         photo: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80',
+        description: 'Apartamento pronto para cliente de alto padrao, com vista mar e condicoes claras de parceria.',
+        advertiser: 'Marina Souza',
+        phone: '5547999990001',
     },
     {
+        id: 'property-casa-condominio-itapema',
         title: 'Casa mobiliada em condominio',
         city: 'Itapema',
         district: 'Morretes',
@@ -209,8 +221,12 @@ const properties: Array<{
         status: 'Reservado',
         partnership: 'Comissao 5%',
         photo: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80',
+        description: 'Casa mobiliada em condominio fechado, ideal para familia buscando mudanca rapida.',
+        advertiser: 'Litoral Prime Imoveis',
+        phone: '5547999990002',
     },
     {
+        id: 'property-sala-comercial-camboriu',
         title: 'Sala comercial pronta',
         city: 'Camboriu',
         district: 'Centro',
@@ -219,10 +235,14 @@ const properties: Array<{
         status: 'Disponivel',
         partnership: 'Aberto a parceria',
         photo: 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=80',
+        description: 'Sala comercial bem localizada para investidor ou profissional liberal, pronta para uso.',
+        advertiser: 'Studio Vendas Imobiliarias',
+        phone: '5547999990004',
     },
 ];
 
 const vehicles: Array<{
+    id: string;
     title: string;
     type: string;
     brandModel: string;
@@ -239,6 +259,7 @@ const vehicles: Array<{
     photo: string;
 }> = [
     {
+        id: 'vehicle-bmw-320i-2021',
         title: 'BMW 320i 2021',
         type: 'Carro',
         brandModel: 'BMW 320i',
@@ -255,6 +276,7 @@ const vehicles: Array<{
         photo: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=900&q=80',
     },
     {
+        id: 'vehicle-seadoo-gti-130',
         title: 'Jet ski Sea-Doo GTI 130',
         type: 'Jet ski',
         brandModel: 'Sea-Doo GTI 130',
@@ -271,6 +293,7 @@ const vehicles: Array<{
         photo: 'https://images.unsplash.com/photo-1569263979104-865ab7cd8d13?auto=format&fit=crop&w=900&q=80',
     },
     {
+        id: 'vehicle-lancha-focker-240',
         title: 'Lancha Fibrafort Focker 240',
         type: 'Lancha',
         brandModel: 'Fibrafort Focker 240',
@@ -287,6 +310,7 @@ const vehicles: Array<{
         photo: 'https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?auto=format&fit=crop&w=900&q=80',
     },
     {
+        id: 'vehicle-bmw-gs-1250',
         title: 'Moto BMW GS 1250',
         type: 'Moto',
         brandModel: 'BMW GS 1250',
@@ -303,6 +327,7 @@ const vehicles: Array<{
         photo: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80',
     },
     {
+        id: 'vehicle-hilux-srx-2022',
         title: 'Caminhonete Hilux SRX 2022',
         type: 'Caminhonete',
         brandModel: 'Toyota Hilux SRX',
@@ -378,6 +403,7 @@ const benefits = [
 
 const services = [
     {
+        id: 'service-fotoprime-imobiliaria',
         name: 'FotoPrime Imobiliaria',
         category: 'Fotografo imobiliario',
         region: 'Balneario Camboriu, Itapema e Itajai',
@@ -390,6 +416,7 @@ const services = [
         phone: '5547999990011',
     },
     {
+        id: 'service-credito-litoral',
         name: 'Credito Litoral',
         category: 'Correspondente bancario',
         region: 'Santa Catarina',
@@ -402,6 +429,7 @@ const services = [
         phone: '5547999990012',
     },
     {
+        id: 'service-juridico-imob-sc',
         name: 'Juridico Imob SC',
         category: 'Advogado',
         region: 'Litoral SC',
@@ -414,6 +442,7 @@ const services = [
         phone: '5547999990013',
     },
     {
+        id: 'service-studio-360-imoveis',
         name: 'Studio 360 Imoveis',
         category: 'Videomaker',
         region: 'Balneario Camboriu',
@@ -426,6 +455,7 @@ const services = [
         phone: '5547999990014',
     },
     {
+        id: 'service-planejados-costa-verde',
         name: 'Planejados Costa Verde',
         category: 'Moveis planejados',
         region: 'Itapema, Porto Belo e Bombinhas',
@@ -440,6 +470,7 @@ const services = [
 ];
 
 type PropertyCardItem = {
+    id: string;
     title: string;
     city: string;
     district: string;
@@ -448,9 +479,13 @@ type PropertyCardItem = {
     status: PropertyStatus;
     partnership: string;
     photo: string;
+    description: string;
+    advertiser: string;
+    phone: string;
 };
 
 type VehicleCardItem = {
+    id: string;
     title: string;
     type: string;
     brandModel: string;
@@ -466,6 +501,8 @@ type VehicleCardItem = {
     phone: string;
     photo: string;
 };
+
+type ServiceCardItem = (typeof services)[number];
 
 const statusStyles: Record<string, string> = {
     Aberta: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -502,6 +539,7 @@ function opportunityStatusToVehicleStatus(status: OpportunityStatus): VehicleSta
 
 function propertyCardFromOpportunity(item: Opportunity): PropertyCardItem {
     return {
+        id: item.id,
         title: item.title,
         city: item.city,
         district: 'Publicado no Hub',
@@ -510,11 +548,15 @@ function propertyCardFromOpportunity(item: Opportunity): PropertyCardItem {
         status: opportunityStatusToPropertyStatus(item.status),
         partnership: item.category,
         photo: item.images[0] || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80',
+        description: item.description,
+        advertiser: item.author,
+        phone: item.phone,
     };
 }
 
 function vehicleCardFromOpportunity(item: Opportunity): VehicleCardItem {
     return {
+        id: item.id,
         title: item.title,
         type: 'Outro',
         brandModel: item.title,
@@ -545,12 +587,16 @@ function readStoredOpportunities(): Opportunity[] {
 }
 
 function readSavedOpportunityIds(): string[] {
+    return readStoredStringArray(SAVED_OPPORTUNITIES_STORAGE_KEY);
+}
+
+function readStoredStringArray(key: string): string[] {
     try {
-        const stored = localStorage.getItem(SAVED_OPPORTUNITIES_STORAGE_KEY);
+        const stored = localStorage.getItem(key);
         if (!stored) return [];
 
         const parsed = JSON.parse(stored);
-        return Array.isArray(parsed) ? parsed : [];
+        return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
     } catch {
         return [];
     }
@@ -583,8 +629,12 @@ function saveOpportunities(items: Opportunity[]) {
 }
 
 function saveSavedOpportunityIds(ids: string[]) {
+    saveStoredStringArray(SAVED_OPPORTUNITIES_STORAGE_KEY, ids);
+}
+
+function saveStoredStringArray(key: string, ids: string[]) {
     try {
-        localStorage.setItem(SAVED_OPPORTUNITIES_STORAGE_KEY, JSON.stringify(ids));
+        localStorage.setItem(key, JSON.stringify(ids));
     } catch {
         // Saved ids are a convenience cache. If the browser refuses storage, keep the UI alive.
     }
@@ -1185,12 +1235,22 @@ function CloseDealModal({
     );
 }
 
-function PropertyCard({ item }: { item: PropertyCardItem }) {
+function PropertyCard({
+    item,
+    saved = false,
+    onOpen,
+    onSave,
+}: {
+    item: PropertyCardItem;
+    saved?: boolean;
+    onOpen?: (item: PropertyCardItem) => void;
+    onSave?: (id: string) => void;
+}) {
     return (
         <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
-            <div className="aspect-[16/9] overflow-hidden bg-surface-hover">
+            <button type="button" onClick={() => onOpen?.(item)} className="block aspect-[16/9] w-full overflow-hidden bg-surface-hover text-left">
                 <img src={item.photo} alt={item.title} className="h-full w-full object-cover" />
-            </div>
+            </button>
             <div className="p-5">
                 <div className="flex flex-wrap items-center gap-2">
                     <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>
@@ -1200,29 +1260,45 @@ function PropertyCard({ item }: { item: PropertyCardItem }) {
                         {item.type}
                     </span>
                 </div>
-                <h2 className="mt-4 text-xl font-display text-text-primary">{item.title}</h2>
+                <button type="button" onClick={() => onOpen?.(item)} className="mt-4 block text-left">
+                    <h2 className="text-xl font-display text-text-primary transition hover:text-primary">{item.title}</h2>
+                </button>
                 <p className="mt-2 text-sm text-text-secondary">{item.city} / {item.district}</p>
                 <p className="mt-4 text-2xl font-display text-text-primary">{item.value}</p>
                 <p className="mt-2 text-sm font-semibold text-primary">{item.partnership}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                    <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho cliente</button>
-                    <button className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
+                    <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho cliente</a>
+                    <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
                         <MessageCircle size={16} />
                         WhatsApp
+                    </a>
+                    <button type="button" onClick={() => onOpen?.(item)} className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
+                    <button type="button" onClick={() => onSave?.(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}>
+                        <Bookmark size={16} />
+                        {saved ? 'Salvo' : 'Salvar'}
                     </button>
-                    <button className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
                 </div>
             </div>
         </article>
     );
 }
 
-function VehicleCard({ item }: { item: VehicleCardItem }) {
+function VehicleCard({
+    item,
+    saved = false,
+    onOpen,
+    onSave,
+}: {
+    item: VehicleCardItem;
+    saved?: boolean;
+    onOpen?: (item: VehicleCardItem) => void;
+    onSave?: (id: string) => void;
+}) {
     return (
         <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
-            <div className="aspect-[16/9] overflow-hidden bg-surface-hover">
+            <button type="button" onClick={() => onOpen?.(item)} className="block aspect-[16/9] w-full overflow-hidden bg-surface-hover text-left">
                 <img src={item.photo} alt={item.title} className="h-full w-full object-cover" />
-            </div>
+            </button>
             <div className="p-5">
                 <div className="flex flex-wrap items-center gap-2">
                     <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>
@@ -1235,7 +1311,9 @@ function VehicleCard({ item }: { item: VehicleCardItem }) {
                         {item.badge}
                     </span>
                 </div>
-                <h2 className="mt-4 text-xl font-display text-text-primary">{item.title}</h2>
+                <button type="button" onClick={() => onOpen?.(item)} className="mt-4 block text-left">
+                    <h2 className="text-xl font-display text-text-primary transition hover:text-primary">{item.title}</h2>
+                </button>
                 <p className="mt-2 text-sm font-semibold text-text-secondary">{item.brandModel} · {item.year}</p>
                 <p className="mt-2 flex items-center gap-2 text-sm text-text-secondary">
                     <MapPin size={15} className="text-primary" />
@@ -1246,15 +1324,15 @@ function VehicleCard({ item }: { item: VehicleCardItem }) {
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-text-secondary">{item.description}</p>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Anunciante: {item.advertiser}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                    <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho interessado</button>
+                    <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho interessado</a>
                     <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
                         <MessageCircle size={16} />
                         WhatsApp
                     </a>
-                    <button className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
-                    <button className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">
+                    <button type="button" onClick={() => onOpen?.(item)} className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
+                    <button type="button" onClick={() => onSave?.(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}>
                         <Bookmark size={16} />
-                        Salvar
+                        {saved ? 'Salvo' : 'Salvar'}
                     </button>
                 </div>
             </div>
@@ -1262,7 +1340,17 @@ function VehicleCard({ item }: { item: VehicleCardItem }) {
     );
 }
 
-function ServiceCard({ item }: { item: (typeof services)[number] }) {
+function ServiceCard({
+    item,
+    saved = false,
+    onOpen,
+    onSave,
+}: {
+    item: ServiceCardItem;
+    saved?: boolean;
+    onOpen?: (item: ServiceCardItem) => void;
+    onSave?: (id: string) => void;
+}) {
     return (
         <article className="rounded-[26px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
             <div className="flex flex-wrap items-center gap-2">
@@ -1273,7 +1361,9 @@ function ServiceCard({ item }: { item: (typeof services)[number] }) {
                     {item.category}
                 </span>
             </div>
-            <h2 className="mt-4 text-xl font-display text-text-primary">{item.name}</h2>
+            <button type="button" onClick={() => onOpen?.(item)} className="mt-4 block text-left">
+                <h2 className="text-xl font-display text-text-primary transition hover:text-primary">{item.name}</h2>
+            </button>
             <p className="mt-2 text-sm font-semibold text-text-secondary">{item.region}</p>
             <p className="mt-2 text-sm text-text-secondary">{item.attendance}</p>
             <p className="mt-4 text-sm leading-7 text-text-secondary">{item.description}</p>
@@ -1283,18 +1373,178 @@ function ServiceCard({ item }: { item: (typeof services)[number] }) {
             </div>
             <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-primary">{item.rating}</p>
             <div className="mt-5 flex flex-wrap gap-2">
-                <button className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Solicitar orçamento</button>
+                <a href={whatsAppLink(item.phone, item.name)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Solicitar orcamento</a>
                 <a href={whatsAppLink(item.phone, item.name)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary">
                     <MessageCircle size={16} />
                     WhatsApp
                 </a>
-                <button className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
-                <button className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">
+                <button type="button" onClick={() => onOpen?.(item)} className="rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-secondary">Ver detalhes</button>
+                <button type="button" onClick={() => onSave?.(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}>
                     <Bookmark size={16} />
-                    Salvar
+                    {saved ? 'Salvo' : 'Salvar'}
                 </button>
             </div>
         </article>
+    );
+}
+
+function PropertyDetailsModal({
+    item,
+    saved,
+    onClose,
+    onSave,
+}: {
+    item: PropertyCardItem | null;
+    saved: boolean;
+    onClose: () => void;
+    onSave: (id: string) => void;
+}) {
+    if (!item) return null;
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#06131F]/55 p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-border/70 bg-surface shadow-[0_24px_80px_rgba(8,23,38,0.28)]">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Detalhes do imovel</p>
+                        <h2 className="mt-1 text-2xl font-display text-text-primary">{item.title}</h2>
+                    </div>
+                    <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-text-secondary">
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="grid gap-6 p-6 lg:grid-cols-[1.05fr_0.95fr]">
+                    <img src={item.photo} alt={item.title} className="aspect-[16/11] w-full rounded-[22px] object-cover" />
+                    <div>
+                        <div className="flex flex-wrap gap-2">
+                            <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>{item.status}</span>
+                            <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{item.type}</span>
+                        </div>
+                        <p className="mt-5 text-3xl font-display text-text-primary">{item.value}</p>
+                        <p className="mt-2 text-sm font-semibold text-primary">{item.partnership}</p>
+                        <p className="mt-4 flex items-center gap-2 text-sm text-text-secondary"><MapPin size={15} className="text-primary" />{item.city} / {item.district}</p>
+                        <p className="mt-5 text-sm leading-7 text-text-secondary">{item.description}</p>
+                        <div className="mt-5 rounded-2xl border border-border/70 bg-background/80 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Anunciante</p>
+                            <p className="mt-2 text-sm font-semibold text-text-primary">{item.advertiser}</p>
+                        </div>
+                        <div className="mt-5 flex flex-wrap gap-2">
+                            <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho cliente</a>
+                            <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary"><MessageCircle size={16} />WhatsApp</a>
+                            <button type="button" onClick={() => onSave(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}><Bookmark size={16} />{saved ? 'Salvo' : 'Salvar'}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function VehicleDetailsModal({
+    item,
+    saved,
+    onClose,
+    onSave,
+}: {
+    item: VehicleCardItem | null;
+    saved: boolean;
+    onClose: () => void;
+    onSave: (id: string) => void;
+}) {
+    if (!item) return null;
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#06131F]/55 p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-border/70 bg-surface shadow-[0_24px_80px_rgba(8,23,38,0.28)]">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Detalhes do veiculo</p>
+                        <h2 className="mt-1 text-2xl font-display text-text-primary">{item.title}</h2>
+                    </div>
+                    <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-text-secondary">
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="grid gap-6 p-6 lg:grid-cols-[1.05fr_0.95fr]">
+                    <img src={item.photo} alt={item.title} className="aspect-[16/11] w-full rounded-[22px] object-cover" />
+                    <div>
+                        <div className="flex flex-wrap gap-2">
+                            <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>{item.status}</span>
+                            <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{item.type}</span>
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item.badge}</span>
+                        </div>
+                        <p className="mt-5 text-3xl font-display text-text-primary">{item.value}</p>
+                        <p className="mt-2 text-sm font-semibold text-primary">{item.modality}</p>
+                        <p className="mt-4 text-sm font-semibold text-text-secondary">{item.brandModel} - {item.year}</p>
+                        <p className="mt-2 flex items-center gap-2 text-sm text-text-secondary"><MapPin size={15} className="text-primary" />{item.city}</p>
+                        <p className="mt-5 text-sm leading-7 text-text-secondary">{item.description}</p>
+                        <div className="mt-5 rounded-2xl border border-border/70 bg-background/80 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Anunciante</p>
+                            <p className="mt-2 text-sm font-semibold text-text-primary">{item.advertiser}</p>
+                        </div>
+                        <div className="mt-5 flex flex-wrap gap-2">
+                            <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Tenho interessado</a>
+                            <a href={whatsAppLink(item.phone, item.title)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary"><MessageCircle size={16} />WhatsApp</a>
+                            <button type="button" onClick={() => onSave(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}><Bookmark size={16} />{saved ? 'Salvo' : 'Salvar'}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ServiceDetailsModal({
+    item,
+    saved,
+    onClose,
+    onSave,
+}: {
+    item: ServiceCardItem | null;
+    saved: boolean;
+    onClose: () => void;
+    onSave: (id: string) => void;
+}) {
+    if (!item) return null;
+
+    return (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#06131F]/55 p-4 backdrop-blur-sm">
+            <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-border/70 bg-surface shadow-[0_24px_80px_rgba(8,23,38,0.28)]">
+                <div className="flex items-center justify-between border-b border-border/70 px-6 py-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Detalhes do servico</p>
+                        <h2 className="mt-1 text-2xl font-display text-text-primary">{item.name}</h2>
+                    </div>
+                    <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 bg-white text-text-secondary">
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="p-6">
+                    <div className="flex flex-wrap gap-2">
+                        <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.seal])}>{item.seal}</span>
+                        <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{item.category}</span>
+                    </div>
+                    <p className="mt-5 text-sm font-semibold text-text-secondary">{item.region}</p>
+                    <p className="mt-2 text-sm text-text-secondary">{item.attendance}</p>
+                    <p className="mt-5 text-sm leading-7 text-text-secondary">{item.description}</p>
+                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Condicao para membros</p>
+                            <p className="mt-2 text-sm font-semibold text-text-primary">{item.condition}</p>
+                        </div>
+                        <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">Destaque</p>
+                            <p className="mt-2 text-sm font-semibold text-text-primary">{item.rating}</p>
+                        </div>
+                    </div>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                        <a href={whatsAppLink(item.phone, item.name)} target="_blank" rel="noreferrer" className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Solicitar orcamento</a>
+                        <a href={whatsAppLink(item.phone, item.name)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-border/80 bg-white px-4 py-2 text-sm font-semibold text-text-primary"><MessageCircle size={16} />WhatsApp</a>
+                        <button type="button" onClick={() => onSave(item.id)} className={cn('inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold', saved ? 'border-primary/25 bg-primary/10 text-primary' : 'border-border/80 bg-white text-text-secondary')}><Bookmark size={16} />{saved ? 'Salvo' : 'Salvar'}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 
@@ -1384,6 +1634,20 @@ function useOpportunitiesStore() {
         markOpportunityClosed,
         toggleSaved,
     };
+}
+
+function useSavedCatalog(storageKey: string) {
+    const [savedIds, setSavedIds] = useState<string[]>(() => readStoredStringArray(storageKey));
+
+    useEffect(() => saveStoredStringArray(storageKey, savedIds), [savedIds, storageKey]);
+
+    const toggleSaved = (id: string) => {
+        setSavedIds((current) => current.includes(id)
+            ? current.filter((savedId) => savedId !== id)
+            : [id, ...current]);
+    };
+
+    return { savedIds, toggleSaved };
 }
 
 export function BrokerHome() {
@@ -1608,8 +1872,26 @@ export function BrokerOpportunities() {
 export function BrokerSavedOpportunities() {
     const { blocked } = useBrokerAccessGuard();
     const { opportunities, savedIds, toggleSaved } = useOpportunitiesStore();
+    const { savedIds: savedPropertyIds, toggleSaved: toggleSavedProperty } = useSavedCatalog(SAVED_PROPERTIES_STORAGE_KEY);
+    const { savedIds: savedVehicleIds, toggleSaved: toggleSavedVehicle } = useSavedCatalog(SAVED_VEHICLES_STORAGE_KEY);
+    const { savedIds: savedServiceIds, toggleSaved: toggleSavedService } = useSavedCatalog(SAVED_SERVICES_STORAGE_KEY);
     const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+    const [selectedProperty, setSelectedProperty] = useState<PropertyCardItem | null>(null);
+    const [selectedVehicle, setSelectedVehicle] = useState<VehicleCardItem | null>(null);
+    const [selectedService, setSelectedService] = useState<ServiceCardItem | null>(null);
     const savedOpportunities = opportunities.filter((item) => savedIds.includes(item.id));
+    const propertyItems = [
+        ...opportunities.filter(isPropertyOpportunity).map(propertyCardFromOpportunity),
+        ...properties,
+    ];
+    const vehicleItems = [
+        ...opportunities.filter(isVehicleOpportunity).map(vehicleCardFromOpportunity),
+        ...vehicles,
+    ];
+    const savedProperties = propertyItems.filter((item) => savedPropertyIds.includes(item.id));
+    const savedVehicles = vehicleItems.filter((item) => savedVehicleIds.includes(item.id));
+    const savedServices = services.filter((item) => savedServiceIds.includes(item.id));
+    const hasSavedItems = savedOpportunities.length > 0 || savedProperties.length > 0 || savedVehicles.length > 0 || savedServices.length > 0;
 
     if (blocked) {
         return <Navigate to="/dashboard" replace />;
@@ -1620,28 +1902,65 @@ export function BrokerSavedOpportunities() {
             <PageHeader
                 eyebrow="Favoritos"
                 title="Salvos"
-                description="Consulte rapidamente as oportunidades que voce separou para responder depois."
+                description="Consulte rapidamente oportunidades, imoveis, veiculos e servicos que voce separou para responder depois."
             />
 
-            {savedOpportunities.length > 0 ? (
-                <section className="grid gap-4 xl:grid-cols-2">
-                    {savedOpportunities.map((item) => (
-                        <OpportunityCard
-                            key={item.id}
-                            item={item}
-                            saved
-                            onOpen={setSelectedOpportunity}
-                            onSave={toggleSaved}
-                        />
-                    ))}
-                </section>
+            {hasSavedItems ? (
+                <div className="space-y-6">
+                    {savedOpportunities.length > 0 && (
+                        <section>
+                            <h2 className="mb-3 text-lg font-display text-text-primary">Oportunidades salvas</h2>
+                            <div className="grid gap-4 xl:grid-cols-2">
+                                {savedOpportunities.map((item) => (
+                                    <OpportunityCard
+                                        key={item.id}
+                                        item={item}
+                                        saved
+                                        onOpen={setSelectedOpportunity}
+                                        onSave={toggleSaved}
+                                    />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                    {savedProperties.length > 0 && (
+                        <section>
+                            <h2 className="mb-3 text-lg font-display text-text-primary">Imoveis salvos</h2>
+                            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                                {savedProperties.map((item) => (
+                                    <PropertyCard key={item.id} item={item} saved onOpen={setSelectedProperty} onSave={toggleSavedProperty} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                    {savedVehicles.length > 0 && (
+                        <section>
+                            <h2 className="mb-3 text-lg font-display text-text-primary">Veiculos salvos</h2>
+                            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                                {savedVehicles.map((item) => (
+                                    <VehicleCard key={item.id} item={item} saved onOpen={setSelectedVehicle} onSave={toggleSavedVehicle} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                    {savedServices.length > 0 && (
+                        <section>
+                            <h2 className="mb-3 text-lg font-display text-text-primary">Servicos salvos</h2>
+                            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                                {savedServices.map((item) => (
+                                    <ServiceCard key={item.id} item={item} saved onOpen={setSelectedService} onSave={toggleSavedService} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </div>
             ) : (
                 <section className="rounded-[26px] border border-dashed border-border/80 bg-surface/90 p-8 text-center">
                     <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                         <Bookmark size={22} />
                     </div>
-                    <p className="mt-5 text-lg font-semibold text-text-primary">Nenhuma oportunidade salva ainda</p>
-                    <p className="mt-2 text-sm text-text-secondary">Quando voce salvar uma oportunidade, ela aparece aqui.</p>
+                    <p className="mt-5 text-lg font-semibold text-text-primary">Nada salvo ainda</p>
+                    <p className="mt-2 text-sm text-text-secondary">Quando voce salvar uma oportunidade, imovel, veiculo ou servico, aparece aqui.</p>
                     <Link to="/oportunidades" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-white">
                         Ver oportunidades
                     </Link>
@@ -1653,6 +1972,24 @@ export function BrokerSavedOpportunities() {
                 saved={selectedOpportunity ? savedIds.includes(selectedOpportunity.id) : false}
                 onClose={() => setSelectedOpportunity(null)}
                 onSave={toggleSaved}
+            />
+            <PropertyDetailsModal
+                item={selectedProperty}
+                saved={selectedProperty ? savedPropertyIds.includes(selectedProperty.id) : false}
+                onClose={() => setSelectedProperty(null)}
+                onSave={toggleSavedProperty}
+            />
+            <VehicleDetailsModal
+                item={selectedVehicle}
+                saved={selectedVehicle ? savedVehicleIds.includes(selectedVehicle.id) : false}
+                onClose={() => setSelectedVehicle(null)}
+                onSave={toggleSavedVehicle}
+            />
+            <ServiceDetailsModal
+                item={selectedService}
+                saved={selectedService ? savedServiceIds.includes(selectedService.id) : false}
+                onClose={() => setSelectedService(null)}
+                onSave={toggleSavedService}
             />
         </div>
     );
@@ -1842,10 +2179,42 @@ export function BrokerMyBusiness() {
 export function BrokerProperties() {
     const { blocked } = useBrokerAccessGuard();
     const { opportunities } = useOpportunitiesStore();
-    const propertyItems = [
-        ...opportunities.filter(isPropertyOpportunity).map(propertyCardFromOpportunity),
-        ...properties,
-    ];
+    const { savedIds, toggleSaved } = useSavedCatalog(SAVED_PROPERTIES_STORAGE_KEY);
+    const [selectedProperty, setSelectedProperty] = useState<PropertyCardItem | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [cityFilter, setCityFilter] = useState('all');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const propertyItems = useMemo(
+        () => [
+            ...opportunities.filter(isPropertyOpportunity).map(propertyCardFromOpportunity),
+            ...properties,
+        ],
+        [opportunities],
+    );
+    const filteredProperties = useMemo(() => {
+        const query = normalizeText(searchQuery);
+
+        return propertyItems.filter((item) => {
+            const matchesSearch = !query || [
+                item.title,
+                item.city,
+                item.district,
+                item.type,
+                item.value,
+                item.partnership,
+                item.description,
+                item.advertiser,
+            ].join(' ').toLowerCase().includes(query);
+
+            return (
+                matchesSearch &&
+                (cityFilter === 'all' || item.city === cityFilter) &&
+                (typeFilter === 'all' || item.type === typeFilter) &&
+                (statusFilter === 'all' || item.status === statusFilter)
+            );
+        });
+    }, [cityFilter, propertyItems, searchQuery, statusFilter, typeFilter]);
 
     if (blocked) {
         return <Navigate to="/dashboard" replace />;
@@ -1860,15 +2229,29 @@ export function BrokerProperties() {
             />
             <section className="rounded-[26px] border border-border/70 bg-surface/95 p-5">
                 <div className="grid gap-4 xl:grid-cols-4">
-                    <SearchBox placeholder="Buscar por cidade, bairro, tipo ou valor" />
-                    <SelectField label="Cidade" value="all" onChange={() => { }} options={[{ value: 'all', label: 'Todas' }, ...cities.map((city) => ({ value: city, label: city }))]} />
-                    <SelectField label="Tipo" value="all" onChange={() => { }} options={[{ value: 'all', label: 'Todos' }, 'Apartamento', 'Casa', 'Comercial', 'Terreno', 'Rural'].map((item) => typeof item === 'string' ? { value: item, label: item } : item)} />
-                    <SelectField label="Status" value="all" onChange={() => { }} options={[{ value: 'all', label: 'Todos' }, 'Disponivel', 'Reservado', 'Vendido'].map((item) => typeof item === 'string' ? { value: item, label: item } : item)} />
+                    <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Buscar por cidade, bairro, tipo ou valor" />
+                    <SelectField label="Cidade" value={cityFilter} onChange={setCityFilter} options={[{ value: 'all', label: 'Todas' }, ...cities.map((city) => ({ value: city, label: city }))]} />
+                    <SelectField label="Tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: 'all', label: 'Todos' }, 'Apartamento', 'Casa', 'Comercial', 'Terreno', 'Rural', 'Imovel'].map((item) => typeof item === 'string' ? { value: item, label: item } : item)} />
+                    <SelectField label="Status" value={statusFilter} onChange={setStatusFilter} options={[{ value: 'all', label: 'Todos' }, 'Disponivel', 'Reservado', 'Vendido'].map((item) => typeof item === 'string' ? { value: item, label: item } : item)} />
                 </div>
             </section>
             <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {propertyItems.map((item) => <PropertyCard key={`${item.title}-${item.city}`} item={item} />)}
+                {filteredProperties.map((item) => (
+                    <PropertyCard
+                        key={item.id}
+                        item={item}
+                        saved={savedIds.includes(item.id)}
+                        onOpen={setSelectedProperty}
+                        onSave={toggleSaved}
+                    />
+                ))}
             </section>
+            <PropertyDetailsModal
+                item={selectedProperty}
+                saved={selectedProperty ? savedIds.includes(selectedProperty.id) : false}
+                onClose={() => setSelectedProperty(null)}
+                onSave={toggleSaved}
+            />
         </div>
     );
 }
@@ -1876,6 +2259,8 @@ export function BrokerProperties() {
 export function BrokerVehicles() {
     const { blocked } = useBrokerAccessGuard();
     const { opportunities } = useOpportunitiesStore();
+    const { savedIds, toggleSaved } = useSavedCatalog(SAVED_VEHICLES_STORAGE_KEY);
+    const [selectedVehicle, setSelectedVehicle] = useState<VehicleCardItem | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState('all');
     const [cityFilter, setCityFilter] = useState('all');
@@ -1950,14 +2335,30 @@ export function BrokerVehicles() {
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {filteredVehicles.map((item) => <VehicleCard key={item.title} item={item} />)}
+                {filteredVehicles.map((item) => (
+                    <VehicleCard
+                        key={item.id}
+                        item={item}
+                        saved={savedIds.includes(item.id)}
+                        onOpen={setSelectedVehicle}
+                        onSave={toggleSaved}
+                    />
+                ))}
             </section>
+            <VehicleDetailsModal
+                item={selectedVehicle}
+                saved={selectedVehicle ? savedIds.includes(selectedVehicle.id) : false}
+                onClose={() => setSelectedVehicle(null)}
+                onSave={toggleSaved}
+            />
         </div>
     );
 }
 
 export function BrokerServices() {
     const { blocked } = useBrokerAccessGuard();
+    const { savedIds, toggleSaved } = useSavedCatalog(SAVED_SERVICES_STORAGE_KEY);
+    const [selectedService, setSelectedService] = useState<ServiceCardItem | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [cityFilter, setCityFilter] = useState('all');
@@ -2017,8 +2418,22 @@ export function BrokerServices() {
             </section>
 
             <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {filteredServices.map((item) => <ServiceCard key={item.name} item={item} />)}
+                {filteredServices.map((item) => (
+                    <ServiceCard
+                        key={item.id}
+                        item={item}
+                        saved={savedIds.includes(item.id)}
+                        onOpen={setSelectedService}
+                        onSave={toggleSaved}
+                    />
+                ))}
             </section>
+            <ServiceDetailsModal
+                item={selectedService}
+                saved={selectedService ? savedIds.includes(selectedService.id) : false}
+                onClose={() => setSelectedService(null)}
+                onSave={toggleSaved}
+            />
         </div>
     );
 }
