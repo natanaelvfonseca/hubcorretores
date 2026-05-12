@@ -73,7 +73,7 @@ const opportunityCategories = [
     'Parceria/co-venda',
     'Permuta',
     'Servicos',
-    'Veiculos',
+    'Veiculo disponivel',
     'Cartas/consorcios',
     'Outros negocios',
 ];
@@ -439,6 +439,34 @@ const services = [
     },
 ];
 
+type PropertyCardItem = {
+    title: string;
+    city: string;
+    district: string;
+    type: string;
+    value: string;
+    status: PropertyStatus;
+    partnership: string;
+    photo: string;
+};
+
+type VehicleCardItem = {
+    title: string;
+    type: string;
+    brandModel: string;
+    year: string;
+    city: string;
+    value: string;
+    valueNumber: number;
+    modality: string;
+    status: VehicleStatus;
+    description: string;
+    badge: string;
+    advertiser: string;
+    phone: string;
+    photo: string;
+};
+
 const statusStyles: Record<string, string> = {
     Aberta: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     Resolvida: 'border-slate-200 bg-slate-50 text-slate-600',
@@ -451,6 +479,58 @@ const statusStyles: Record<string, string> = {
     'Indicado pela comunidade': 'border-amber-200 bg-amber-50 text-amber-700',
     'Novo parceiro': 'border-sky-200 bg-sky-50 text-sky-700',
 };
+
+function isPropertyOpportunity(item: Opportunity) {
+    return item.category === 'Imovel disponivel';
+}
+
+function isVehicleOpportunity(item: Opportunity) {
+    return item.category === 'Veiculo disponivel' || item.category === 'Veiculos';
+}
+
+function opportunityStatusToPropertyStatus(status: OpportunityStatus): PropertyStatus {
+    if (status === 'Resolvida') return 'Vendido';
+    if (status === 'Em negociacao') return 'Reservado';
+    return 'Disponivel';
+}
+
+function opportunityStatusToVehicleStatus(status: OpportunityStatus): VehicleStatus {
+    if (status === 'Resolvida') return 'Vendido';
+    if (status === 'Em negociacao') return 'Em negociacao';
+    return 'Disponivel';
+}
+
+function propertyCardFromOpportunity(item: Opportunity): PropertyCardItem {
+    return {
+        title: item.title,
+        city: item.city,
+        district: 'Publicado no Hub',
+        type: 'Imovel',
+        value: 'A combinar',
+        status: opportunityStatusToPropertyStatus(item.status),
+        partnership: item.category,
+        photo: item.images[0] || 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80',
+    };
+}
+
+function vehicleCardFromOpportunity(item: Opportunity): VehicleCardItem {
+    return {
+        title: item.title,
+        type: 'Outro',
+        brandModel: item.title,
+        year: 'A informar',
+        city: item.city,
+        value: 'A combinar',
+        valueNumber: 0,
+        modality: item.category,
+        status: opportunityStatusToVehicleStatus(item.status),
+        description: item.description,
+        badge: 'Verificado',
+        advertiser: item.author,
+        phone: item.phone,
+        photo: item.images[0] || 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=900&q=80',
+    };
+}
 
 function readStoredOpportunities(): Opportunity[] {
     try {
@@ -923,6 +1003,9 @@ function OpportunityCreateModal({
                             onChange={(category) => onChange({ ...draft, category })}
                             options={opportunityCategories.map((category) => ({ value: category, label: category }))}
                         />
+                        <div className="md:col-span-2 -mt-2 rounded-2xl border border-primary/15 bg-primary/[0.06] px-4 py-3 text-sm leading-6 text-text-secondary">
+                            Se escolher Imovel disponivel, a publicacao aparece tambem em Imoveis. Se escolher Veiculo disponivel, aparece tambem em Veiculos. Todas continuam no mural de Oportunidades.
+                        </div>
                         <SelectField
                             label="Cidade"
                             value={draft.city}
@@ -1102,7 +1185,7 @@ function CloseDealModal({
     );
 }
 
-function PropertyCard({ item }: { item: (typeof properties)[number] }) {
+function PropertyCard({ item }: { item: PropertyCardItem }) {
     return (
         <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
             <div className="aspect-[16/9] overflow-hidden bg-surface-hover">
@@ -1134,7 +1217,7 @@ function PropertyCard({ item }: { item: (typeof properties)[number] }) {
     );
 }
 
-function VehicleCard({ item }: { item: (typeof vehicles)[number] }) {
+function VehicleCard({ item }: { item: VehicleCardItem }) {
     return (
         <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
             <div className="aspect-[16/9] overflow-hidden bg-surface-hover">
@@ -1758,6 +1841,11 @@ export function BrokerMyBusiness() {
 
 export function BrokerProperties() {
     const { blocked } = useBrokerAccessGuard();
+    const { opportunities } = useOpportunitiesStore();
+    const propertyItems = [
+        ...opportunities.filter(isPropertyOpportunity).map(propertyCardFromOpportunity),
+        ...properties,
+    ];
 
     if (blocked) {
         return <Navigate to="/dashboard" replace />;
@@ -1769,7 +1857,6 @@ export function BrokerProperties() {
                 eyebrow="Vitrine pratica"
                 title="Imoveis"
                 description="Divulgue imoveis com contexto comercial e encontre ativos prontos para apresentar aos seus clientes."
-                action="Publicar Imovel"
             />
             <section className="rounded-[26px] border border-border/70 bg-surface/95 p-5">
                 <div className="grid gap-4 xl:grid-cols-4">
@@ -1780,7 +1867,7 @@ export function BrokerProperties() {
                 </div>
             </section>
             <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {properties.map((item) => <PropertyCard key={item.title} item={item} />)}
+                {propertyItems.map((item) => <PropertyCard key={`${item.title}-${item.city}`} item={item} />)}
             </section>
         </div>
     );
@@ -1788,6 +1875,7 @@ export function BrokerProperties() {
 
 export function BrokerVehicles() {
     const { blocked } = useBrokerAccessGuard();
+    const { opportunities } = useOpportunitiesStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState('all');
     const [cityFilter, setCityFilter] = useState('all');
@@ -1795,10 +1883,18 @@ export function BrokerVehicles() {
     const [modalityFilter, setModalityFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
 
+    const vehicleItems = useMemo(
+        () => [
+            ...opportunities.filter(isVehicleOpportunity).map(vehicleCardFromOpportunity),
+            ...vehicles,
+        ],
+        [opportunities],
+    );
+
     const filteredVehicles = useMemo(() => {
         const query = normalizeText(searchQuery);
 
-        return vehicles.filter((item) => {
+        return vehicleItems.filter((item) => {
             const matchesSearch = !query || [
                 item.title,
                 item.type,
@@ -1822,7 +1918,7 @@ export function BrokerVehicles() {
                 (statusFilter === 'all' || item.status === statusFilter)
             );
         });
-    }, [cityFilter, modalityFilter, searchQuery, statusFilter, typeFilter, valueFilter]);
+    }, [cityFilter, modalityFilter, searchQuery, statusFilter, typeFilter, valueFilter, vehicleItems]);
 
     if (blocked) {
         return <Navigate to="/dashboard" replace />;
@@ -1834,8 +1930,6 @@ export function BrokerVehicles() {
                 eyebrow="Vitrine de bens moveis"
                 title="Veiculos da comunidade"
                 description="Encontre veiculos, embarcacoes e oportunidades de troca ou permuta dentro da rede Corretores do Litoral SC."
-                action="Publicar Veiculo"
-                onAction={() => window.alert('Cadastro de veiculos preparado para a proxima etapa do MVP.')}
             />
 
             <section className="rounded-[26px] border border-primary/15 bg-primary/[0.06] p-5">
@@ -1904,8 +1998,6 @@ export function BrokerServices() {
                 eyebrow="Diretorio pratico"
                 title="Servicos e parceiros"
                 description="Encontre prestadores, fornecedores e parceiros confiaveis para acelerar negocios dentro da comunidade."
-                action="Cadastrar Servico"
-                onAction={() => window.alert('Cadastro de servicos preparado para a proxima etapa do MVP.')}
             />
 
             <section className="rounded-[26px] border border-primary/15 bg-primary/[0.06] p-5">
