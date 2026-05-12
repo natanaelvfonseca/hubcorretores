@@ -1,6 +1,7 @@
 import {
     BarChart3,
     Bookmark,
+    Briefcase,
     Building2,
     Gift,
     Home,
@@ -105,6 +106,14 @@ const brokerMvpNavItems: PortalNavItem[] = [
         eyebrow: 'Vitrine',
         summary: 'Imóveis disponíveis, reservados e vendidos com dados rápidos de parceria.',
         icon: Building2,
+    },
+    {
+        id: 'broker-my-business',
+        path: '/meus-negocios',
+        navLabel: 'Meus Negócios',
+        eyebrow: 'Controle',
+        summary: 'Edite, remova e marque o fechamento das suas oportunidades.',
+        icon: Briefcase,
     },
     {
         id: 'broker-members',

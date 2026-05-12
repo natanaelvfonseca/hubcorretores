@@ -14,6 +14,7 @@ import { HubAdminPanel } from './pages/hub/HubAdminPanel';
 import {
     BrokerBenefits,
     BrokerMembers,
+    BrokerMyBusiness,
     BrokerOpportunities,
     BrokerProfile,
     BrokerProperties,
@@ -84,6 +85,7 @@ function App() {
                             <Route path="networking" element={<HubModulePage sectionId="networking" />} />
                             <Route path="oportunidades" element={<BrokerOpportunities />} />
                             <Route path="imoveis" element={<BrokerProperties />} />
+                            <Route path="meus-negocios" element={<BrokerMyBusiness />} />
                             <Route path="membros" element={<BrokerMembers />} />
                             <Route path="beneficios" element={<BrokerBenefits />} />
                             <Route path="salvos" element={<BrokerSavedOpportunities />} />

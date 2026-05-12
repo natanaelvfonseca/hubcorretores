@@ -28,6 +28,7 @@ type PropertyStatus = 'Disponivel' | 'Reservado' | 'Vendido';
 
 interface Opportunity {
     id: string;
+    ownerId?: string;
     title: string;
     city: string;
     category: string;
@@ -38,6 +39,8 @@ interface Opportunity {
     phone: string;
     images: string[];
     createdAt: string;
+    closedByCommunity?: boolean;
+    closedAt?: string;
 }
 
 interface OpportunityDraft {
@@ -49,6 +52,7 @@ interface OpportunityDraft {
     description: string;
     phone: string;
     images: string[];
+    closedByCommunity: boolean;
 }
 
 type SelectOption = {
@@ -80,6 +84,7 @@ const opportunityStatuses: OpportunityStatus[] = ['Aberta', 'Em negociacao', 'Re
 const defaultOpportunities: Opportunity[] = [
     {
         id: 'default-1',
+        ownerId: 'community-seed-1',
         title: 'Cliente procura apartamento frente mar',
         city: 'Balneario Camboriu',
         category: 'Cliente comprador',
@@ -90,9 +95,11 @@ const defaultOpportunities: Opportunity[] = [
         phone: '5547999990001',
         images: ['https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=80'],
         createdAt: new Date('2026-05-01T10:00:00').toISOString(),
+        closedByCommunity: false,
     },
     {
         id: 'default-2',
+        ownerId: 'community-seed-2',
         title: 'Co-venda para casa em condominio',
         city: 'Itapema',
         category: 'Parceria/co-venda',
@@ -103,9 +110,11 @@ const defaultOpportunities: Opportunity[] = [
         phone: '5547999990002',
         images: ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=900&q=80'],
         createdAt: new Date('2026-05-02T11:00:00').toISOString(),
+        closedByCommunity: false,
     },
     {
         id: 'default-3',
+        ownerId: 'community-seed-3',
         title: 'Permuta por sala comercial',
         city: 'Camboriu',
         category: 'Permuta',
@@ -116,6 +125,7 @@ const defaultOpportunities: Opportunity[] = [
         phone: '5547999990003',
         images: [],
         createdAt: new Date('2026-05-03T12:00:00').toISOString(),
+        closedByCommunity: false,
     },
 ];
 
@@ -128,6 +138,7 @@ const emptyOpportunityDraft: OpportunityDraft = {
     description: '',
     phone: '',
     images: [],
+    closedByCommunity: false,
 };
 
 const properties: Array<{
@@ -355,6 +366,25 @@ function whatsAppLink(phone: string, title: string) {
     return `https://wa.me/${target}?text=${text}`;
 }
 
+function userOwnsOpportunity(item: Opportunity, user?: { id?: string; name?: string } | null) {
+    if (!user) return false;
+    return item.ownerId === user.id || (!item.ownerId && item.author === user.name);
+}
+
+function draftFromOpportunity(item: Opportunity): OpportunityDraft {
+    return {
+        title: item.title,
+        city: item.city,
+        category: item.category,
+        urgency: item.urgency,
+        status: item.status,
+        description: item.description,
+        phone: item.phone,
+        images: item.images,
+        closedByCommunity: Boolean(item.closedByCommunity),
+    };
+}
+
 function SelectField({
     label,
     value,
@@ -558,7 +588,7 @@ function OpportunityModal({
                         </div>
                     )}
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-4">
+    <div className="mt-6 grid gap-4 md:grid-cols-4">
                         {[
                             ['Cidade', item.city],
                             ['Categoria', item.category],
@@ -571,6 +601,19 @@ function OpportunityModal({
                             </div>
                         ))}
                     </div>
+
+                    {item.status === 'Resolvida' ? (
+                        <div className="mt-6 rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 text-emerald-800">
+                            <p className="text-sm font-semibold">
+                                Negocio fechado{item.closedByCommunity ? ' pela comunidade do Hub' : ''}
+                            </p>
+                            <p className="mt-2 text-sm leading-6 opacity-80">
+                                {item.closedByCommunity
+                                    ? 'Este registro ajuda a medir os negocios gerados pela plataforma.'
+                                    : 'O publicador marcou esta oportunidade como resolvida.'}
+                            </p>
+                        </div>
+                    ) : null}
 
                     <div className="mt-6 rounded-[24px] border border-border/70 bg-surface p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-muted">Descricao</p>
@@ -611,12 +654,14 @@ function OpportunityModal({
 function OpportunityCreateModal({
     open,
     draft,
+    editing = false,
     onClose,
     onChange,
     onSubmit,
 }: {
     open: boolean;
     draft: OpportunityDraft;
+    editing?: boolean;
     onClose: () => void;
     onChange: (draft: OpportunityDraft) => void;
     onSubmit: () => void;
@@ -644,8 +689,12 @@ function OpportunityCreateModal({
             <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]">
                 <div className="flex items-start justify-between gap-4 border-b border-border/70 px-6 py-5">
                     <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Nova oportunidade</p>
-                        <h2 className="mt-2 text-2xl font-display text-text-primary">Publicar no mural do Hub</h2>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">
+                            {editing ? 'Editar oportunidade' : 'Nova oportunidade'}
+                        </p>
+                        <h2 className="mt-2 text-2xl font-display text-text-primary">
+                            {editing ? 'Atualizar seu negocio' : 'Publicar no mural do Hub'}
+                        </h2>
                     </div>
                     <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 text-text-secondary">
                         <X size={18} />
@@ -688,6 +737,29 @@ function OpportunityCreateModal({
                             onChange={(status) => onChange({ ...draft, status: status as OpportunityStatus })}
                             options={opportunityStatuses.map((status) => ({ value: status, label: status }))}
                         />
+
+                        <label className="md:col-span-2 rounded-[22px] border border-border/70 bg-background/80 p-4">
+                            <span className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={draft.closedByCommunity}
+                                    onChange={(event) => onChange({
+                                        ...draft,
+                                        closedByCommunity: event.target.checked,
+                                        status: event.target.checked ? 'Resolvida' : draft.status,
+                                    })}
+                                    className="mt-1 h-4 w-4 accent-primary"
+                                />
+                                <span>
+                                    <span className="block text-sm font-semibold text-text-primary">
+                                        Negocio fechado com usuario da comunidade Hub
+                                    </span>
+                                    <span className="mt-1 block text-sm leading-6 text-text-secondary">
+                                        Marque quando a oportunidade virou negocio por conexao feita dentro da plataforma.
+                                    </span>
+                                </span>
+                            </span>
+                        </label>
 
                         <label className="md:col-span-2">
                             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.2em] text-text-muted">WhatsApp para contato</span>
@@ -761,7 +833,7 @@ function OpportunityCreateModal({
                             Cancelar
                         </button>
                         <button type="button" onClick={onSubmit} className="h-12 rounded-2xl bg-gradient-primary px-5 text-sm font-semibold text-white">
-                            Publicar oportunidade
+                            {editing ? 'Salvar alteracoes' : 'Publicar oportunidade'}
                         </button>
                     </div>
                 </div>
@@ -814,9 +886,10 @@ function useOpportunitiesStore() {
     useEffect(() => saveOpportunities(opportunities), [opportunities]);
     useEffect(() => saveSavedOpportunityIds(savedIds), [savedIds]);
 
-    const addOpportunity = (draft: OpportunityDraft, author: string) => {
+    const addOpportunity = (draft: OpportunityDraft, author: string, ownerId?: string) => {
         const next: Opportunity = {
             id: `opportunity-${Date.now()}`,
+            ownerId,
             title: draft.title.trim(),
             city: draft.city,
             category: draft.category,
@@ -827,10 +900,49 @@ function useOpportunitiesStore() {
             phone: draft.phone.trim(),
             images: draft.images,
             createdAt: new Date().toISOString(),
+            closedByCommunity: draft.status === 'Resolvida' ? draft.closedByCommunity : false,
+            closedAt: draft.status === 'Resolvida' ? new Date().toISOString() : undefined,
         };
 
         setOpportunities((current) => [next, ...current]);
         return next;
+    };
+
+    const updateOpportunity = (id: string, draft: OpportunityDraft) => {
+        setOpportunities((current) => current.map((item) => {
+            if (item.id !== id) return item;
+
+            const isClosed = draft.status === 'Resolvida';
+            return {
+                ...item,
+                title: draft.title.trim(),
+                city: draft.city,
+                category: draft.category,
+                urgency: draft.urgency,
+                status: draft.status,
+                description: draft.description.trim(),
+                phone: draft.phone.trim(),
+                images: draft.images,
+                closedByCommunity: isClosed ? draft.closedByCommunity : false,
+                closedAt: isClosed ? item.closedAt || new Date().toISOString() : undefined,
+            };
+        }));
+    };
+
+    const deleteOpportunity = (id: string) => {
+        setOpportunities((current) => current.filter((item) => item.id !== id));
+        setSavedIds((current) => current.filter((savedId) => savedId !== id));
+    };
+
+    const markOpportunityClosed = (id: string, closedByCommunity: boolean) => {
+        setOpportunities((current) => current.map((item) => item.id === id
+            ? {
+                ...item,
+                status: 'Resolvida',
+                closedByCommunity,
+                closedAt: item.closedAt || new Date().toISOString(),
+            }
+            : item));
     };
 
     const toggleSaved = (id: string) => {
@@ -839,7 +951,15 @@ function useOpportunitiesStore() {
             : [id, ...current]);
     };
 
-    return { opportunities, savedIds, addOpportunity, toggleSaved };
+    return {
+        opportunities,
+        savedIds,
+        addOpportunity,
+        updateOpportunity,
+        deleteOpportunity,
+        markOpportunityClosed,
+        toggleSaved,
+    };
 }
 
 export function BrokerHome() {
@@ -982,7 +1102,7 @@ export function BrokerOpportunities() {
             return;
         }
 
-        const created = addOpportunity(draft, user?.name || 'Membro Hub');
+        const created = addOpportunity(draft, user?.name || 'Membro Hub', user?.id);
         setDraft(emptyOpportunityDraft);
         setShowCreateModal(false);
         setSelectedOpportunity(created);
@@ -1107,6 +1227,160 @@ export function BrokerSavedOpportunities() {
                 </section>
             )}
 
+            <OpportunityModal
+                item={selectedOpportunity}
+                saved={selectedOpportunity ? savedIds.includes(selectedOpportunity.id) : false}
+                onClose={() => setSelectedOpportunity(null)}
+                onSave={toggleSaved}
+            />
+        </div>
+    );
+}
+
+export function BrokerMyBusiness() {
+    const { user, blocked } = useBrokerAccessGuard();
+    const {
+        opportunities,
+        savedIds,
+        updateOpportunity,
+        deleteOpportunity,
+        markOpportunityClosed,
+        toggleSaved,
+    } = useOpportunitiesStore();
+    const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
+    const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+    const [draft, setDraft] = useState<OpportunityDraft>(emptyOpportunityDraft);
+    const myOpportunities = opportunities.filter((item) => userOwnsOpportunity(item, user));
+    const communityClosedCount = myOpportunities.filter((item) => item.status === 'Resolvida' && item.closedByCommunity).length;
+    const closedCount = myOpportunities.filter((item) => item.status === 'Resolvida').length;
+
+    if (blocked) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    const startEdit = (item: Opportunity) => {
+        setEditingOpportunity(item);
+        setDraft(draftFromOpportunity(item));
+    };
+
+    const closeEdit = () => {
+        setEditingOpportunity(null);
+        setDraft(emptyOpportunityDraft);
+    };
+
+    const saveEdit = () => {
+        if (!editingOpportunity) return;
+        if (!draft.title.trim() || !draft.description.trim()) {
+            window.alert('Preencha titulo e descricao para salvar.');
+            return;
+        }
+
+        updateOpportunity(editingOpportunity.id, draft);
+        closeEdit();
+    };
+
+    const removeItem = (item: Opportunity) => {
+        if (!window.confirm(`Apagar "${item.title}" dos seus negocios?`)) return;
+        deleteOpportunity(item.id);
+    };
+
+    return (
+        <div className="space-y-6 pb-6">
+            <PageHeader
+                eyebrow="Area individual"
+                title="Meus Negocios"
+                description="Controle suas oportunidades publicadas, atualize status, edite informacoes e registre negocios fechados pela comunidade."
+            />
+
+            <section className="grid gap-4 md:grid-cols-3">
+                {[
+                    { label: 'Publicadas por voce', value: myOpportunities.length.toString() },
+                    { label: 'Negocios fechados', value: closedCount.toString() },
+                    { label: 'Fechados via comunidade', value: communityClosedCount.toString() },
+                ].map((metric) => (
+                    <article key={metric.label} className="rounded-[26px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+                        <p className="text-3xl font-display text-text-primary">{metric.value}</p>
+                        <p className="mt-2 text-sm font-semibold text-text-secondary">{metric.label}</p>
+                    </article>
+                ))}
+            </section>
+
+            {myOpportunities.length > 0 ? (
+                <section className="space-y-4">
+                    {myOpportunities.map((item) => (
+                        <article key={item.id} className="rounded-[28px] border border-border/70 bg-surface/95 p-5 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
+                            <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
+                                <button type="button" onClick={() => setSelectedOpportunity(item)} className="min-w-0 text-left">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                            {item.category}
+                                        </span>
+                                        <span className={cn('rounded-full border px-3 py-1 text-xs font-semibold', statusStyles[item.status])}>
+                                            {item.status}
+                                        </span>
+                                        {item.closedByCommunity ? (
+                                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                                Fechado via comunidade
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <h2 className="mt-4 text-2xl font-display text-text-primary">{item.title}</h2>
+                                    <p className="mt-2 text-sm font-semibold text-text-secondary">{item.city} · {formatDate(item.createdAt)}</p>
+                                    <p className="mt-3 line-clamp-2 text-sm leading-7 text-text-secondary">{item.description}</p>
+                                </button>
+
+                                <div className="flex flex-wrap gap-2 lg:max-w-sm lg:justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => startEdit(item)}
+                                        className="h-11 rounded-2xl border border-border/80 bg-white px-4 text-sm font-semibold text-text-primary"
+                                    >
+                                        Editar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => markOpportunityClosed(item.id, false)}
+                                        className="h-11 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700"
+                                    >
+                                        Marcar fechado
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => markOpportunityClosed(item.id, true)}
+                                        className="h-11 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
+                                    >
+                                        Fechado pelo Hub
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItem(item)}
+                                        className="h-11 rounded-2xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-600"
+                                    >
+                                        Apagar
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    ))}
+                </section>
+            ) : (
+                <section className="rounded-[26px] border border-dashed border-border/80 bg-surface/90 p-8 text-center">
+                    <p className="text-lg font-semibold text-text-primary">Voce ainda nao publicou oportunidades</p>
+                    <p className="mt-2 text-sm text-text-secondary">Publique pelo mural de oportunidades e controle tudo por aqui.</p>
+                    <Link to="/oportunidades" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-white">
+                        Publicar oportunidade
+                    </Link>
+                </section>
+            )}
+
+            <OpportunityCreateModal
+                open={Boolean(editingOpportunity)}
+                editing
+                draft={draft}
+                onClose={closeEdit}
+                onChange={setDraft}
+                onSubmit={saveEdit}
+            />
             <OpportunityModal
                 item={selectedOpportunity}
                 saved={selectedOpportunity ? savedIds.includes(selectedOpportunity.id) : false}
