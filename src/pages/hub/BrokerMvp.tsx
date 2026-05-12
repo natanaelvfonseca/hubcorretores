@@ -842,6 +842,62 @@ function OpportunityCreateModal({
     );
 }
 
+function CloseDealModal({
+    item,
+    onClose,
+    onConfirm,
+}: {
+    item: Opportunity | null;
+    onClose: () => void;
+    onConfirm: (closedByCommunity: boolean) => void;
+}) {
+    if (!item) return null;
+
+    return (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.28)]">
+                <div className="flex items-start justify-between gap-4 border-b border-border/70 px-6 py-5">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary">Fechar negocio</p>
+                        <h2 className="mt-2 text-2xl font-display text-text-primary">Como esse negocio foi fechado?</h2>
+                    </div>
+                    <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border/80 text-text-secondary">
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-6">
+                    <div className="rounded-[24px] border border-border/70 bg-background/80 p-5">
+                        <p className="text-sm font-semibold text-text-primary">{item.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-text-secondary">
+                            Escolha a opcao correta para o Hub medir quantos negocios estao sendo gerados pela comunidade.
+                        </p>
+                    </div>
+
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                        <button
+                            type="button"
+                            onClick={() => onConfirm(true)}
+                            className="rounded-[22px] border border-emerald-200 bg-emerald-50 p-5 text-left text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
+                        >
+                            <p className="text-base font-semibold">Fechado pela comunidade</p>
+                            <p className="mt-2 text-sm leading-6 opacity-80">Foi fechado com alguem encontrado ou acionado pelo Hub.</p>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onConfirm(false)}
+                            className="rounded-[22px] border border-border/80 bg-white p-5 text-left text-text-primary transition hover:border-primary/25 hover:bg-primary/[0.04]"
+                        >
+                            <p className="text-base font-semibold">Fechado fora do Hub</p>
+                            <p className="mt-2 text-sm leading-6 text-text-secondary">Foi resolvido por outro canal, sem participacao da comunidade.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function PropertyCard({ item }: { item: (typeof properties)[number] }) {
     return (
         <article className="overflow-hidden rounded-[26px] border border-border/70 bg-surface/95 shadow-[0_14px_36px_rgba(8,23,38,0.05)]">
@@ -1227,6 +1283,7 @@ export function BrokerMyBusiness() {
     } = useOpportunitiesStore();
     const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
     const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+    const [closingOpportunity, setClosingOpportunity] = useState<Opportunity | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [draft, setDraft] = useState<OpportunityDraft>(emptyOpportunityDraft);
     const myOpportunities = opportunities.filter((item) => userOwnsOpportunity(item, user));
@@ -1281,9 +1338,10 @@ export function BrokerMyBusiness() {
         deleteOpportunity(item.id);
     };
 
-    const closeDeal = (item: Opportunity) => {
-        const closedByCommunity = window.confirm('Esse negocio foi fechado com alguem da comunidade do Hub?');
-        markOpportunityClosed(item.id, closedByCommunity);
+    const confirmCloseDeal = (closedByCommunity: boolean) => {
+        if (!closingOpportunity) return;
+        markOpportunityClosed(closingOpportunity.id, closedByCommunity);
+        setClosingOpportunity(null);
     };
 
     return (
@@ -1343,7 +1401,7 @@ export function BrokerMyBusiness() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => closeDeal(item)}
+                                        onClick={() => setClosingOpportunity(item)}
                                         className="h-11 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
                                     >
                                         Fechar negocio
@@ -1383,6 +1441,11 @@ export function BrokerMyBusiness() {
                 saved={selectedOpportunity ? savedIds.includes(selectedOpportunity.id) : false}
                 onClose={() => setSelectedOpportunity(null)}
                 onSave={toggleSaved}
+            />
+            <CloseDealModal
+                item={closingOpportunity}
+                onClose={() => setClosingOpportunity(null)}
+                onConfirm={confirmCloseDeal}
             />
         </div>
     );
