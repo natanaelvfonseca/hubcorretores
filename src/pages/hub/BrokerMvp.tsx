@@ -1284,6 +1284,11 @@ export function BrokerMyBusiness() {
         deleteOpportunity(item.id);
     };
 
+    const closeDeal = (item: Opportunity) => {
+        const closedByCommunity = window.confirm('Esse negocio foi fechado com alguem da comunidade do Hub?');
+        markOpportunityClosed(item.id, closedByCommunity);
+    };
+
     return (
         <div className="space-y-6 pb-6">
             <PageHeader
@@ -1339,17 +1344,10 @@ export function BrokerMyBusiness() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => markOpportunityClosed(item.id, false)}
-                                        className="h-11 rounded-2xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700"
-                                    >
-                                        Marcar fechado
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => markOpportunityClosed(item.id, true)}
+                                        onClick={() => closeDeal(item)}
                                         className="h-11 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-700"
                                     >
-                                        Fechado pelo Hub
+                                        Fechar negocio
                                     </button>
                                     <button
                                         type="button"
