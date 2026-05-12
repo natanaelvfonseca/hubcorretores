@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { MobileFooterNav } from './MobileFooterNav';
+import { useAuth } from '../../context/AuthContext';
+import { isConstrutoraUser } from '../../lib/portalAccess';
 
 const MOBILE_MEDIA_QUERY = '(max-width: 1023px)';
 
 export function AppShell() {
+    const { user } = useAuth();
     const [isMobile, setIsMobile] = useState(() => {
         if (typeof window === 'undefined') return false;
         return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
@@ -16,6 +20,7 @@ export function AppShell() {
     });
     const location = useLocation();
     const isFullScreenPage = location.pathname.includes('/live-chat') || location.pathname.includes('/kanban'); // Future proofing
+    const useBrokerMobileNav = isMobile && !isConstrutoraUser(user);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -35,13 +40,17 @@ export function AppShell() {
     }, []);
 
     const effectiveCollapsed = isMobile ? sidebarCollapsed : false;
-    const contentMarginClass = isMobile
+    const contentMarginClass = useBrokerMobileNav
+        ? 'ml-0'
+        : isMobile
         ? (effectiveCollapsed ? 'ml-20' : 'ml-72')
         : 'ml-72';
 
     return (
         <div className="flex h-screen bg-background overflow-hidden relative" data-tour-id="tour-app-shell">
-            <Sidebar collapsed={effectiveCollapsed} setCollapsed={setSidebarCollapsed} isMobile={isMobile} />
+            {!useBrokerMobileNav && (
+                <Sidebar collapsed={effectiveCollapsed} setCollapsed={setSidebarCollapsed} isMobile={isMobile} />
+            )}
             <div
                 className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${contentMarginClass}`}
             >
@@ -50,12 +59,13 @@ export function AppShell() {
                   If it's a full screen page (like Chat), use overflow-hidden and no padding.
                   Otherwise use standard dashboard layout (scrollable, padded).
                 */}
-                <main className={`flex-1 ${isFullScreenPage ? 'overflow-hidden p-0' : 'overflow-y-auto p-6 scrollbar-hide'}`}>
+                <main className={`flex-1 ${isFullScreenPage ? 'overflow-hidden p-0' : `overflow-y-auto p-6 scrollbar-hide ${useBrokerMobileNav ? 'pb-28' : ''}`}`}>
                     <div className={`w-full h-full ${isFullScreenPage ? '' : 'max-w-7xl mx-auto'}`}>
                         <Outlet />
                     </div>
                 </main>
             </div>
+            {useBrokerMobileNav && <MobileFooterNav />}
 
             {/* Background Glow Effect */}
             <div className="absolute inset-0 pointer-events-none z-0">

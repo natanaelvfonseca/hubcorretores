@@ -1078,7 +1078,7 @@ export function BrokerHome() {
             <section className="grid gap-5 xl:grid-cols-2">
                 <div className="space-y-4">
                     <div className="flex items-center justify-between gap-3">
-                        <h2 className="text-2xl font-display text-text-primary">Oportunidades recentes</h2>
+                        <h2 className="text-2xl font-display text-text-primary">Oportunidades mais quentes</h2>
                         <Link to="/oportunidades" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">
                             Ver todas <ArrowRight size={16} />
                         </Link>
